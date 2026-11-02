@@ -585,7 +585,7 @@ function render(){
   }
 
   const top=node('header','top','',s);
-  const versionTag=node('span','', 'V19',top);
+  const versionTag=node('span','', 'V20',top);
   versionTag.title=APP_VERSION;
   versionTag.style.cssText='position:absolute;top:2px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:400;opacity:.65;pointer-events:none;z-index:2;line-height:1;white-space:nowrap';
   const tl=node('div','top-left','',top);
@@ -654,7 +654,7 @@ function scrollEnd(){const t=$('#transcript');if(t)t.scrollTo({top:t.scrollHeigh
 
 function drawHome(root){
   const h=node('main','home','',root);const L=active();
-  const versionTag=node('span','', 'V19',h);versionTag.title=APP_VERSION;versionTag.style.cssText='position:absolute;top:max(6px, env(safe-area-inset-top));right:10px;font-size:10px;font-weight:400;opacity:.7;z-index:20;pointer-events:none';
+  const versionTag=node('span','', 'V20',h);versionTag.title=APP_VERSION;versionTag.style.cssText='position:absolute;top:max(6px, env(safe-area-inset-top));right:10px;font-size:10px;font-weight:400;opacity:.7;z-index:20;pointer-events:none';
   /* 사진을 먼저 보여 주고, 사진을 못 받으면(오프라인 등) 직접 그린 그림을 대신 보여 줌 */
   const showPhoto=()=>{h.style.backgroundImage=`url("${L.image}")`;const sv=h.querySelector('.home-scene');if(sv)sv.remove()};
   if(L.bg){h.style.backgroundColor=L.bg[1];h.insertAdjacentHTML('afterbegin',sceneSVG(L))}
@@ -1142,7 +1142,7 @@ function drawSettings(body){
   node('p','tiny','AI 목소리는 휴대폰 목소리보다 자연스럽지만, 문장마다 1~2초 늦어지고 쓴 만큼 요금이 조금 나갑니다. 실패하면 자동으로 휴대폰 목소리로 읽습니다. 빨라야 하는 듣기 모드는 늘 휴대폰 목소리를 씁니다.',sec);
   node('p','tiny','💡 인터넷 없이 소리를 내려면: 휴대폰 설정 → "텍스트 음성 변환"(TTS) → 기본 엔진 설정 → "음성 데이터 설치"에서 중국어·일본어 등을 미리 내려받으세요. 그다음 위 목록에서 "인터넷 없이 됨" 목소리를 고르면 됩니다.',sec);
   node('label','field',`말하는 속도: ${state.rate.toFixed(2)}배`,sec).id='rateLabel';
-  const rate=node('input','',null,sec);rate.type='range';rate.min='0.6';rate.max='1.4';rate.step='0.05';rate.value=state.rate;rate.style.width='100%';
+  const rate=node('input','',null,sec);rate.type='range';rate.min='0.6';rate.max='1.5';rate.step='0.05';rate.value=state.rate;rate.style.width='100%';
   rate.oninput=()=>{state.rate=+rate.value;$('#rateLabel').textContent=`말하는 속도: ${state.rate.toFixed(2)}배`};
   rate.onchange=()=>{persist();speak('이 속도로 말할게요.','ko')};
 
@@ -1468,16 +1468,17 @@ function startRecognition(){
   micDiagnostic('인식 언어: '+r.lang+' · 이 언어로 말해야 글자가 나타납니다.');
   let finalText='';
   const live=state.mode==='listen';
+  const listenTarget=source==='ko'?active().code:'ko';
   const noSpace=/^(ja|zh|th)/.test(source);
   const sess={sent:'',last:Date.now(),chain:Promise.resolve(),entry:null,prev:'',rev:0};
   const sendPiece=(piece,full)=>{
     piece=piece.trim();if(!piece)return;
     sess.last=Date.now();
-    if(!sess.entry){sess.entry={original:'',translation:'번역 중…',source,target:'ko',failed:false};state.listening.push(sess.entry);render();scrollEnd()}
+    if(!sess.entry){sess.entry={original:'',translation:'번역 중…',source,target:listenTarget,failed:false};state.listening.push(sess.entry);render();scrollEnd()}
     const e=sess.entry;e.original=(full||sess.sent).trim();
     const tn=takeTone();
     sess.chain=sess.chain.then(async()=>{
-      try{const tr=await translate(piece,source,'ko');e.translation=(e.translation==='번역 중…'?'':e.translation+' ')+tr;render();scrollEnd();if(state.earListen)queueSpeak(tr,'ko',tn)}
+      try{const tr=await translate(piece,source,listenTarget);e.translation=(e.translation==='번역 중…'?'':e.translation+' ')+tr;render();scrollEnd();if(state.earListen)queueSpeak(tr,listenTarget,tn)}
       catch(err){if(e.translation==='번역 중…')e.translation='번역 실패 · '+err.message;render()}
     });
   };
@@ -1528,7 +1529,7 @@ function startRecognition(){
         if(!matched){
           // The STT engine corrected an earlier provisional transcript: replace, never append.
           const entry=sess.entry;
-          sess.chain=sess.chain.then(async()=>{try{entry.translation=await translate(finalText,source,'ko');entry.original=finalText;entry.failed=false;render();scrollEnd()}catch(err){entry.translation='번역 실패 · '+err.message;entry.failed=true;render()}});
+          sess.chain=sess.chain.then(async()=>{try{entry.translation=await translate(finalText,source,listenTarget);entry.original=finalText;entry.failed=false;render();scrollEnd()}catch(err){entry.translation='번역 실패 · '+err.message;entry.failed=true;render()}});
         }else{
           const rest=finalText.slice(sess.sent.length);sess.sent=finalText;
           if(rest.trim())sendPiece(rest,finalText);
