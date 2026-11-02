@@ -34,8 +34,8 @@ svg{display:block}
 .home:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#0003,transparent 40%,#0006)}
 .lang{position:relative;border:1px solid #fff9;background:#fffffff0;color:#1e3038;border-radius:40px;padding:13px 26px;font-size:19px;box-shadow:0 4px 16px #0004}
 .home-tip{position:relative;color:#fff;font-size:15px;margin-top:16px;text-shadow:0 1px 4px #000c}
-.select-pop{position:absolute;bottom:calc(140px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#fff;color:#1e3038;border-radius:18px;padding:10px;width:220px;z-index:15;box-shadow:0 8px 40px #0005}
-.select-pop button{display:block;width:100%;border:0;background:white;padding:15px;text-align:left;border-radius:10px;font-size:17px}
+.select-pop{position:absolute;bottom:calc(150px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#fff;color:#1e3038;border-radius:18px;padding:8px;width:min(92vw,340px);max-height:58vh;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:2px;z-index:15;box-shadow:0 8px 40px #0005}
+.select-pop button{display:block;width:100%;border:0;background:white;padding:12px 10px;text-align:left;border-radius:10px;font-size:15px}.select-pop button.on{background:#e3f4e9;font-weight:700}
 
 /* ── 본 화면 ── */
 .screen{display:flex;flex-direction:column;height:100dvh;--acc:var(--accent)}
@@ -174,6 +174,22 @@ svg{display:block}
 .drawer-item.add{background:transparent;border:1.5px dashed var(--line);color:var(--accent);text-align:center}
 .phrase.mine{border-left:4px solid var(--accent)}
 .danger-link{border:0;background:none;color:#c0392b;font-weight:600;padding:10px 4px}
+/* v7 */
+.home-flag{position:absolute;top:22%;left:50%;transform:translateX(-50%);font-size:150px;opacity:.9;filter:drop-shadow(0 8px 20px #0005)}
+.recent{position:relative;display:flex;align-items:center;gap:2px;margin-bottom:8px;font-size:11px;color:#ffffffaa}
+.recent span{margin-right:2px}
+.recent button{border:0;background:transparent;color:#ffffffc0;font-size:11px;padding:3px 6px;text-decoration:underline;text-underline-offset:2px}
+.home-tip2{position:relative;color:#ffffffc8;font-size:12px;margin-top:6px;text-shadow:0 1px 3px #000c}
+.long-tip{font-style:normal;font-weight:400;font-size:11px;color:var(--muted);opacity:.8}
+.drawer-item.strong .long-tip{color:#fff}
+/* v8 */
+.dim-btn{position:absolute;right:12px;bottom:calc(112px + env(safe-area-inset-bottom));z-index:4;border:1px solid var(--line);background:var(--bg);color:var(--text);border-radius:20px;padding:8px 13px;font-size:13px;font-weight:650;box-shadow:0 3px 10px #0002}
+.dim-overlay{position:absolute;inset:0;z-index:60;background:#000;touch-action:manipulation}
+.dim-box{position:absolute;color:#6b6b6b;animation:drift 40s ease-in-out infinite alternate}
+.dim-text{font-size:15px}
+.dim-sub{font-size:12px;color:#4a4a4a;margin-top:4px}
+.dim-back{margin-top:12px;border:1px solid #333;background:#111;color:#8a8a8a;border-radius:16px;padding:8px 14px;font-size:13px}
+@keyframes drift{0%{transform:translate(0,0)}50%{transform:translate(30px,60px)}100%{transform:translate(-10px,120px)}}
 /* v6 */
 .install-band{position:relative;margin-top:14px;display:flex;align-items:center;gap:4px;background:#ffffffee;border-radius:30px;padding:4px 4px 4px 6px;box-shadow:0 4px 14px #0004}
 .install-go{border:0;background:#29865c;color:#fff;border-radius:24px;padding:9px 16px;font-size:15px;font-weight:700}
@@ -198,7 +214,24 @@ const LANGS=[
   {name:'일본어',code:'ja',flag:'🇯🇵',locale:'ja-JP',image:'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=1400&q=85'},
   {name:'중국어',code:'zh-CN',flag:'🇨🇳',locale:'zh-CN',image:'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=1400&q=85'},
   {name:'영어',code:'en',flag:'🇺🇸',locale:'en-US',image:'https://images.unsplash.com/photo-1485738422979-f5c462d49f74?w=1400&q=85'},
-  {name:'베트남어',code:'vi',flag:'🇻🇳',locale:'vi-VN',image:'https://images.unsplash.com/photo-1528127269322-539801943592?w=1400&q=85'}
+  {name:'베트남어',code:'vi',flag:'🇻🇳',locale:'vi-VN',image:'https://images.unsplash.com/photo-1528127269322-539801943592?w=1400&q=85'},
+  {name:'대만 중국어',code:'zh-TW',flag:'🇹🇼',locale:'zh-TW',bg:['#d7263d','#1b3a8c']},
+  {name:'태국어',code:'th',flag:'🇹🇭',locale:'th-TH',bg:['#2d2a6e','#c8102e']},
+  {name:'인도네시아어',code:'id',flag:'🇮🇩',locale:'id-ID',bg:['#e63946','#f1c27d']},
+  {name:'말레이어',code:'ms',flag:'🇲🇾',locale:'ms-MY',bg:['#0b3c8c','#f4c430']},
+  {name:'필리핀어',code:'tl',flag:'🇵🇭',locale:'fil-PH',bg:['#0038a8','#ce1126']},
+  {name:'힌디어',code:'hi',flag:'🇮🇳',locale:'hi-IN',bg:['#ff9933','#138808']},
+  {name:'몽골어',code:'mn',flag:'🇲🇳',locale:'mn-MN',bg:['#c4272f','#015197']},
+  {name:'러시아어',code:'ru',flag:'🇷🇺',locale:'ru-RU',bg:['#1c3f94','#d52b1e']},
+  {name:'프랑스어',code:'fr',flag:'🇫🇷',locale:'fr-FR',bg:['#1f3c88','#e63946']},
+  {name:'독일어',code:'de',flag:'🇩🇪',locale:'de-DE',bg:['#2b2b2b','#d4a017']},
+  {name:'스페인어',code:'es',flag:'🇪🇸',locale:'es-ES',bg:['#c60b1e','#f1bf00']},
+  {name:'이탈리아어',code:'it',flag:'🇮🇹',locale:'it-IT',bg:['#009246','#ce2b37']},
+  {name:'포르투갈어',code:'pt',flag:'🇵🇹',locale:'pt-PT',bg:['#046a38','#da291c']},
+  {name:'폴란드어',code:'pl',flag:'🇵🇱',locale:'pl-PL',bg:['#8a1c2b','#dc143c']},
+  {name:'체코어',code:'cs',flag:'🇨🇿',locale:'cs-CZ',bg:['#11457e','#d7141a']},
+  {name:'튀르키예어',code:'tr',flag:'🇹🇷',locale:'tr-TR',bg:['#8f0d1a','#e30a17']},
+  {name:'아랍어',code:'ar',flag:'🇸🇦',locale:'ar-SA',bg:['#006c35','#0b3d2e']}
 ];
 const THEMES=[['basic','기본'],['ocean','바다'],['sunset','노을'],['night','밤'],['kids','어린이']];
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -240,16 +273,19 @@ const DEFAULT_NOTES=[
   {t:'도움 요청',x:'도와주세요. 한국어 통역이 필요합니다.'}
 ];
 const sizes=[14,17,20,25,31];
-const speechModes=['양쪽','한국어',null,'끔'];
-const speechCls=['m-both','m-ko','m-foreign',''];
+const speechModes=['양쪽',null,'끔'];
+const speechCls=['m-both','m-foreign',''];
 const recogModes=['ko','foreign','auto'];
 
 function store(k,v){try{localStorage.setItem(k,v)}catch{}}
 function load(k,d=''){try{return localStorage.getItem(k)??d}catch{return d}}
 function loadJSON(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}}
 
-const state={page:'home',mode:'conversation',lang:0,items:[],listening:[],speech:0,koSize:2,foreignSize:2,mic:false,recognizer:null,side:false,modal:null,interim:'',sourceTurn:0,speaking:false,recog:'ko',theme:'basic',rate:0.95,voices:{},showPron:false,confirmWait:2,pending:null,listenLang:'ko',flash:null};
-Object.assign(state,(({lang,koSize,foreignSize,speech,recog,theme,rate,voices,showPron,confirmWait})=>({lang:lang||0,koSize:koSize??2,foreignSize:Math.min(foreignSize??2,4),speech:speech??0,recog:recogModes.includes(recog)?recog:'ko',theme:theme||'basic',rate:rate||0.95,voices:voices||{},showPron:!!showPron,confirmWait:confirmWait??2}))(loadJSON('travel_settings',{})));
+const state={dim:false,earListen:false,adminOpen:false,page:'home',mode:'conversation',lang:0,items:[],listening:[],speech:0,koSize:2,foreignSize:2,mic:false,recognizer:null,side:false,modal:null,interim:'',sourceTurn:0,speaking:false,recog:'ko',theme:'basic',rate:1.1,voices:{},showPron:false,confirmWait:0,pending:null,listenLang:'ko',flash:null};
+(()=>{const s=loadJSON('travel_settings',{});const old=!(s.v>=7);
+  const sp=old?({0:0,1:0,2:1,3:2})[s.speech??0]??0:(s.speech??0);
+  Object.assign(state,{lang:s.lang>=0&&s.lang<LANGS.length?s.lang:0,koSize:s.koSize??2,foreignSize:Math.min(s.foreignSize??2,4),speech:Math.min(sp,2),recog:recogModes.includes(s.recog)?s.recog:'ko',theme:s.theme||'basic',rate:old?1.1:(s.rate||1.1),voices:s.voices||{},earListen:!!s.earListen,showPron:!!s.showPron,confirmWait:old?0:(s.confirmWait??0)});
+})();
 
 /* 자주 쓰는 문장 (제목+문장 목록, 추가·삭제 가능) */
 let notes=loadJSON('travel_notes_v2',null);
@@ -266,7 +302,7 @@ let pronCache=loadJSON('pron_cache',{});
 
 (()=>{const h=loadJSON('travel_history',{});const fix=e=>{if(e.translation==='번역 중…'||e.correcting){e.correcting=false;if(!e.translation||e.translation==='번역 중…'){e.translation='번역 중단됨';e.failed=true}}return e};state.items=(h.items||[]).map(fix);state.listening=(h.listening||[]).map(fix)})();
 
-function persist(){store('travel_settings',JSON.stringify({lang:state.lang,koSize:state.koSize,foreignSize:state.foreignSize,speech:state.speech,recog:state.recog,theme:state.theme,rate:state.rate,voices:state.voices,showPron:state.showPron,confirmWait:state.confirmWait}))}
+function persist(){store('travel_settings',JSON.stringify({v:7,earListen:state.earListen,lang:state.lang,koSize:state.koSize,foreignSize:state.foreignSize,speech:state.speech,recog:state.recog,theme:state.theme,rate:state.rate,voices:state.voices,showPron:state.showPron,confirmWait:state.confirmWait}))}
 function saveHistory(){store('travel_history',JSON.stringify({items:state.items.slice(-300),listening:state.listening.slice(-300)}))}
 const active=()=>LANGS[state.lang];
 const langOf=code=>LANGS.find(l=>l.code===code);
@@ -278,7 +314,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='버전 6 · 2026.11.02';
+const APP_VERSION='버전 8 · 2026.11.02';
 const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
@@ -294,7 +330,15 @@ function askConfirm(msg,okLabel,onOk){
 }
 
 /* ── 소리 ── */
-function voiceFor(code){const list=speechSynthesis.getVoices?.()||[];const want=state.voices[code];return want?list.find(v=>v.name===want)||null:null}
+function voiceFor(code){
+  const list=speechSynthesis.getVoices?.()||[];const want=state.voices[code];
+  if(want){const v=list.find(v=>v.name===want);if(v)return v}
+  const loc=localeOf(code).toLowerCase(),pre=loc.slice(0,2);
+  const norm=v=>v.lang.toLowerCase().replace('_','-');
+  const m=list.filter(v=>norm(v).startsWith(pre)&&(code!=='zh-TW'||/tw|hk|hant/.test(norm(v)))) ;
+  const pool=m.length?m:list.filter(v=>norm(v).startsWith(pre));
+  return pool.find(v=>norm(v)===loc&&v.localService)||pool.find(v=>norm(v)===loc)||pool.find(v=>v.localService)||pool[0]||null;
+}
 function stopSpeech(){try{speechSynthesis.cancel()}catch{}state.speaking=false}
 function speak(text,code){
   if(!('speechSynthesis'in window))return notify('음성 출력이 지원되지 않습니다.');
@@ -307,22 +351,31 @@ function speak(text,code){
   s.onend=done;s.onerror=done;
   speechSynthesis.speak(s);
 }
+/* 듣기 모드 · 이어폰: 마이크를 멈추지 않고, 번역이 나오는 대로 줄 서서 이어 읽기 */
+function queueSpeak(text,code){
+  if(!('speechSynthesis'in window))return;
+  const s=new SpeechSynthesisUtterance(text);s.lang=localeOf(code);s.rate=Math.max(state.rate,1.15);
+  const v=voiceFor(code);if(v)s.voice=v;
+  speechSynthesis.speak(s);
+}
 function autoSpeak(text,code){
-  if(state.mode!=='conversation'||state.speech===3)return;
-  if(state.speech===0||(state.speech===1&&code==='ko')||(state.speech===2&&code!=='ko'))speak(text,code);
+  if(state.mode!=='conversation'||state.speech===2)return;
+  if(state.speech===0||(state.speech===1&&code!=='ko'))speak(text,code);
 }
 
 /* ── 이동 ── */
 function goMain(){state.page='main';try{history.pushState({app:'main'},'')}catch{}render()}
 function goHome(){state.modal=null;stopDictation();if(history.state?.app==='main')history.back();else home()}
-function home(){stopMic();stopDictation();stopSpeech();clearPending();state.page='home';state.modal=null;state.side=false;render()}
+function home(){state.dim=false;stopMic();stopDictation();stopSpeech();clearPending();state.page='home';state.modal=null;state.side=false;render()}
 function closeLayer(){state.modal=null;state.side=false;stopDictation();render()}
 window.addEventListener('popstate',()=>{
   if(state.page!=='main')return;
   if(state.modal||state.side){closeLayer();try{history.pushState({app:'main'},'')}catch{}}
   else home();
 });
-function setLang(i){state.lang=i;persist();if(state.mic)pauseRecognizer();render()}
+function recentWrap(h){const r=h.querySelector('.recent');if(r)r.remove();return r||document.createComment('')}
+function setLang(i){state.lang=i;persist();
+  {const c=LANGS[i].code;store('recent_langs',JSON.stringify([c,...loadJSON('recent_langs',[]).filter(x=>x!==c)].slice(0,5)))}if(state.mic)pauseRecognizer();render()}
 function openDrawer(){stopSpeech();state.side=true;state.modal=null;render()}
 
 /* ── 그리기 ── */
@@ -344,7 +397,7 @@ function render(){
   const top=node('header','top','',s);
   const tl=node('div','top-left','',top);
   const hb=button('','home-btn',goHome,tl);hb.innerHTML=ICON.home(15)+'<span>처음으로</span>';
-  button(listen?'듣기 모드 ⇄':'대화 모드 ⇄','mode',()=>{stopMic();clearPending();state.mode=listen?'conversation':'listen';render()},top);
+  button(listen?'듣기 모드 ⇄':'대화 모드 ⇄','mode',()=>{stopMic();clearPending();state.dim=false;state.mode=listen?'conversation':'listen';render()},top);
   const tr=node('div','top-right','',top);
   iconButton(ICON.share(21),'icon-btn','전체 보내기',shareAll,tr);
   if(!isInstalled()&&document.documentElement.requestFullscreen)iconButton(document.fullscreenElement?ICON.exitFull(21):ICON.full(21),'icon-btn','전체 화면',toggleFullscreen,tr);
@@ -359,11 +412,12 @@ function render(){
   const bar=node('footer','bar','',s);
   const bl=node('div','bar-left','',bar);
   if(listen){
-    smallButton(ICON.globe(19),`${active().name} → 한국어`,'wide m-foreign',()=>setLang((state.lang+1)%LANGS.length),bl,'lang');
+    smallButton(ICON.globe(19),`${active().name}→한`,'m-foreign',()=>setLang((state.lang+1)%LANGS.length),bl,'lang');
+    smallButton('<b style="font-size:18px;line-height:1">🎧</b>',state.earListen?'이어폰 켬':'이어폰 끔',state.earListen?'m-ko':'off',()=>{state.earListen=!state.earListen;persist();if(state.earListen)notify('🎧 이어폰을 꽂은 상태로 쓰세요. 번역된 한국어를 끊지 않고 이어서 읽어 줍니다. (스피커로 나오면 앱이 자기 소리를 다시 알아들을 수 있어요)');else try{speechSynthesis.cancel()}catch{};render()},bl,'ear');
   }else{
     const rl={ko:'한국어',foreign:active().name,auto:'번갈아'}[state.recog];
     smallButton(ICON.mic(19),rl,'m-'+state.recog,()=>{state.recog=recogModes[(recogModes.indexOf(state.recog)+1)%3];state.sourceTurn=0;persist();if(state.mic)pauseRecognizer();render()},bl,'recog');
-    smallButton(state.speech===3?ICON.mute(19):ICON.speaker(19),speechModes[state.speech]||active().name,state.speech===3?'off':speechCls[state.speech],()=>{state.speech=(state.speech+1)%4;persist();render()},bl,'speech');
+    smallButton(state.speech===2?ICON.mute(19):ICON.speaker(19),speechModes[state.speech]||active().name,state.speech===2?'off':speechCls[state.speech],()=>{state.speech=(state.speech+1)%3;persist();render()},bl,'speech');
   }
   const mw=node('div','mic-wrap','',bar);
   button('','mic',toggleMic,mw).id='micBtn';
@@ -374,6 +428,16 @@ function render(){
   const fk=button('','font-btn'+(state.flash==='ko'?' flash':''),()=>{state.flash='ko';state.koSize=(state.koSize+1)%5;persist();render()},br);fk.innerHTML='가<small>한국어</small>';
   const ff=button('','font-btn'+(state.flash==='fg'?' flash':''),()=>{state.flash='fg';state.foreignSize=(state.foreignSize+1)%5;persist();render()},br);ff.innerHTML='A<small>외국어</small>';
 
+  if(listen&&!state.dim)button('🌙 화면 어둡게','dim-btn',()=>{if(!state.mic)notify('마이크를 켠 상태에서 쓰면 이어폰으로 계속 들을 수 있어요.');setDim(true)},s);
+  if(state.dim&&state.page==='main'){
+    const ov=node('div','dim-overlay','',root);
+    const box=node('div','dim-box','',ov);
+    box.style.top=(20+Math.random()*50)+'%';box.style.left=(10+Math.random()*30)+'%';
+    node('div','dim-text',state.mic?'🎧 듣는 중 · 화면만 어둡게 했어요':'⏸ 마이크가 꺼져 있어요',box);
+    node('div','dim-sub','두 번 누르면 밝아집니다',box);
+    button('화면 되돌리기','dim-back',e=>{e.stopPropagation();setDim(false)},box);
+    let last=0;ov.addEventListener('pointerup',e=>{if(e.target.closest('.dim-back'))return;const t=Date.now();if(t-last<400)setDim(false);last=t});
+  }
   if(!listen){
     if(state.side)drawDrawer(s);
     else{const tab=button('◀','side-tab',null,s);tab.setAttribute('aria-label','자주 쓰는 문장');tab.addEventListener('pointerdown',e=>{e.preventDefault();openDrawer()})}
@@ -394,7 +458,9 @@ function updateMic(){
 function scrollEnd(){const t=$('#transcript');if(t)t.scrollTo({top:t.scrollHeight,behavior:'smooth'})}
 
 function drawHome(root){
-  const h=node('main','home','',root);h.style.backgroundImage=`url("${active().image}")`;
+  const h=node('main','home','',root);const L=active();
+  if(L.image)h.style.backgroundImage=`url("${L.image}")`;
+  else{h.style.background=`linear-gradient(160deg,${L.bg[0]},${L.bg[1]})`;node('div','home-flag',L.flag,h)}
   h.onclick=goMain;
   const b=button(`${active().flag} ${active().name} ⌄`,'lang',null,h);
   let timer,long=false;
@@ -404,9 +470,19 @@ function drawHome(root){
   b.oncontextmenu=e=>e.preventDefault();
   function showPop(){
     const pop=node('div','select-pop','',h);pop.onclick=e=>e.stopPropagation();
-    LANGS.forEach((l,i)=>button(`${l.flag} ${l.name}`,'',e=>{e.stopPropagation();setLang(i)},pop));
+    pop.style.bottom=(h.clientHeight-b.offsetTop+12)+'px';
+    const shown=Date.now();
+    LANGS.forEach((l,i)=>button(`${l.flag} ${l.name}`,i===state.lang?'on':'',e=>{e.stopPropagation();if(Date.now()-shown<500)return;setLang(i)},pop));
   }
+  const recent=loadJSON('recent_langs',[]).filter(c=>c!==L.code&&langOf(c)).slice(0,3);
+  if(recent.length){
+    const rc=node('div','recent','',h);rc.onclick=e=>e.stopPropagation();
+    node('span','','최근',rc);
+    recent.forEach(c=>button(langOf(c).name,'',e=>{e.stopPropagation();setLang(LANGS.findIndex(l=>l.code===c))},rc));
+  }
+  h.insertBefore(recentWrap(h),b);
   node('div','home-tip','화면을 누르면 통역이 시작됩니다',h);
+  node('div','home-tip2','언어 버튼을 길게 누르면 목록에서 고를 수 있어요',h);
   if(!isInstalled()&&load('install_hide')!=='1'){
     const band=node('div','install-band','',h);band.onclick=e=>e.stopPropagation();
     button('📲 앱으로 설치하기','install-go',installApp,band);
@@ -430,7 +506,7 @@ function bubble(parent,item,index,field){
   const failed=!isOrig&&item.failed;
   const b=node('div','bubble '+(code==='ko'?'ko':'foreign')+(failed?' fail':'')+(isOrig&&code==='ko'?' has-edit':''),'',parent);
   b.style.fontSize=sizes[code==='ko'?state.koSize:state.foreignSize]+'px';
-  node('span','',text,b);
+  node('span','',text,b).dir='auto';
   if(isOrig&&item.correcting)node('span','fixing','✨ AI 교정 중…',b);
   b.onclick=()=>{if(!failed&&text&&text!=='번역 중…')openEnlarge(text,code,code!=='ko'?item.original:null)};
   if(isOrig&&code==='ko'){const e=button('✎','edit',ev=>{ev.stopPropagation();openEdit(index)},b);e.setAttribute('aria-label','수정')}
@@ -516,7 +592,7 @@ function drawDrawer(parent){
   notes.forEach((n,i)=>{
     let timer,long=false;
     const b=button('','drawer-item',()=>{if(long){long=false;return}useNote(i)},d);
-    b.textContent=n.t;node('small','',n.x||'(비어 있음 · 길게 눌러 입력)',b);
+    b.textContent=n.t;if(i<2)node('em','long-tip',' (길게 누르면 수정)',b);node('small','',n.x||'(비어 있음 · 길게 눌러 입력)',b);
     b.addEventListener('pointerdown',()=>{long=false;timer=setTimeout(()=>{long=true;openNote(i)},600)});
     ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>clearTimeout(timer)));
     b.oncontextmenu=e=>e.preventDefault();
@@ -528,7 +604,7 @@ async function useNote(i){
   if(!text)return openNote(i);
   state.side=false;state.mode='conversation';render();
   await consume(text,'ko',{note:true});
-  if(state.speech===3)notify('소리가 "끔"으로 되어 있습니다. 아래 스피커 버튼으로 켤 수 있어요.');
+  if(state.speech===2)notify('소리가 "끔"으로 되어 있습니다. 아래 스피커 버튼으로 켤 수 있어요.');
 }
 function openNote(i){state.side=false;state.modal={type:'note',index:i};render()}
 function openEnlarge(text,code,sub){state.modal={type:'enlarge',text,code,sub,rotated:false};render()}
@@ -563,7 +639,7 @@ function drawModal(root){
   if(data.type==='enlarge'){
     const eb=node('div','enlarge-body','',body);
     if(data.sub)node('div','sub-text',data.sub,eb);
-    const big=node('div','big-text',data.text,eb);if(data.rotated)big.classList.add('rotated');
+    const big=node('div','big-text',data.text,eb);big.dir='auto';if(data.rotated)big.classList.add('rotated');
     if(data.code!=='ko'&&state.showPron){const pw=node('div','',null,eb);pw.style.fontSize='20px';drawPron(pw,data.text,data.code)}
     node('div','tap-tip','빈 곳을 누르면 돌아갑니다',eb);
     if(data.code!=='ko'){
@@ -752,6 +828,7 @@ function drawSettings(body){
   sec=node('div','sec','',body);node('h4','','기타',sec);
   const btns=node('div','row-btns','',sec);
   if(installEvent&&!isInstalled())button('📲 휴대폰에 앱 설치','action primary',installApp,btns);
+  button('🔗 앱 주소 복사·보내기','action primary',()=>shareAppLink(),btns);
   button('대화 기록 삭제','action',()=>askConfirm('대화 기록을 모두 지울까요?\n지운 기록은 되살릴 수 없습니다.','삭제',()=>{state.items=[];state.listening=[];saveHistory();notify('대화 기록을 지웠습니다.')}),btns);
   button('자주 쓰는 문장 기본값으로','action',()=>askConfirm('자주 쓰는 문장을 처음 기본 문구로 되돌릴까요?\n직접 고치거나 추가한 문장은 사라집니다.','되돌리기',()=>{notes=DEFAULT_NOTES.map(n=>({...n}));saveNotes();notify('기본 문구로 되돌렸습니다.')}),btns);
   if(!isInstalled())node('p','tiny','설치: 크롬 메뉴(⋮) → "앱 설치"를 누르면 주소창 없이 전체 화면 앱으로 열립니다. 새 버전을 올리면 설치한 앱도 자동으로 바뀝니다.',sec);
@@ -774,7 +851,7 @@ function drawSettings(body){
 function drawHelp(body){
   const H=[
     ['🗣 대화 모드','현지인과 주고받을 때 씁니다. 큰 마이크를 누르고 말하면 글자가 실시간으로 보이고, 말이 끝나면 잠깐 "고치기 / 보내기"를 고를 수 있습니다. 그대로 두면 자동으로 번역해서 소리로 들려줍니다.'],
-    ['👂 듣기 모드','가이드 설명처럼 외국어를 계속 들을 때 씁니다. 외국어를 한국어로 번역해 아래로 쌓아 줍니다. 🌐 버튼으로 듣는 언어를 바꿀 수 있습니다.'],
+    ['👂 듣기 모드','가이드 설명처럼 외국어를 계속 들을 때 씁니다. 외국어를 한국어로 번역해 아래로 쌓아 줍니다. 🌐 버튼으로 듣는 언어를 바꿀 수 있습니다. 🎧 버튼을 켜면 번역된 한국어를 이어폰으로 끊지 않고 계속 읽어 줍니다(몇 초 늦게 따라옵니다). 꼭 이어폰을 꽂고 쓰세요.\n🌙 화면 어둡게: 화면을 까맣게 덮어 배터리를 아끼고, 마이크는 계속 듣습니다. 두 번 누르거나 "화면 되돌리기"로 밝아집니다. (화면을 완전히 끄면 마이크가 멈추니 끄지 마세요)\n⏱ 2분 동안 말이 없으면 자동으로 어두워지고, 그 뒤 5분 더 없으면 마이크와 화면이 꺼집니다. 대화 모드는 2분 동안 말이 없으면 마이크가 꺼집니다.'],
     ['⬇ 아래 버튼','🎤 알아듣기: 누를 때마다 한국어 → 외국어 → 번갈아\n🔊 소리: 양쪽 → 한국어 → 외국어 → 끔\n⌨ 글로 통역: 붙여넣기·파일·말로 입력\n가 / A: 한국어·외국어 글씨 크기'],
     ['💬 말풍선','한국어 말풍선의 ✎로 고치면 다시 번역합니다. 외국어 말풍선의 "가"는 한글 발음, 🔊는 다시 듣기입니다. 말풍선을 누르면 크게 보여 주고, 빈 곳을 누르면 돌아갑니다.'],
     ['◀ 자주 쓰는 문장','오른쪽 ◀ 탭을 누르면 나옵니다. 짧게 누르면 통역, 길게 누르면 고치기·지우기. 맨 아래 "문장 추가하기"로 새 문장을 넣을 수 있습니다.'],
@@ -937,10 +1014,17 @@ async function consume(text,source,opt={}){
     if(opt.note&&source==='ko')cacheTr(target,entry.original,entry.translation);
     render();scrollEnd();
     if(!toListen&&!opt.fromText)autoSpeak(entry.translation,target);
+    if(toListen&&state.earListen)queueSpeak(entry.translation,'ko');
   }catch(err){entry.translation='번역 실패 · '+err.message;entry.failed=true;render();scrollEnd()}
 }
 
 /* ── 전체 보내기 ── */
+const APP_URL='https://lsc571-max.github.io/travel/';
+async function shareAppLink(){
+  const text='여행 통역 앱 · 크롬으로 열고 "앱으로 설치하기"를 누르세요\n'+APP_URL;
+  if(navigator.share){try{await navigator.share({title:'여행 통역 앱',text,url:APP_URL});return}catch(e){if(e.name==='AbortError')return}}
+  try{await navigator.clipboard.writeText(APP_URL);notify('앱 주소를 복사했습니다. 카톡에 붙여넣기 하세요.')}catch{notify('주소: '+APP_URL)}
+}
 async function shareAll(){
   const listen=state.mode==='listen';
   const list=listen?state.listening:state.items;
@@ -954,11 +1038,32 @@ async function shareAll(){
 let lastFinal={text:'',at:0};
 function pauseRecognizer(){const r=state.recognizer;state.recognizer=null;try{r?.abort()}catch{}if(state.interim){state.interim='';updateLive()}}
 function resumeRecognizer(){if(state.mic&&!state.recognizer&&!state.speaking&&!state.modal&&!state.pending&&!dict&&state.page==='main')startRecognition()}
-function stopMic(){state.mic=false;pauseRecognizer();state.interim=''}
+/* ── 화면 꺼짐 방지와 자동 종료 ──
+   대화 모드: 2분 동안 말이 없으면 마이크 끄고 화면도 원래대로.
+   듣기 모드: 2분 말이 없으면 화면만 자동으로 어둡게(마이크는 계속), 그 뒤 5분 더 없으면 마이크와 화면 모두 끔. */
+let wakeLock=null,idle1=null,idle2=null;
+async function keepAwake(){
+  if(wakeLock||!('wakeLock'in navigator)||document.visibilityState!=='visible')return;
+  try{wakeLock=await navigator.wakeLock.request('screen');wakeLock.addEventListener('release',()=>{wakeLock=null})}catch{}
+}
+function releaseWake(){try{wakeLock?.release()}catch{}wakeLock=null}
+function activity(){
+  keepAwake();clearTimeout(idle1);clearTimeout(idle2);
+  idle1=setTimeout(()=>{
+    if(!state.mic)return;
+    if(state.mode==='listen'){
+      if(!state.dim)setDim(true);
+      idle2=setTimeout(()=>{if(!state.mic)return;stopMic();state.dim=false;render();notify('5분 동안 말소리가 없어 마이크를 껐습니다. 다시 쓰려면 마이크를 누르세요.')},300000);
+    }else{stopMic();clearPending();render();notify('2분 동안 말소리가 없어 마이크를 껐습니다.')}
+  },120000);
+}
+function setDim(on){state.dim=on;render()}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&state.mic)keepAwake()});
+function stopMic(){state.mic=false;pauseRecognizer();state.interim='';clearTimeout(idle1);clearTimeout(idle2);releaseWake()}
 function toggleMic(){
   if(state.mic){stopMic();clearPending();render();return}
   if(!SR){notify('이 브라우저에는 음성 인식 기능이 없습니다. "글로 통역"을 이용해 주세요.');return}
-  state.mic=true;state.sourceTurn=0;render();
+  state.mic=true;state.sourceTurn=0;activity();render();
 }
 function startRecognition(){
   if(!SR||!state.mic||state.modal||state.speaking||state.pending||state.page!=='main')return;
@@ -971,6 +1076,7 @@ function startRecognition(){
   let finalText='';
   r.onresult=event=>{
     if(state.recognizer!==r||state.speaking)return;
+    activity();
     const res=event.results[event.results.length-1];const t=res[0].transcript.trim();
     if(res.isFinal)finalText=t;
     state.interim=t;

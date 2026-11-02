@@ -1,6 +1,6 @@
 // 앱 화면 파일을 저장해 두었다가, 인터넷이 약할 때도 앱이 열리게 합니다.
 // 번역 서버 요청은 저장하지 않습니다.
-const CACHE = 'travel-interpreter-v6';
+const CACHE = 'travel-interpreter-v8';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
