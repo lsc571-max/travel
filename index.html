@@ -395,7 +395,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='V23 · 음성 옵션 분리 · 2026.11.03';
+const APP_VERSION='V24 · 듣기 마이크 안정화 · 설정 위치 유지 · 2026.11.03';
 const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
@@ -518,7 +518,8 @@ function pcmToWav(b64,rate){
 /* 목소리 톤 따라가기 (시험 기능): 말하는 사람의 높낮이·크기를 재서 읽는 목소리에 반영 */
 const tone={stream:null,ctx:null,an:null,buf:null,timer:null,samples:[]};
 async function startTone(){
-  if(!(state.toneFollow||state.autoVoice)||tone.stream||!navigator.mediaDevices?.getUserMedia)return;
+  // 듣기 모드는 SpeechRecognition이 마이크를 독점하도록 별도 분석 스트림을 열지 않습니다.
+  if(state.mode==='listen'||!(state.toneFollow||state.autoVoice)||tone.stream||!navigator.mediaDevices?.getUserMedia)return;
   try{
     tone.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
     tone.ctx=new (window.AudioContext||window.webkitAudioContext)();
@@ -578,6 +579,7 @@ function openDrawer(){stopSpeech();state.side=true;state.modal=null;render()}
 /* ── 그리기 ── */
 function render(){
   const root=$('#app');root.dataset.theme=state.theme;
+  const settingsScroll=state.modal?.type==='settings' ? root.querySelector('.modal-content')?.scrollTop : null;
   const oldT=$('#transcript');const keep=oldT?{top:oldT.scrollTop,atBottom:oldT.scrollHeight-oldT.scrollTop-oldT.clientHeight<60}:null;
   root.replaceChildren();
   document.querySelector('meta[name=theme-color]').content=getComputedStyle(root).getPropertyValue('--accent').trim()||'#29865c';
@@ -645,7 +647,7 @@ function render(){
     else{const tab=button('◀','side-tab',null,s);tab.setAttribute('aria-label','자주 쓰는 문장');tab.addEventListener('pointerdown',e=>{e.preventDefault();openDrawer()})}
   }
   if(keep&&!keep.atBottom)content.scrollTop=keep.top;else content.scrollTop=content.scrollHeight;
-  if(state.modal){pauseRecognizer();drawModal(root)}else resumeRecognizer();
+  if(state.modal){pauseRecognizer();drawModal(root);if(settingsScroll!==null&&settingsScroll!==undefined){const sc=root.querySelector('.modal-content');if(sc)sc.scrollTop=settingsScroll}}else resumeRecognizer();
   state.flash=null;
   updateMic();saveHistory();
 }
@@ -1216,6 +1218,7 @@ function drawSettings(body){
     toggle.onchange=()=>{if(k==='autoVoice')state.autoVoice=toggle.checked;else testOptions[k]=toggle.checked;if(k==='volumeFollow')state.toneFollow=toggle.checked;if(state.mic&&(state.toneFollow||state.autoVoice))startTone();else if(!state.toneFollow&&!state.autoVoice)stopTone();saveTestOptions();persist();notify(title+(toggle.checked?' 켬':' 끔')+' · 다음 문장부터 적용됩니다.')};
   });
   button('테스트 옵션 초기화','action',()=>{testOptions={...TEST_DEFAULTS};state.toneFollow=false;state.autoVoice=true;stopTone();saveTestOptions();persist();render();notify('테스트 옵션을 기본값으로 되돌렸습니다.')},testArea);
+  node('p','tiny','듣기 모드에서는 음성 인식 충돌을 막기 위해 강약 분석과 음높이 기반 자동 선택을 일시 보류합니다. 대화 모드에서는 선택한 설정이 유지됩니다.',testArea);
   node('p','tiny','화면 자동 어두워짐(2분)과 듣기 자동 종료(추가 5분)는 변경하지 않았습니다. 음높이 기반 음색 선택으로 실제 성별을 판정하지 않으며, 기기마다 지원 음성이 다릅니다.',testArea);
   node('h4','','🔧 관리자 메뉴 (새 버전 올리기)',admin);
   node('p','tiny','① 받은 zip을 "내 파일"에서 압축 풀기 ② 아래 버튼 → "choose your files"로 파일 5개 모두 선택 ③ 맨 아래 초록 "Commit changes" ④ 1~2분 뒤 앱을 껐다 켜면 새 버전',admin);
