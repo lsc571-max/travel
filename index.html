@@ -349,11 +349,11 @@ function store(k,v){try{localStorage.setItem(k,v)}catch{}}
 function load(k,d=''){try{return localStorage.getItem(k)??d}catch{return d}}
 function loadJSON(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}}
 
-const state={listenFrom:'foreign',geminiVoice:'',toneFollow:false,dim:false,earListen:false,adminOpen:false,page:'home',mode:'conversation',lang:2,items:[],listening:[],speech:0,koSize:2,foreignSize:2,mic:false,recognizer:null,side:false,modal:null,interim:'',sourceTurn:0,speaking:false,recog:'ko',theme:'basic',rate:1.1,voices:{},showPron:false,showKoPron:false,confirmWait:0,pending:null,listenLang:'ko',flash:null};
+const state={listenFrom:'foreign',geminiVoice:'',toneFollow:false,autoVoice:true,dim:false,earListen:false,adminOpen:false,page:'home',mode:'conversation',lang:2,items:[],listening:[],speech:0,koSize:2,foreignSize:2,mic:false,recognizer:null,side:false,modal:null,interim:'',sourceTurn:0,speaking:false,recog:'ko',theme:'basic',rate:1.1,voices:{},showPron:false,showKoPron:false,confirmWait:0,pending:null,listenLang:'ko',flash:null};
 (()=>{const s=loadJSON('travel_settings',{});const old=!(s.v>=7);
   let sp=old?({0:0,1:0,2:1,3:2})[s.speech??0]??0:(s.speech??0);
   const pre10=!(s.v>=10);if(pre10&&sp===2)sp=3;
-  Object.assign(state,{lang:2,koSize:s.koSize??2,foreignSize:Math.min(s.foreignSize??2,4),speech:Math.min(sp,3),recog:recogModes.includes(s.recog)?s.recog:'ko',theme:s.theme||'basic',rate:pre10?1.1:(s.rate||1.1),voices:s.voices||{},geminiVoice:s.geminiVoice||'',toneFollow:false,listenFrom:s.listenFrom==='ko'?'ko':'foreign',earListen:!!s.earListen,showPron:!!s.showPron,showKoPron:!!s.showKoPron,confirmWait:0});
+  Object.assign(state,{lang:2,koSize:s.koSize??2,foreignSize:Math.min(s.foreignSize??2,4),speech:Math.min(sp,3),recog:recogModes.includes(s.recog)?s.recog:'ko',theme:s.theme||'basic',rate:pre10?1.1:(s.rate||1.1),voices:s.voices||{},geminiVoice:s.geminiVoice||'',toneFollow:false,autoVoice:s.autoVoice!==false,listenFrom:s.listenFrom==='ko'?'ko':'foreign',earListen:!!s.earListen,showPron:!!s.showPron,showKoPron:!!s.showKoPron,confirmWait:0});
 })();
 
 /* 자주 쓰는 문장 (제목+문장 목록, 추가·삭제 가능) */
@@ -383,7 +383,7 @@ function glossaryHint(){const w=glossary.filter(g=>g.word).map(g=>g.out?`${g.wor
 
 (()=>{const h=loadJSON('travel_history',{});const fix=e=>{if(e.translation==='번역 중…'||e.correcting){e.correcting=false;if(!e.translation||e.translation==='번역 중…'){e.translation='번역 중단됨';e.failed=true}}return e};state.items=(h.items||[]).map(fix);state.listening=(h.listening||[]).map(fix)})();
 
-function persist(){store('travel_settings',JSON.stringify({v:12,listenFrom:state.listenFrom,geminiVoice:state.geminiVoice,toneFollow:state.toneFollow,earListen:state.earListen,lang:state.lang,koSize:state.koSize,foreignSize:state.foreignSize,speech:state.speech,recog:state.recog,theme:state.theme,rate:state.rate,voices:state.voices,showPron:state.showPron,showKoPron:state.showKoPron,confirmWait:state.confirmWait}))}
+function persist(){store('travel_settings',JSON.stringify({v:12,listenFrom:state.listenFrom,geminiVoice:state.geminiVoice,toneFollow:state.toneFollow,autoVoice:state.autoVoice,earListen:state.earListen,lang:state.lang,koSize:state.koSize,foreignSize:state.foreignSize,speech:state.speech,recog:state.recog,theme:state.theme,rate:state.rate,voices:state.voices,showPron:state.showPron,showKoPron:state.showKoPron,confirmWait:state.confirmWait}))}
 function saveHistory(){store('travel_history',JSON.stringify({items:state.items.slice(-300),listening:state.listening.slice(-300)}))}
 const active=()=>LANGS[state.lang];
 const langOf=code=>LANGS.find(l=>l.code===code);
@@ -395,7 +395,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='V22 · 기본 설정 안정화 · 2026.11.03';
+const APP_VERSION='V23 · 음성 옵션 분리 · 2026.11.03';
 const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
@@ -413,12 +413,12 @@ function askConfirm(msg,okLabel,onOk){
 /* ── 소리 ── */
 function voiceFor(code,tone){
   const list=speechSynthesis.getVoices?.()||[];const want=state.voices[code];
-  if(want){const v=list.find(v=>v.name===want);if(v)return v}
+  if(want&&!state.autoVoice){const v=list.find(v=>v.name===want);if(v)return v}
   const loc=localeOf(code).toLowerCase(),pre=loc.slice(0,2);
   const norm=v=>v.lang.toLowerCase().replace('_','-');
   const m=list.filter(v=>norm(v).startsWith(pre)&&(code!=='zh-TW'||/tw|hk|hant/.test(norm(v)))) ;
   const pool=m.length?m:list.filter(v=>norm(v).startsWith(pre));
-  if(tone&&testOptions.volumeFollow){
+  if(tone&&state.autoVoice){
     const high=tone.hz>=175;
     const pattern=high?/female|woman|여성|여자|soyeon|yuna|heami|zira|siri/i:/male|man|남성|남자|injoon|junwoo|david|daniel/i;
     const matching=pool.find(v=>pattern.test(v.name));if(matching)return matching;
@@ -441,7 +441,7 @@ function speak(text,code,tone){
   state.speaking=true;updateMic();
   const done=()=>{state.speaking=false;setReading(null);updateMic();setTimeout(resumeRecognizer,450)};
   if(useGemini()&&text.length<=400){
-    const autoVoice=tone&&testOptions.volumeFollow?(tone.hz>=175?'Kore':'Charon'):state.geminiVoice;
+    const autoVoice=tone&&state.autoVoice?(tone.hz>=175?'Kore':'Charon'):state.geminiVoice;
     geminiAudio(text,autoVoice).then(a=>{if(!state.speaking){return}curAudio=a;a.playbackRate=Math.min(state.rate,2);a.volume=toneVolume(tone);a.onended=done;a.onerror=done;setReading(text,a.playbackRate);return a.play()}).catch(()=>deviceSpeak(text,code,tone,done));
     return;
   }
@@ -518,7 +518,7 @@ function pcmToWav(b64,rate){
 /* 목소리 톤 따라가기 (시험 기능): 말하는 사람의 높낮이·크기를 재서 읽는 목소리에 반영 */
 const tone={stream:null,ctx:null,an:null,buf:null,timer:null,samples:[]};
 async function startTone(){
-  if(!state.toneFollow||tone.stream||!navigator.mediaDevices?.getUserMedia)return;
+  if(!(state.toneFollow||state.autoVoice)||tone.stream||!navigator.mediaDevices?.getUserMedia)return;
   try{
     tone.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}});
     tone.ctx=new (window.AudioContext||window.webkitAudioContext)();
@@ -541,7 +541,7 @@ function sampleTone(){
   if(tone.samples.length>60)tone.samples.shift();
 }
 function takeTone(){
-  if(!state.toneFollow||!tone.samples.length)return null;
+  if(!(state.toneFollow||state.autoVoice)||!tone.samples.length)return null;
   const recent=tone.samples.filter(s=>Date.now()-s.at<6000);tone.samples=[];
   if(!recent.length)return null;
   const hz=recent.map(s=>s.hz).sort((a,b)=>a-b)[Math.floor(recent.length/2)];
@@ -1205,17 +1205,18 @@ function drawSettings(body){
   const testLabels=[
     ['fastInterim','중간 번역 미리 시작','14버전 기능 · 문장이 끝나기 전 안정된 구간부터 번역'],
     ['adaptiveSpeed','최대 2배속 따라잡기','14버전 기능 · 한국어 음성이 밀리면 읽기 속도 증가'],
-    ['volumeFollow','말소리 강약 반영','음성 특성에 따라 음량·높낮이와 가능한 출력 음색을 조절']
+    ['volumeFollow','말소리 강약 반영','말소리 크기와 높낮이를 출력에 반영'],
+     ['autoVoice','남성형·여성형 음성 자동 선택','목소리 높낮이에 따라 출력 음색 자동 선택 (성별 판정 아님)']
   ];
   testLabels.forEach(([k,title,desc])=>{
     const row=node('label','dl-row','',testArea);row.style.cssText='gap:8px;align-items:flex-start';
     const label=node('span','','',row);label.style.cssText='flex:1;font-size:14px';
     node('b','',title,label).style.display='block';node('small','tiny',desc,label).style.display='block';
-    const toggle=node('input','','',row);toggle.type='checkbox';toggle.checked=!!testOptions[k];toggle.style.cssText='width:22px;height:22px;flex:0 0 auto';
-    toggle.onchange=()=>{testOptions[k]=toggle.checked;if(k==='volumeFollow'){state.toneFollow=toggle.checked;if(toggle.checked&&state.mic)startTone();else if(!toggle.checked)stopTone();}saveTestOptions();notify(title+(toggle.checked?' 켬':' 끔')+' · 다음 문장부터 적용됩니다.')};
+    const toggle=node('input','','',row);toggle.type='checkbox';toggle.checked=k==='autoVoice'?state.autoVoice:!!testOptions[k];toggle.style.cssText='width:22px;height:22px;flex:0 0 auto';
+    toggle.onchange=()=>{if(k==='autoVoice')state.autoVoice=toggle.checked;else testOptions[k]=toggle.checked;if(k==='volumeFollow')state.toneFollow=toggle.checked;if(state.mic&&(state.toneFollow||state.autoVoice))startTone();else if(!state.toneFollow&&!state.autoVoice)stopTone();saveTestOptions();persist();notify(title+(toggle.checked?' 켬':' 끔')+' · 다음 문장부터 적용됩니다.')};
   });
-  button('테스트 옵션 초기화','action',()=>{testOptions={...TEST_DEFAULTS};state.toneFollow=false;stopTone();saveTestOptions();render();notify('테스트 옵션을 기본값으로 되돌렸습니다.')},testArea);
-  node('p','tiny','화면 자동 어두워짐(2분)과 듣기 자동 종료(추가 5분)는 변경하지 않았습니다. 남녀 화자 자동 구분은 추가 음성 분석 모델이 필요하여 아직 포함되지 않았습니다.',testArea);
+  button('테스트 옵션 초기화','action',()=>{testOptions={...TEST_DEFAULTS};state.toneFollow=false;state.autoVoice=true;stopTone();saveTestOptions();persist();render();notify('테스트 옵션을 기본값으로 되돌렸습니다.')},testArea);
+  node('p','tiny','화면 자동 어두워짐(2분)과 듣기 자동 종료(추가 5분)는 변경하지 않았습니다. 음높이 기반 음색 선택으로 실제 성별을 판정하지 않으며, 기기마다 지원 음성이 다릅니다.',testArea);
   node('h4','','🔧 관리자 메뉴 (새 버전 올리기)',admin);
   node('p','tiny','① 받은 zip을 "내 파일"에서 압축 풀기 ② 아래 버튼 → "choose your files"로 파일 5개 모두 선택 ③ 맨 아래 초록 "Commit changes" ④ 1~2분 뒤 앱을 껐다 켜면 새 버전',admin);
   const links=[['⬆ GitHub에 새 버전 올리기',REPO+'/upload/main',true],['📂 저장소 열기',REPO],['⚙ Pages 설정',REPO+'/settings/pages'],['🌐 앱 주소 열기','https://lsc571-max.github.io/travel/']];
