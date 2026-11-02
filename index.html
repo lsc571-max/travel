@@ -182,6 +182,19 @@ svg{display:block}
 .home-tip2{position:relative;color:#ffffffc8;font-size:12px;margin-top:6px;text-shadow:0 1px 3px #000c}
 .long-tip{font-style:normal;font-weight:400;font-size:11px;color:var(--muted);opacity:.8}
 .drawer-item.strong .long-tip{color:#fff}
+/* v10 */
+.home-scene{position:absolute;inset:0;width:100%;height:100%}
+.lang-back{position:absolute;inset:0;z-index:30;background:#0005}
+.select-pop.in-app{bottom:auto;top:12%;max-height:70vh}
+.pop-title{grid-column:1/-1;font-weight:700;padding:8px 10px 4px;font-size:15px}
+.gl-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.gl-row span{flex:1}.gl-row .action{padding:6px 10px;font-size:13px}
+.dl-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.dl-card{border:1px solid var(--line);border-radius:10px;padding:7px 6px;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center}
+.dl-card b{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.dl-card span{font-size:10px;color:var(--muted)}
+.dl-card.got{background:var(--ko)}
+.dl-btn{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:5px 8px;font-size:12px;font-weight:600;width:100%}
 /* v8 */
 .dim-btn{position:absolute;right:12px;bottom:calc(112px + env(safe-area-inset-bottom));z-index:4;border:1px solid var(--line);background:var(--bg);color:var(--text);border-radius:20px;padding:8px 13px;font-size:13px;font-weight:650;box-shadow:0 3px 10px #0002}
 .dim-overlay{position:absolute;inset:0;z-index:60;background:#000;touch-action:manipulation}
@@ -233,6 +246,48 @@ const LANGS=[
   {name:'튀르키예어',code:'tr',flag:'🇹🇷',locale:'tr-TR',bg:['#8f0d1a','#e30a17']},
   {name:'아랍어',code:'ar',flag:'🇸🇦',locale:'ar-SA',bg:['#006c35','#0b3d2e']}
 ];
+/* ── 나라 대표 그림 (직접 그린 그림, 사진 없이 가볍게) ── */
+const SC='#1b1b2f';
+const R=(x,y,w,h,f=SC)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${f}"/>`;
+const P=(pts,f=SC)=>`<polygon points="${pts}" fill="${f}"/>`;
+const D=(d,f=SC)=>`<path d="${d}" fill="${f}"/>`;
+const C=(cx,cy,r,f=SC)=>`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${f}"/>`;
+const onion=(cx,y,w,h,f=SC)=>D(`M${cx-w/2},${y} C${cx-w*0.85},${y-h*0.45} ${cx-w*0.12},${y-h*0.72} ${cx},${y-h} C${cx+w*0.12},${y-h*0.72} ${cx+w*0.85},${y-h*0.45} ${cx+w/2},${y} Z`,f);
+const dome=(cx,y,r,f=SC)=>D(`M${cx-r},${y} A${r},${r} 0 0 1 ${cx+r},${y} Z`,f);
+const spire=(x,y,w,h,f=SC)=>P(`${x},${y} ${x+w},${y} ${x+w/2},${y-h}`,f);
+const minaret=(x,top,base=620,w=9)=>R(x,top,w,base-top)+spire(x-1,top,w+2,34)+R(x-3,top+40,w+6,5);
+const LANDMARKS={
+  'zh-TW':()=>{let s=R(178,560,44,60)+R(150,600,100,20);for(let i=0;i<8;i++){const y=560-i*36;s+=P(`${172},${y} ${228},${y} ${236},${y-36} ${164},${y-36}`)}return s+R(186,232,28,12)+R(197,150,6,84)},
+  th:()=>{const prang=(cx,base,h,w)=>{let s='';const n=7;for(let i=0;i<n;i++){const y=base-i*(h/n),ww=w*(1-i/n);s+=P(`${cx-ww/2},${y} ${cx+ww/2},${y} ${cx+ww*0.42},${y-h/n} ${cx-ww*0.42},${y-h/n}`)}return s+spire(cx-4,base-h,8,40)};return R(80,590,240,30)+prang(200,590,300,120)+prang(105,590,150,60)+prang(295,590,150,60)},
+  id:()=>P('40,620 170,330 300,620','#ffffff22')+(()=>{const t=(x0,dir)=>{let s='';for(let i=0;i<7;i++){const w=90-i*11,y=620-i*40,x=dir>0?x0:x0-w;s+=R(x,y-40,w,40)}return s};return t(100,1)+t(300,-1)})()+R(0,618,400,4),
+  ms:()=>{const tw=(cx)=>{let s=R(cx-22,330,44,290);[0,1,2,3].forEach(i=>s+=R(cx-18+i*3,300-i*20,36-i*6,22));return s+R(cx-2,180,4,70)};return tw(145)+tw(255)+R(145,455,110,10)+P('180,465 200,500 220,465')},
+  tl:()=>D('M0,600 Q200,575 400,600 L400,800 L0,800 Z','#0b3a5a')+(()=>{const palm=(x,h,lean)=>{let s=`<path d="M${x},620 Q${x+lean*0.4},${620-h*0.6} ${x+lean},${620-h}" stroke="${SC}" stroke-width="9" fill="none"/>`;const tx=x+lean,ty=620-h;[[-70,-10],[-50,25],[60,-5],[45,30],[0,-40]].forEach(([dx,dy])=>s+=`<path d="M${tx},${ty} Q${tx+dx/2},${ty+dy/2-20} ${tx+dx},${ty+dy}" stroke="${SC}" stroke-width="7" fill="none" stroke-linecap="round"/>`);return s};return palm(90,230,40)+palm(310,190,-35)})()+D('M150,600 L250,600 L235,615 L165,615 Z')+R(198,560,3,40)+P('201,562 201,596 228,596'),
+  hi:()=>R(80,570,240,50)+R(140,470,120,100)+R(150,490,20,40,'#ffffff18')+R(230,490,20,40,'#ffffff18')+R(185,500,30,70,'#ffffff18')+onion(200,470,110,120)+R(198,330,4,25)+onion(150,470,30,40)+onion(250,470,30,40)+minaret(88,400,570,10)+minaret(302,400,570,10),
+  mn:()=>P('-20,620 90,420 210,620','#ffffff22')+P('150,620 290,380 430,620','#ffffff1a')+R(140,555,120,65)+P('130,557 200,505 270,557')+R(188,575,24,45,'#ffffff30')+C(200,505,6),
+  ru:()=>{let s=R(110,520,180,100);[[200,330,46],[135,450,34],[265,450,34],[165,410,28],[235,410,28]].forEach(([cx,top,w])=>{s+=R(cx-w*0.35,top,w*0.7,620-top)+onion(cx,top,w,w*1.3)+R(cx-1.5,top-w*1.3-18,3,18)});return s},
+  fr:()=>D('M140,620 C170,520 190,400 196,250 L204,250 C210,400 230,520 260,620 L236,620 C226,575 214,545 200,545 C186,545 174,575 164,620 Z')+R(168,452,64,10)+R(182,360,36,8)+R(198,190,4,62),
+  de:()=>{let s=R(100,600,200,20)+R(95,440,210,30)+R(150,418,100,22);for(let i=0;i<6;i++)s+=R(112+i*34,470,14,130);return s+D('M178,418 l6,-20 l10,4 l8,-14 l8,14 l10,-4 l6,20 Z')},
+  es:()=>{const sp=(cx,top,w)=>D(`M${cx-w/2},620 L${cx-w/2},${top+w} Q${cx},${top-w*1.2} ${cx+w/2},${top+w} L${cx+w/2},620 Z`)+C(cx,top-w*0.6,4);return sp(130,330,26)+sp(165,280,30)+sp(235,280,30)+sp(270,330,26)+sp(200,200,34)+R(110,540,180,80)},
+  it:()=>{let s=D('M70,620 L70,470 Q200,430 330,470 L330,620 Z')+D('M250,450 L330,470 L330,420 L290,425 Z');for(let r=0;r<3;r++)for(let i=0;i<9;i++){s+=D(`M${86+i*27},${600-r*45} l0,-24 a8,8 0 0 1 16,0 l0,24 Z`,'#ffffff26')}return s},
+  pt:()=>{let s=R(120,530,160,90)+R(170,370,60,160);for(let i=0;i<8;i++)s+=R(120+i*21,518,12,12);for(let i=0;i<4;i++)s+=R(170+i*16,358,10,12);return s+onion(124,530,18,26)+onion(276,530,18,26)+onion(174,370,14,20)+onion(226,370,14,20)+D('M190,480 a10,10 0 0 1 20,0 l0,30 l-20,0 Z','#ffffff26')},
+  pl:()=>{let s='';[[40,560,48],[90,545,46],[310,555,46],[356,565,44]].forEach(([x,y,w])=>s+=R(x,y,w,620-y)+P(`${x},${y} ${x+w/2},${y-22} ${x+w},${y}`));s+=R(140,400,46,220)+spire(140,400,46,120)+R(214,440,42,180)+onion(235,440,30,40)+R(160,520,80,100);return s},
+  cs:()=>{let s=D('M0,560 L400,560 L400,580 L0,580 Z');for(let i=0;i<5;i++)s+=D(`M${i*90},580 L${i*90+90},580 L${i*90+90},620 Q${i*90+45},585 ${i*90},620 Z`);s+=R(60,410,70,150)+P('55,410 95,330 135,410')+spire(56,410,10,60)+spire(124,410,10,60)+R(260,450,40,110)+P('255,450 280,390 305,450');return s+D('M0,620 L400,620 L400,800 L0,800 Z','#0b2a3a')},
+  tr:()=>R(110,520,180,100)+dome(200,520,70)+R(197,430,6,20)+dome(140,535,35)+dome(260,535,35)+minaret(78,380)+minaret(105,410)+minaret(286,410)+minaret(313,380),
+  ar:()=>D('M0,620 Q100,560 220,600 T400,585 L400,800 L0,800 Z','#3a2a1a')+R(150,520,100,90)+onion(200,520,90,95)+R(198,410,4,20)+minaret(270,380,610,12)+`<path d="M90,610 Q86,560 92,520" stroke="${SC}" stroke-width="7" fill="none"/>`+[[-40,-5],[-25,20],[35,0],[25,22],[0,-30]].map(([dx,dy])=>`<path d="M92,520 Q${92+dx/2},${500+dy/2} ${92+dx},${520+dy}" stroke="${SC}" stroke-width="6" fill="none" stroke-linecap="round"/>`).join('')
+};
+function sceneSVG(L){
+  const f=LANDMARKS[L.code];if(!f)return '';
+  const [a,b]=L.bg;
+  return `<svg class="home-scene" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${b}"/><stop offset=".55" stop-color="${a}"/><stop offset="1" stop-color="#ffd9a8"/></linearGradient></defs>
+<rect width="400" height="800" fill="url(#sky)"/>
+<circle cx="305" cy="190" r="46" fill="#fff4d6" opacity=".85"/>
+<g opacity=".5" fill="#fff"><circle cx="60" cy="90" r="1.6"/><circle cx="140" cy="60" r="1.2"/><circle cx="220" cy="110" r="1.4"/><circle cx="360" cy="70" r="1.2"/><circle cx="30" cy="200" r="1"/></g>
+<g transform="translate(0,-40)">${f()}</g>
+<rect y="580" width="400" height="220" fill="${SC}"/>
+</svg>`;
+}
+
 const THEMES=[['basic','기본'],['ocean','바다'],['sunset','노을'],['night','밤'],['kids','어린이']];
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 const $=s=>document.querySelector(s);
@@ -273,18 +328,19 @@ const DEFAULT_NOTES=[
   {t:'도움 요청',x:'도와주세요. 한국어 통역이 필요합니다.'}
 ];
 const sizes=[14,17,20,25,31];
-const speechModes=['양쪽',null,'끔'];
-const speechCls=['m-both','m-foreign',''];
+const speechModes=['양쪽',null,'한국어','끔'];
+const speechCls=['m-both','m-foreign','m-ko',''];
 const recogModes=['ko','foreign','auto'];
 
 function store(k,v){try{localStorage.setItem(k,v)}catch{}}
 function load(k,d=''){try{return localStorage.getItem(k)??d}catch{return d}}
 function loadJSON(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}}
 
-const state={geminiVoice:'',toneFollow:false,dim:false,earListen:false,adminOpen:false,page:'home',mode:'conversation',lang:0,items:[],listening:[],speech:0,koSize:2,foreignSize:2,mic:false,recognizer:null,side:false,modal:null,interim:'',sourceTurn:0,speaking:false,recog:'ko',theme:'basic',rate:1.1,voices:{},showPron:false,confirmWait:0,pending:null,listenLang:'ko',flash:null};
+const state={listenFrom:'foreign',geminiVoice:'',toneFollow:false,dim:false,earListen:false,adminOpen:false,page:'home',mode:'conversation',lang:0,items:[],listening:[],speech:0,koSize:2,foreignSize:2,mic:false,recognizer:null,side:false,modal:null,interim:'',sourceTurn:0,speaking:false,recog:'ko',theme:'basic',rate:1.1,voices:{},showPron:false,confirmWait:0,pending:null,listenLang:'ko',flash:null};
 (()=>{const s=loadJSON('travel_settings',{});const old=!(s.v>=7);
-  const sp=old?({0:0,1:0,2:1,3:2})[s.speech??0]??0:(s.speech??0);
-  Object.assign(state,{lang:s.lang>=0&&s.lang<LANGS.length?s.lang:0,koSize:s.koSize??2,foreignSize:Math.min(s.foreignSize??2,4),speech:Math.min(sp,2),recog:recogModes.includes(s.recog)?s.recog:'ko',theme:s.theme||'basic',rate:old?1.1:(s.rate||1.1),voices:s.voices||{},geminiVoice:s.geminiVoice||'',toneFollow:!!s.toneFollow,earListen:!!s.earListen,showPron:!!s.showPron,confirmWait:old?0:(s.confirmWait??0)});
+  let sp=old?({0:0,1:0,2:1,3:2})[s.speech??0]??0:(s.speech??0);
+  const pre10=!(s.v>=10);if(pre10&&sp===2)sp=3;
+  Object.assign(state,{lang:s.lang>=0&&s.lang<LANGS.length?s.lang:0,koSize:s.koSize??2,foreignSize:Math.min(s.foreignSize??2,4),speech:Math.min(sp,3),recog:recogModes.includes(s.recog)?s.recog:'ko',theme:s.theme||'basic',rate:pre10?1.1:(s.rate||1.1),voices:s.voices||{},geminiVoice:s.geminiVoice||'',toneFollow:false,listenFrom:s.listenFrom==='ko'?'ko':'foreign',earListen:!!s.earListen,showPron:!!s.showPron,confirmWait:old?0:(s.confirmWait??0)});
 })();
 
 /* 자주 쓰는 문장 (제목+문장 목록, 추가·삭제 가능) */
@@ -299,10 +355,16 @@ const saveCustom=()=>store('custom_phrases',JSON.stringify(customPhrases));
 function allPhrases(){const out={};for(const c of Object.keys(PHRASES))out[c]=[...PHRASES[c]];for(const c of Object.keys(customPhrases)){out[c]=[...(out[c]||[]),...customPhrases[c].filter(p=>!(out[c]||[]).includes(p))]}return out}
 const isCustom=(cat,ko)=>(customPhrases[cat]||[]).includes(ko);
 let pronCache=loadJSON('pron_cache',{});
+let glossary=loadJSON('glossary',[]);   // [{word:'이승철', heard:'이성철,이승처', out:'Lee Seung-chul'}]
+const saveGlossary=()=>store('glossary',JSON.stringify(glossary));
+const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+function fixHeard(text){let t=text;for(const g of glossary){for(const w of (g.heard||'').split(',').map(x=>x.trim()).filter(Boolean)){t=t.replace(new RegExp(esc(w),'g'),g.word)}}return t}
+function protectWords(text){let t=text;for(const g of glossary){if(g.out&&g.word)t=t.replace(new RegExp(esc(g.word),'g'),g.out)}return t}
+function glossaryHint(){const w=glossary.filter(g=>g.word).map(g=>g.out?`${g.word}(${g.out})`:g.word);return w.length?`\n다음 단어는 반드시 이렇게 쓰세요: ${w.join(', ')}`:''}
 
 (()=>{const h=loadJSON('travel_history',{});const fix=e=>{if(e.translation==='번역 중…'||e.correcting){e.correcting=false;if(!e.translation||e.translation==='번역 중…'){e.translation='번역 중단됨';e.failed=true}}return e};state.items=(h.items||[]).map(fix);state.listening=(h.listening||[]).map(fix)})();
 
-function persist(){store('travel_settings',JSON.stringify({v:7,geminiVoice:state.geminiVoice,toneFollow:state.toneFollow,earListen:state.earListen,lang:state.lang,koSize:state.koSize,foreignSize:state.foreignSize,speech:state.speech,recog:state.recog,theme:state.theme,rate:state.rate,voices:state.voices,showPron:state.showPron,confirmWait:state.confirmWait}))}
+function persist(){store('travel_settings',JSON.stringify({v:10,listenFrom:state.listenFrom,geminiVoice:state.geminiVoice,toneFollow:state.toneFollow,earListen:state.earListen,lang:state.lang,koSize:state.koSize,foreignSize:state.foreignSize,speech:state.speech,recog:state.recog,theme:state.theme,rate:state.rate,voices:state.voices,showPron:state.showPron,confirmWait:state.confirmWait}))}
 function saveHistory(){store('travel_history',JSON.stringify({items:state.items.slice(-300),listening:state.listening.slice(-300)}))}
 const active=()=>LANGS[state.lang];
 const langOf=code=>LANGS.find(l=>l.code===code);
@@ -314,7 +376,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='버전 9 · 2026.11.02';
+const APP_VERSION='버전 10 · 2026.11.02';
 const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
@@ -376,8 +438,8 @@ function queueSpeak(text,code,tone){
   speechSynthesis.speak(s);
 }
 function autoSpeak(text,code,tone){
-  if(state.mode!=='conversation'||state.speech===2)return;
-  if(state.speech===0||(state.speech===1&&code!=='ko'))speak(text,code,tone);
+  if(state.mode!=='conversation'||state.speech===3)return;
+  if(state.speech===0||(state.speech===1&&code!=='ko')||(state.speech===2&&code==='ko'))speak(text,code,tone);
 }
 /* Gemini 목소리 (PCM 24kHz → WAV) */
 const ttsCache=new Map();
@@ -458,6 +520,15 @@ window.addEventListener('popstate',()=>{
 function recentWrap(h){const r=h.querySelector('.recent');if(r)r.remove();return r||document.createComment('')}
 function setLang(i){state.lang=i;persist();
   {const c=LANGS[i].code;store('recent_langs',JSON.stringify([c,...loadJSON('recent_langs',[]).filter(x=>x!==c)].slice(0,5)))}if(state.mic)pauseRecognizer();render()}
+function longPress(el,fn){let t;el.addEventListener('pointerdown',()=>{el._long=false;t=setTimeout(()=>{el._long=true;fn()},550)});['pointerup','pointercancel','pointerleave'].forEach(ev=>el.addEventListener(ev,()=>clearTimeout(t)));el.oncontextmenu=e=>e.preventDefault()}
+function showLangPop(parent){
+  $('.lang-back')?.remove();
+  const back=node('div','lang-back','',parent);const shown=Date.now();
+  back.onclick=e=>{if(e.target===back&&Date.now()-shown>400)back.remove()};
+  const pop=node('div','select-pop in-app','',back);
+  node('div','pop-title','외국어 고르기',pop);
+  LANGS.forEach((l,i)=>button(`${l.flag} ${l.name}`,i===state.lang?'on':'',e=>{e.stopPropagation();if(Date.now()-shown<400)return;back.remove();setLang(i)},pop));
+}
 function openDrawer(){stopSpeech();state.side=true;state.modal=null;render()}
 
 /* ── 그리기 ── */
@@ -494,12 +565,14 @@ function render(){
   const bar=node('footer','bar','',s);
   const bl=node('div','bar-left','',bar);
   if(listen){
-    smallButton(ICON.globe(19),`${active().name}→한`,'m-foreign',()=>setLang((state.lang+1)%LANGS.length),bl,'lang');
+    const lb=smallButton(ICON.globe(19),state.listenFrom==='ko'?`한→${active().name}`:`${active().name}→한`,state.listenFrom==='ko'?'m-ko':'m-foreign',()=>{if(lb._long){lb._long=false;return}state.listenFrom=state.listenFrom==='ko'?'foreign':'ko';persist();if(state.mic)pauseRecognizer();render()},bl,'lang');
+    longPress(lb,()=>showLangPop(s));
     smallButton('<b style="font-size:18px;line-height:1">🎧</b>',state.earListen?'이어폰 켬':'이어폰 끔',state.earListen?'m-ko':'off',()=>{state.earListen=!state.earListen;persist();if(state.earListen)notify('🎧 이어폰을 꽂은 상태로 쓰세요. 번역된 한국어를 끊지 않고 이어서 읽어 줍니다. (스피커로 나오면 앱이 자기 소리를 다시 알아들을 수 있어요)');else try{speechSynthesis.cancel()}catch{};render()},bl,'ear');
   }else{
     const rl={ko:'한국어',foreign:active().name,auto:'번갈아'}[state.recog];
-    smallButton(ICON.mic(19),rl,'m-'+state.recog,()=>{state.recog=recogModes[(recogModes.indexOf(state.recog)+1)%3];state.sourceTurn=0;persist();if(state.mic)pauseRecognizer();render()},bl,'recog');
-    smallButton(state.speech===2?ICON.mute(19):ICON.speaker(19),speechModes[state.speech]||active().name,state.speech===2?'off':speechCls[state.speech],()=>{state.speech=(state.speech+1)%3;persist();render()},bl,'speech');
+    const rb=smallButton(ICON.mic(19),rl,'m-'+state.recog,()=>{if(rb._long){rb._long=false;return}state.recog=recogModes[(recogModes.indexOf(state.recog)+1)%3];state.sourceTurn=0;persist();if(state.mic)pauseRecognizer();render()},bl,'recog');
+    longPress(rb,()=>showLangPop(s));
+    smallButton(state.speech===3?ICON.mute(19):ICON.speaker(19),speechModes[state.speech]||active().name,state.speech===3?'off':speechCls[state.speech],()=>{state.speech=(state.speech+1)%4;persist();render()},bl,'speech');
   }
   const mw=node('div','mic-wrap','',bar);
   button('','mic',toggleMic,mw).id='micBtn';
@@ -542,7 +615,7 @@ function scrollEnd(){const t=$('#transcript');if(t)t.scrollTo({top:t.scrollHeigh
 function drawHome(root){
   const h=node('main','home','',root);const L=active();
   if(L.image)h.style.backgroundImage=`url("${L.image}")`;
-  else{h.style.background=`linear-gradient(160deg,${L.bg[0]},${L.bg[1]})`;node('div','home-flag',L.flag,h)}
+  else{h.style.background=L.bg[1];h.insertAdjacentHTML('afterbegin',sceneSVG(L))}
   h.onclick=goMain;
   const b=button(`${active().flag} ${active().name} ⌄`,'lang',null,h);
   let timer,long=false;
@@ -602,9 +675,10 @@ function bubble(parent,item,index,field){
 function drawListen(parent){
   if(!state.listening.length&&!state.interim)hint(parent,'가이드의 외국어 설명을 듣고\n한국어로 누적 표시합니다.\n\n아래 🌐 버튼으로 듣는 언어를 바꿀 수 있어요.');
   state.listening.forEach(x=>{
-    const row=node('div','listen-row',x.translation,parent);row.style.fontSize=sizes[state.koSize]+'px';
+    const tg=x.target||'ko';
+    const row=node('div','listen-row',x.translation,parent);row.style.fontSize=sizes[tg==='ko'?state.koSize:state.foreignSize]+'px';row.dir='auto';
     node('span','orig',x.original,row);
-    row.onclick=()=>openEnlarge(x.translation,'ko');
+    row.onclick=()=>openEnlarge(x.translation,tg,tg!=='ko'?x.original:null);
   });
 }
 /* 말하는 동안 보이는 글자 + 확인 카드 */
@@ -634,6 +708,7 @@ function updateLive(){
 let pendingTimer=null;
 function clearPending(){clearTimeout(pendingTimer);state.pending=null}
 function startPending(text,source){
+  if(source==='ko')text=fixHeard(text);
   const tn=takeTone();
   const wait=state.confirmWait;
   if(!wait){consume(text,source,{fromMic:true,tone:tn});return}
@@ -687,7 +762,7 @@ async function useNote(i){
   if(!text)return openNote(i);
   state.side=false;state.mode='conversation';render();
   await consume(text,'ko',{note:true});
-  if(state.speech===2)notify('소리가 "끔"으로 되어 있습니다. 아래 스피커 버튼으로 켤 수 있어요.');
+  if(state.speech===3)notify('소리가 "끔"으로 되어 있습니다. 아래 스피커 버튼으로 켤 수 있어요.');
 }
 function openNote(i){state.side=false;state.modal={type:'note',index:i};render()}
 function openEnlarge(text,code,sub){state.modal={type:'enlarge',text,code,sub,rotated:false};render()}
@@ -849,7 +924,24 @@ function drawAddPhrase(body,data){
 }
 
 function drawSettings(body){
-  let sec=node('div','sec','',body);node('h4','','테마',sec);
+  let sec=node('div','sec','',body);node('h4','','자주 쓰는 기능',sec);
+  const fbtns=node('div','row-btns','',sec);
+  if(installEvent&&!isInstalled())button('📲 휴대폰에 앱 설치','action primary',installApp,fbtns);
+  button('🔗 앱 주소 복사·보내기','action primary',()=>shareAppLink(),fbtns);
+  button('📤 대화 기록 보내기','action',()=>shareAll(),fbtns);
+  const fb2=node('div','row-btns','',sec);
+  button('🗑 대화 기록 삭제','action',()=>askConfirm('대화 기록을 모두 지울까요?\n지운 기록은 되살릴 수 없습니다.','삭제',()=>{state.items=[];state.listening=[];saveHistory();notify('대화 기록을 지웠습니다.')}),fb2);
+  button('↺ 자주 쓰는 문장 기본값','action',()=>askConfirm('자주 쓰는 문장을 처음 기본 문구로 되돌릴까요?\n직접 고치거나 추가한 문장은 사라집니다.','되돌리기',()=>{notes=DEFAULT_NOTES.map(n=>({...n}));saveNotes();notify('기본 문구로 되돌렸습니다.')}),fb2);
+
+  sec=node('div','sec','',body);node('h4','','📒 내 단어장',sec);
+  node('p','tiny','이름·학교·회사처럼 정확해야 하는 말을 적어 두세요. 잘못 알아들은 말은 바른 말로 고치고, 외국어 표기를 적으면 번역할 때 그대로 넣습니다.',sec);
+  glossary.forEach((g,i)=>{const r=node('div','gl-row','',sec);node('span','',`${g.word}${g.heard?` ← ${g.heard}`:''}${g.out?` → ${g.out}`:''}`,r);button('지우기','action',()=>{glossary.splice(i,1);saveGlossary();render()},r)});
+  const gw=node('input','text-field','',sec);gw.placeholder='바른 말 (예: 이승철)';
+  const gh=node('input','text-field','',sec);gh.placeholder='잘못 들리는 말, 쉼표로 (예: 이성철, 이승처)';gh.style.marginTop='6px';
+  const go=node('input','text-field','',sec);go.placeholder='외국어 표기 (선택, 예: Lee Seung-chul)';go.style.marginTop='6px';
+  button('＋ 단어 추가','action primary',()=>{const w=gw.value.trim();if(!w)return notify('바른 말을 입력하세요');glossary.push({word:w,heard:gh.value.trim(),out:go.value.trim()});saveGlossary();render();notify('단어장에 추가했습니다.')},sec).style.marginTop='8px';
+
+  sec=node('div','sec','',body);node('h4','','테마',sec);
   const tc=node('div','chips','',sec);
   THEMES.forEach(([k,n])=>button(n,'chip'+(state.theme===k?' on':''),()=>{state.theme=k;persist();render()},tc));
 
@@ -887,11 +979,6 @@ function drawSettings(body){
   gv.onchange=()=>{state.geminiVoice=gv.value;persist();tryVoice()};
   button('▶ 미리 듣기','action',tryVoice,gr);
   node('p','tiny','AI 목소리는 휴대폰 목소리보다 자연스럽지만, 문장마다 1~2초 늦어지고 쓴 만큼 요금이 조금 나갑니다. 실패하면 자동으로 휴대폰 목소리로 읽습니다. 빨라야 하는 듣기 모드는 늘 휴대폰 목소리를 씁니다.',sec);
-  const tf=node('label','field','',sec);tf.style.display='flex';tf.style.gap='8px';tf.style.alignItems='center';
-  const cb=node('input','',null,tf);cb.type='checkbox';cb.checked=state.toneFollow;
-  node('span','','🧪 목소리 톤 따라가기 (시험 기능)',tf);
-  cb.onchange=()=>{state.toneFollow=cb.checked;persist();if(!cb.checked)stopTone();else if(state.mic)startTone()};
-  node('p','tiny','말하는 사람 목소리가 높으면 높게, 낮으면 낮게, 크면 크게, 작으면 작게 따라 읽습니다(휴대폰 목소리에 적용, AI 목소리는 크기만). 일부 안드로이드폰에서는 음성 인식과 부딪혀 인식이 멈출 수 있어요. 그럴 땐 꺼 주세요.',sec);
   node('p','tiny','💡 인터넷 없이 소리를 내려면: 휴대폰 설정 → "텍스트 음성 변환"(TTS) → 기본 엔진 설정 → "음성 데이터 설치"에서 중국어·일본어 등을 미리 내려받으세요. 그다음 위 목록에서 "인터넷 없이 됨" 목소리를 고르면 됩니다.',sec);
   node('label','field',`말하는 속도: ${state.rate.toFixed(2)}배`,sec).id='rateLabel';
   const rate=node('input','',null,sec);rate.type='range';rate.min='0.6';rate.max='1.4';rate.step='0.05';rate.value=state.rate;rate.style.width='100%';
@@ -900,10 +987,13 @@ function drawSettings(body){
 
   sec=node('div','sec','',body);node('h4','','인터넷 없을 때 쓸 여행 문구',sec);
   node('p','tiny','인터넷이 될 때 받아 두면, 여행 문구·직접 추가한 문구·자주 쓰는 문장을 인터넷 없이도 보여 주고 들려줍니다. (실시간 음성 통역은 인터넷이 있어야 합니다.)',sec);
+  const grid=node('div','dl-grid','',sec);
   LANGS.forEach(l=>{
-    const r=node('div','dl-row','',sec);node('b','',`${l.flag} ${l.name}`,r);
-    const off=offlineFor(l.code);node('span','',off?.full?`받음 · ${new Date(off.at).toLocaleDateString('ko-KR')}`:'안 받음',r);
-    const b=button(off?.full?'업데이트':'받기','action',()=>downloadPhrases(l.code,b,()=>render()),r);
+    const off=offlineFor(l.code);
+    const c=node('div','dl-card'+(off?.full?' got':''),'',grid);
+    node('b','',`${l.flag} ${l.name}`,c);
+    node('span','',off?.full?`받음 ${new Date(off.at).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric'})}`:'안 받음',c);
+    const b=button(off?.full?'업데이트':'받기','dl-btn',()=>downloadPhrases(l.code,b,()=>render()),c);
   });
   button('📚 여행 문구 보기','action',()=>openPhrases(),sec).style.marginTop='6px';
 
@@ -931,11 +1021,6 @@ function drawSettings(body){
   const fp=node('div','plan-box','',sec);
   fp.innerHTML='<b>키 없이 (무료)</b><br>· 음성 통역·번역 모두 무료로 됩니다.<br>· 무료 번역은 하루 사용량이 정해져 있어 많이 쓰면 그날은 막힐 수 있어요.<br>· 아래 칸에 이메일을 넣으면 하루 사용량이 크게 늘어납니다.<br><br><b>AI 키를 넣으면</b><br>· AI 교정(말한 문장 다듬기)과 한글 발음이 추가됩니다.<br>· 무료 키: 돈은 안 들지만 느리거나 가끔 실패할 수 있어요.<br>· 유료 키(결제 연결): 빠르고 안정적이며, 쓴 만큼만 요금이 나갑니다. 문장 교정 정도면 보통 한 달에 몇백 원 수준입니다.<br>· 키는 각자 자기 구글 계정으로 만들고, 자기 휴대폰에만 저장됩니다.';
   sec=node('div','sec','',body);node('h4','','기타',sec);
-  const btns=node('div','row-btns','',sec);
-  if(installEvent&&!isInstalled())button('📲 휴대폰에 앱 설치','action primary',installApp,btns);
-  button('🔗 앱 주소 복사·보내기','action primary',()=>shareAppLink(),btns);
-  button('대화 기록 삭제','action',()=>askConfirm('대화 기록을 모두 지울까요?\n지운 기록은 되살릴 수 없습니다.','삭제',()=>{state.items=[];state.listening=[];saveHistory();notify('대화 기록을 지웠습니다.')}),btns);
-  button('자주 쓰는 문장 기본값으로','action',()=>askConfirm('자주 쓰는 문장을 처음 기본 문구로 되돌릴까요?\n직접 고치거나 추가한 문장은 사라집니다.','되돌리기',()=>{notes=DEFAULT_NOTES.map(n=>({...n}));saveNotes();notify('기본 문구로 되돌렸습니다.')}),btns);
   if(!isInstalled())node('p','tiny','설치: 크롬 메뉴(⋮) → "앱 설치"를 누르면 주소창 없이 전체 화면 앱으로 열립니다. 새 버전을 올리면 설치한 앱도 자동으로 바뀝니다.',sec);
   node('p','tiny','온라인 번역: MyMemory 무료 공개 API를 씁니다. 입력한 문장이 외부 번역 서비스로 전송되며, 하루 사용량 제한이 있습니다.',sec);
   node('label','field','무료 번역 사용량 늘리기용 이메일(선택)',sec);
@@ -957,7 +1042,7 @@ function code0Sample(){return '안녕하세요. 이 목소리로 통역해 드�
 function drawHelp(body){
   const H=[
     ['🗣 대화 모드','현지인과 주고받을 때 씁니다. 큰 마이크를 누르고 말하면 글자가 실시간으로 보이고, 말이 끝나면 잠깐 "고치기 / 보내기"를 고를 수 있습니다. 그대로 두면 자동으로 번역해서 소리로 들려줍니다.'],
-    ['👂 듣기 모드','가이드 설명처럼 외국어를 계속 들을 때 씁니다. 외국어를 한국어로 번역해 아래로 쌓아 줍니다. 🌐 버튼으로 듣는 언어를 바꿀 수 있습니다. 말이 길게 이어지면 2~3초마다 끊어서 바로 번역합니다. 🎧 버튼을 켜면 번역된 한국어를 이어폰으로 끊지 않고 계속 읽어 주고, 밀리면 읽는 속도를 1.3배·1.5배로 올려 따라잡습니다. 꼭 이어폰을 꽂고 쓰세요.\n🌙 화면 어둡게: 화면을 까맣게 덮어 배터리를 아끼고, 마이크는 계속 듣습니다. 두 번 누르거나 "화면 되돌리기"로 밝아집니다. (화면을 완전히 끄면 마이크가 멈추니 끄지 마세요)\n⏱ 2분 동안 말이 없으면 자동으로 어두워지고, 그 뒤 5분 더 없으면 마이크와 화면이 꺼집니다. 대화 모드는 2분 동안 말이 없으면 마이크가 꺼집니다.'],
+    ['👂 듣기 모드','가이드 설명처럼 외국어를 계속 들을 때 씁니다. 외국어를 한국어로 번역해 아래로 쌓아 줍니다. 🌐 버튼으로 듣는 언어를 바꿀 수 있습니다. 🌐 버튼을 누르면 "외국어→한국어"와 "한국어→외국어"가 바뀌고, 길게 누르면 다른 외국어를 고를 수 있습니다. 🎧 버튼을 켜면 번역된 한국어를 이어폰으로 끊지 않고 계속 읽어 주고, 밀리면 읽는 속도를 1.3배·1.5배로 올려 따라잡습니다. 꼭 이어폰을 꽂고 쓰세요.\n🌙 화면 어둡게: 화면을 까맣게 덮어 배터리를 아끼고, 마이크는 계속 듣습니다. 두 번 누르거나 "화면 되돌리기"로 밝아집니다. (화면을 완전히 끄면 마이크가 멈추니 끄지 마세요)\n⏱ 2분 동안 말이 없으면 자동으로 어두워지고, 그 뒤 5분 더 없으면 마이크와 화면이 꺼집니다. 대화 모드는 2분 동안 말이 없으면 마이크가 꺼집니다.'],
     ['⬇ 아래 버튼','🎤 알아듣기: 누를 때마다 한국어 → 외국어 → 번갈아\n🔊 소리: 양쪽 → 한국어 → 외국어 → 끔\n⌨ 글로 통역: 붙여넣기·파일·말로 입력\n가 / A: 한국어·외국어 글씨 크기'],
     ['💬 말풍선','한국어 말풍선의 ✎로 고치면 다시 번역합니다. 외국어 말풍선의 "가"는 한글 발음, 🔊는 다시 듣기입니다. 말풍선을 누르면 크게 보여 주고, 빈 곳을 누르면 돌아갑니다.'],
     ['◀ 자주 쓰는 문장','오른쪽 ◀ 탭을 누르면 나옵니다. 짧게 누르면 통역, 길게 누르면 고치기·지우기. 맨 아래 "문장 추가하기"로 새 문장을 넣을 수 있습니다.'],
@@ -1031,7 +1116,7 @@ async function aiAsk(prompt){
   if(!out)throw Error('빈 응답');
   return out;
 }
-const aiCorrect=(text,code)=>aiAsk(`다음은 음성 인식으로 받아 적은 ${nameOf(code)} 문장입니다. 뜻은 절대 바꾸지 말고, 잘못 인식된 단어·맞춤법·띄어쓰기·문장부호만 자연스럽게 고쳐 주세요. 설명 없이 고친 문장만 ${nameOf(code)}로 출력하세요.\n\n${text}`);
+const aiCorrect=(text,code)=>aiAsk(`다음은 음성 인식으로 받아 적은 ${nameOf(code)} 문장입니다. 뜻은 절대 바꾸지 말고, 잘못 인식된 단어·맞춤법·띄어쓰기·문장부호만 자연스럽게 고쳐 주세요. 설명 없이 고친 문장만 ${nameOf(code)}로 출력하세요.${glossaryHint()}\n\n${text}`);
 async function aiPolish(area,code,onChange){
   if(!aiReady()||!navigator.onLine)return;
   const before=area.value.trim();if(!before)return;
@@ -1074,6 +1159,7 @@ function splitText(text,max=380){
   if(cur.trim())out.push(cur);
   return out.map(s=>s.trim()).filter(Boolean);
 }
+function decodeEntities(s){if(!s)return s;const t=document.createElement('textarea');let prev;do{prev=s;t.innerHTML=s;s=t.value}while(s!==prev&&/&[#a-z0-9]+;/i.test(s));return s}
 async function translateOne(text,src,target){
   const qs=new URLSearchParams({q:text,langpair:`${src}|${target}`});
   const email=load('translation_email');if(email)qs.set('de',email);
@@ -1081,7 +1167,7 @@ async function translateOne(text,src,target){
   if(!res.ok)throw Error('번역 서버 오류 '+res.status);
   const p=await res.json();
   if(Number(p.responseStatus)!==200)throw Error(p.responseDetails||'번역 실패');
-  const out=p.responseData?.translatedText;
+  const out=decodeEntities(p.responseData?.translatedText);
   if(!out)throw Error('번역 결과 없음');
   return out;
 }
@@ -1102,8 +1188,9 @@ function isEmptyText(t){return !String(t||'').replace(/[\s.,!?。、！？…·]
 async function consume(text,source,opt={}){
   text=String(text||'').trim();
   if(isEmptyText(text))return;
+  if(source==='ko')text=fixHeard(text);
   const toListen=state.mode==='listen';
-  const target=toListen?'ko':(source==='ko'?active().code:'ko');
+  const target=source==='ko'?active().code:'ko';
   const entry={original:text,translation:'',source,target,failed:false};
   (toListen?state.listening:state.items).push(entry);
   // 대화 모드에서 말로 한 문장은 번역 전에 AI가 다듬음 (5초 넘으면 원래 문장 사용)
@@ -1116,11 +1203,11 @@ async function consume(text,source,opt={}){
   render();scrollEnd();
   const progress=(partial,i,n)=>{entry.translation=partial+`\n… 번역 중 (${i}/${n})`;render()};
   try{
-    entry.translation=await translate(entry.original,source,target,progress);
+    entry.translation=await translate(source==='ko'?protectWords(entry.original):entry.original,source,target,progress);
     if(opt.note&&source==='ko')cacheTr(target,entry.original,entry.translation);
     render();scrollEnd();
     if(!toListen&&!opt.fromText)autoSpeak(entry.translation,target,opt.tone);
-    if(toListen&&state.earListen)queueSpeak(entry.translation,'ko',opt.tone);
+    if(toListen&&state.earListen)queueSpeak(entry.translation,target,opt.tone);
   }catch(err){entry.translation='번역 실패 · '+err.message;entry.failed=true;render();scrollEnd()}
 }
 
@@ -1169,13 +1256,13 @@ function stopMic(){stopTone();state.mic=false;pauseRecognizer();state.interim=''
 function toggleMic(){
   if(state.mic){stopMic();clearPending();render();return}
   if(!SR){notify('이 브라우저에는 음성 인식 기능이 없습니다. "글로 통역"을 이용해 주세요.');return}
-  state.mic=true;state.sourceTurn=0;activity();startTone();render();
+  state.mic=true;state.sourceTurn=0;activity();render();
 }
 function startRecognition(){
   if(!SR||!state.mic||state.modal||state.speaking||state.pending||state.page!=='main')return;
   const r=new SR();state.recognizer=r;
   r.continuous=false;r.interimResults=true;r.maxAlternatives=1;
-  const foreign=state.mode==='listen'||state.recog==='foreign'||(state.recog==='auto'&&state.sourceTurn%2===1);
+  const foreign=state.mode==='listen'?state.listenFrom!=='ko':(state.recog==='foreign'||(state.recog==='auto'&&state.sourceTurn%2===1));
   r.lang=foreign?active().locale:'ko-KR';
   const source=foreign?active().code:'ko';
   state.listenLang=source;updateMic();
@@ -1200,7 +1287,7 @@ function startRecognition(){
     const res=event.results[event.results.length-1];const t=res[0].transcript.trim();
     if(res.isFinal)finalText=t;
     state.interim=t;
-    if(live&&!res.isFinal&&Date.now()-sess.last>2500&&t.startsWith(sess.sent)){
+    if(false&&live&&!res.isFinal&&Date.now()-sess.last>2500&&t.startsWith(sess.sent)){
       const rest=t.slice(sess.sent.length);
       let piece='';
       if(noSpace){if(rest.trim().length>=4)piece=rest}
