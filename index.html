@@ -349,11 +349,11 @@ function store(k,v){try{localStorage.setItem(k,v)}catch{}}
 function load(k,d=''){try{return localStorage.getItem(k)??d}catch{return d}}
 function loadJSON(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}}
 
-const state={listenFrom:'foreign',geminiVoice:'',toneFollow:false,dim:false,earListen:false,adminOpen:false,page:'home',mode:'conversation',lang:0,items:[],listening:[],speech:0,koSize:2,foreignSize:2,mic:false,recognizer:null,side:false,modal:null,interim:'',sourceTurn:0,speaking:false,recog:'ko',theme:'basic',rate:1.1,voices:{},showPron:false,showKoPron:false,confirmWait:0,pending:null,listenLang:'ko',flash:null};
+const state={listenFrom:'foreign',geminiVoice:'',toneFollow:true,dim:false,earListen:false,adminOpen:false,page:'home',mode:'conversation',lang:0,items:[],listening:[],speech:0,koSize:2,foreignSize:2,mic:false,recognizer:null,side:false,modal:null,interim:'',sourceTurn:0,speaking:false,recog:'ko',theme:'basic',rate:1.1,voices:{},showPron:false,showKoPron:false,confirmWait:0,pending:null,listenLang:'ko',flash:null};
 (()=>{const s=loadJSON('travel_settings',{});const old=!(s.v>=7);
   let sp=old?({0:0,1:0,2:1,3:2})[s.speech??0]??0:(s.speech??0);
   const pre10=!(s.v>=10);if(pre10&&sp===2)sp=3;
-  Object.assign(state,{lang:s.lang>=0&&s.lang<LANGS.length?s.lang:0,koSize:s.koSize??2,foreignSize:Math.min(s.foreignSize??2,4),speech:Math.min(sp,3),recog:recogModes.includes(s.recog)?s.recog:'ko',theme:s.theme||'basic',rate:pre10?1.1:(s.rate||1.1),voices:s.voices||{},geminiVoice:s.geminiVoice||'',toneFollow:false,listenFrom:s.listenFrom==='ko'?'ko':'foreign',earListen:!!s.earListen,showPron:!!s.showPron,showKoPron:!!s.showKoPron,confirmWait:old?0:(s.confirmWait??0)});
+  Object.assign(state,{lang:s.lang>=0&&s.lang<LANGS.length?s.lang:0,koSize:s.koSize??2,foreignSize:Math.min(s.foreignSize??2,4),speech:Math.min(sp,3),recog:recogModes.includes(s.recog)?s.recog:'ko',theme:s.theme||'basic',rate:pre10?1.1:(s.rate||1.1),voices:s.voices||{},geminiVoice:s.geminiVoice||'',toneFollow:true,listenFrom:s.listenFrom==='ko'?'ko':'foreign',earListen:!!s.earListen,showPron:!!s.showPron,showKoPron:!!s.showKoPron,confirmWait:old?0:(s.confirmWait??0)});
 })();
 
 /* 자주 쓰는 문장 (제목+문장 목록, 추가·삭제 가능) */
@@ -395,7 +395,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='ChatGPT 수정본 · 버전 19 (음성 인식 안정화) · 2026.11.02';
+const APP_VERSION='V21 · 음성 강약·음색 자동 조절 · 2026.11.02';
 const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
@@ -411,13 +411,18 @@ function askConfirm(msg,okLabel,onOk){
 }
 
 /* ── 소리 ── */
-function voiceFor(code){
+function voiceFor(code,tone){
   const list=speechSynthesis.getVoices?.()||[];const want=state.voices[code];
   if(want){const v=list.find(v=>v.name===want);if(v)return v}
   const loc=localeOf(code).toLowerCase(),pre=loc.slice(0,2);
   const norm=v=>v.lang.toLowerCase().replace('_','-');
   const m=list.filter(v=>norm(v).startsWith(pre)&&(code!=='zh-TW'||/tw|hk|hant/.test(norm(v)))) ;
   const pool=m.length?m:list.filter(v=>norm(v).startsWith(pre));
+  if(tone&&testOptions.volumeFollow){
+    const high=tone.hz>=175;
+    const pattern=high?/female|woman|여성|여자|soyeon|yuna|heami|zira|siri/i:/male|man|남성|남자|injoon|junwoo|david|daniel/i;
+    const matching=pool.find(v=>pattern.test(v.name));if(matching)return matching;
+  }
   return pool.find(v=>norm(v)===loc&&v.localService)||pool.find(v=>norm(v)===loc)||pool.find(v=>v.localService)||pool[0]||null;
 }
 const GEMINI_VOICES=[['Kore','여성 · 또렷함'],['Aoede','여성 · 밝음'],['Leda','여성 · 젊음'],['Zephyr','여성 · 산뜻함'],['Puck','남성 · 경쾌함'],['Charon','남성 · 차분함'],['Fenrir','남성 · 힘참'],['Orus','남성 · 단단함']];
@@ -436,7 +441,8 @@ function speak(text,code,tone){
   state.speaking=true;updateMic();
   const done=()=>{state.speaking=false;setReading(null);updateMic();setTimeout(resumeRecognizer,450)};
   if(useGemini()&&text.length<=400){
-    geminiAudio(text).then(a=>{if(!state.speaking){return}curAudio=a;a.playbackRate=Math.min(state.rate,2);a.volume=toneVolume(tone);a.onended=done;a.onerror=done;setReading(text,a.playbackRate);return a.play()}).catch(()=>deviceSpeak(text,code,tone,done));
+    const autoVoice=tone&&testOptions.volumeFollow?(tone.hz>=175?'Kore':'Charon'):state.geminiVoice;
+    geminiAudio(text,autoVoice).then(a=>{if(!state.speaking){return}curAudio=a;a.playbackRate=Math.min(state.rate,2);a.volume=toneVolume(tone);a.onended=done;a.onerror=done;setReading(text,a.playbackRate);return a.play()}).catch(()=>deviceSpeak(text,code,tone,done));
     return;
   }
   deviceSpeak(text,code,tone,done);
@@ -445,19 +451,20 @@ function deviceSpeak(text,code,tone,done){
   if(!('speechSynthesis'in window)){notify('음성 출력이 지원되지 않습니다.');return done?.()}
   // 긴 글은 문장 단위로 나눠 이어 읽기 (한 번에 너무 길면 휴대폰이 중간에 멈춤)
   const parts=text.length>220?splitText(text,200):[text];
-  const v=voiceFor(code);
+  const v=voiceFor(code,tone);
   parts.forEach((t,i)=>{
     const s=new SpeechSynthesisUtterance(t);s.lang=localeOf(code);s.rate=state.rate;
     if(v)s.voice=v;
-    if(tone){s.pitch=tone.pitch;s.volume=toneVolume(tone)}
+    if(tone&&testOptions.volumeFollow){s.pitch=tone.pitch;s.volume=toneVolume(tone)}
     if(i===0)s.onstart=()=>setReading(text,state.rate);
     if(i===parts.length-1){s.onend=done;s.onerror=done}
     speechSynthesis.speak(s);
   });
 }
 /* 설정 화면의 숨겨진 관리자 메뉴에서만 변경 가능한 테스트 옵션. */
-const TEST_DEFAULTS={fastInterim:true,adaptiveSpeed:true,volumeFollow:false};
+const TEST_DEFAULTS={fastInterim:true,adaptiveSpeed:true,volumeFollow:true};
 let testOptions={...TEST_DEFAULTS,...loadJSON('travel_v15_test_options',{})};
+testOptions.volumeFollow=true;
 function saveTestOptions(){store('travel_v15_test_options',JSON.stringify(testOptions))}
 /* 듣기 모드 · 이어폰: 밀린 음성 수에 따라 1.1 → 1.3 → 1.5 → 1.7 → 최대 2.0배로 따라잡기. */
 let speakQ=0;
@@ -467,7 +474,7 @@ function queueSpeak(text,code,tone){
   const base=Math.max(state.rate,1.1);
   const catchup=testOptions.adaptiveSpeed?(speakQ>=4?2.0:speakQ>=3?1.7:speakQ>=2?1.5:speakQ>=1?1.3:1.1):1.1;
   s.rate=Math.min(2,Math.max(base,catchup));
-  const v=voiceFor(code);if(v)s.voice=v;
+  const v=voiceFor(code,tone);if(v)s.voice=v;
   if(tone&&testOptions.volumeFollow){s.pitch=tone.pitch;s.volume=toneVolume(tone)}
   speakQ++;
   s.onstart=()=>setReading(text,s.rate);
@@ -585,7 +592,7 @@ function render(){
   }
 
   const top=node('header','top','',s);
-  const versionTag=node('span','', 'V20',top);
+  const versionTag=node('span','', 'V21',top);
   versionTag.title=APP_VERSION;
   versionTag.style.cssText='position:absolute;top:2px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:400;opacity:.65;pointer-events:none;z-index:2;line-height:1;white-space:nowrap';
   const tl=node('div','top-left','',top);
@@ -654,7 +661,7 @@ function scrollEnd(){const t=$('#transcript');if(t)t.scrollTo({top:t.scrollHeigh
 
 function drawHome(root){
   const h=node('main','home','',root);const L=active();
-  const versionTag=node('span','', 'V20',h);versionTag.title=APP_VERSION;versionTag.style.cssText='position:absolute;top:max(6px, env(safe-area-inset-top));right:10px;font-size:10px;font-weight:400;opacity:.7;z-index:20;pointer-events:none';
+  const versionTag=node('span','', 'V21',h);versionTag.title=APP_VERSION;versionTag.style.cssText='position:absolute;top:max(6px, env(safe-area-inset-top));right:10px;font-size:10px;font-weight:400;opacity:.7;z-index:20;pointer-events:none';
   /* 사진을 먼저 보여 주고, 사진을 못 받으면(오프라인 등) 직접 그린 그림을 대신 보여 줌 */
   const showPhoto=()=>{h.style.backgroundImage=`url("${L.image}")`;const sv=h.querySelector('.home-scene');if(sv)sv.remove()};
   if(L.bg){h.style.backgroundColor=L.bg[1];h.insertAdjacentHTML('afterbegin',sceneSVG(L))}
@@ -1198,16 +1205,16 @@ function drawSettings(body){
   const testLabels=[
     ['fastInterim','중간 번역 미리 시작','14버전 기능 · 문장이 끝나기 전 안정된 구간부터 번역'],
     ['adaptiveSpeed','최대 2배속 따라잡기','14버전 기능 · 한국어 음성이 밀리면 읽기 속도 증가'],
-    ['volumeFollow','말소리 강약 반영(시험)','음성 신호 분석이 가능한 경우에만 강약을 출력에 반영 · 정확도 미검증']
+    ['volumeFollow','말소리 강약 반영','음성 특성에 따라 음량·높낮이와 가능한 출력 음색을 조절']
   ];
   testLabels.forEach(([k,title,desc])=>{
     const row=node('label','dl-row','',testArea);row.style.cssText='gap:8px;align-items:flex-start';
     const label=node('span','','',row);label.style.cssText='flex:1;font-size:14px';
     node('b','',title,label).style.display='block';node('small','tiny',desc,label).style.display='block';
     const toggle=node('input','','',row);toggle.type='checkbox';toggle.checked=!!testOptions[k];toggle.style.cssText='width:22px;height:22px;flex:0 0 auto';
-    toggle.onchange=()=>{testOptions[k]=toggle.checked;saveTestOptions();notify(title+(toggle.checked?' 켬':' 끔')+' · 다음 문장부터 적용됩니다.')};
+    toggle.onchange=()=>{testOptions[k]=toggle.checked;if(k==='volumeFollow'){state.toneFollow=toggle.checked;if(toggle.checked&&state.mic)startTone();else if(!toggle.checked)stopTone();}saveTestOptions();notify(title+(toggle.checked?' 켬':' 끔')+' · 다음 문장부터 적용됩니다.')};
   });
-  button('테스트 옵션 초기화','action',()=>{testOptions={...TEST_DEFAULTS};saveTestOptions();render();notify('테스트 옵션을 기본값으로 되돌렸습니다.')},testArea);
+  button('테스트 옵션 초기화','action',()=>{testOptions={...TEST_DEFAULTS};state.toneFollow=true;if(state.mic)startTone();saveTestOptions();render();notify('테스트 옵션을 기본값으로 되돌렸습니다.')},testArea);
   node('p','tiny','화면 자동 어두워짐(2분)과 듣기 자동 종료(추가 5분)는 변경하지 않았습니다. 남녀 화자 자동 구분은 추가 음성 분석 모델이 필요하여 아직 포함되지 않았습니다.',testArea);
   node('h4','','🔧 관리자 메뉴 (새 버전 올리기)',admin);
   node('p','tiny','① 받은 zip을 "내 파일"에서 압축 풀기 ② 아래 버튼 → "choose your files"로 파일 5개 모두 선택 ③ 맨 아래 초록 "Commit changes" ④ 1~2분 뒤 앱을 껐다 켜면 새 버전',admin);
@@ -1436,9 +1443,8 @@ function stopMic(){clearTimeout(micRetryTimer);clearTimeout(micWatchdog);stopTon
 let micRetry=0,micLastError='',micRetryTimer=null,micWatchdog=null,micStartingAt=0;
 function micDiagnostic(message){
   if(!message.startsWith('인식 결과:'))micLastError=message;
-  let e=document.getElementById('micDiagnostic');
-  if(!e&&state.page==='main'){e=document.createElement('div');e.id='micDiagnostic';e.setAttribute('role','status');e.style.cssText='position:fixed;bottom:95px;left:12px;right:12px;z-index:9999;background:#fff4df;color:#472b00;border:2px solid #c17a00;border-radius:12px;padding:10px 14px;font-size:15px;line-height:1.4;box-shadow:0 2px 8px #0003';document.body.appendChild(e)}
-  if(e)e.textContent='🎙 마이크 상태: '+message;
+  document.getElementById('micDiagnostic')?.remove();
+  if(/자동 복구에 실패|지원되지 않습니다|권한이 허용되지/.test(message))notify(message);
 }
 function scheduleMicRetry(message){
   clearTimeout(micWatchdog);clearTimeout(micRetryTimer);
@@ -1452,7 +1458,7 @@ function toggleMic(){
   if(state.mic){stopMic();clearPending();clearTimeout(micRetryTimer);clearTimeout(micWatchdog);document.getElementById('micDiagnostic')?.remove();render();return}
   if(!SR){micDiagnostic('이 브라우저에서는 음성 인식이 지원되지 않습니다. Chrome을 이용해 주세요.');return}
   clearTimeout(micRetryTimer);clearTimeout(micWatchdog);micRetry=0;micLastError='';
-  state.mic=true;state.sourceTurn=0;activity();render();
+  state.mic=true;state.sourceTurn=0;activity();startTone();render();
   // Explicit start preserves user-gesture context and avoids a silent 'on' state.
   if(!state.recognizer)startRecognition();
   if(!state.recognizer&&state.mic)scheduleMicRetry('음성 인식 시작을 다시 시도합니다.');
