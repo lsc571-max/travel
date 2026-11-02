@@ -140,6 +140,19 @@ svg{display:block}
 .bubble .ctrls{display:flex;justify-content:flex-end;gap:2px;margin:4px -8px -6px 0}
 .bubble .ctrl{border:0;background:transparent;color:var(--muted);opacity:.65;min-width:32px;min-height:30px;border-radius:8px;font-size:14px;font-weight:700;display:grid;place-items:center}
 .bubble .ctrl.on{opacity:1;color:var(--accent)}
+.rate-m{display:none;align-items:center;gap:3px;margin-right:2px;opacity:.8;pointer-events:none}
+.rate-m.on{display:inline-flex}
+.rate-m i{width:5px;height:18px;border-radius:3px;background:var(--line);position:relative;overflow:hidden}
+.rate-m i:after{content:"";position:absolute;left:0;right:0;bottom:0;height:var(--h,40%);background:var(--accent);transition:height .4s}
+.rate-m b{font-size:10px;font-weight:500;color:var(--muted);opacity:.75}
+.listen-row{position:relative}.listen-row .rate-m{position:absolute;right:8px;top:8px}
+.bubble .ctrl.edit-ctrl{font-size:15px;font-weight:400}
+.pron-note{font-size:.85em;opacity:.7}
+.faint{opacity:.65;font-weight:400;font-size:11px}
+.photo-prev{display:block;max-width:100%;max-height:200px;margin:12px auto 0;border-radius:12px}
+.photo-out{margin-top:12px;padding:14px;border-radius:14px;background:var(--surface)}
+.photo-tr{font-size:20px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.photo-orig{margin-top:10px;font-size:13px;color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}
 .pron{display:block;font-size:.72em;color:var(--muted);margin-top:4px;line-height:1.45}
 .bubble .fixing{display:block;font-size:12px;color:#7b4ed6;opacity:.75;margin-top:4px}
 .live{align-self:flex-start;max-width:94%;border:1.5px dashed var(--line);border-radius:var(--radius);padding:10px 14px;color:var(--muted);font-size:17px;margin-bottom:12px;white-space:pre-wrap}
@@ -336,11 +349,11 @@ function store(k,v){try{localStorage.setItem(k,v)}catch{}}
 function load(k,d=''){try{return localStorage.getItem(k)??d}catch{return d}}
 function loadJSON(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}}
 
-const state={listenFrom:'foreign',geminiVoice:'',toneFollow:false,dim:false,earListen:false,adminOpen:false,page:'home',mode:'conversation',lang:0,items:[],listening:[],speech:0,koSize:2,foreignSize:2,mic:false,recognizer:null,side:false,modal:null,interim:'',sourceTurn:0,speaking:false,recog:'ko',theme:'basic',rate:1.1,voices:{},showPron:false,confirmWait:0,pending:null,listenLang:'ko',flash:null};
+const state={listenFrom:'foreign',geminiVoice:'',toneFollow:false,dim:false,earListen:false,adminOpen:false,page:'home',mode:'conversation',lang:0,items:[],listening:[],speech:0,koSize:2,foreignSize:2,mic:false,recognizer:null,side:false,modal:null,interim:'',sourceTurn:0,speaking:false,recog:'ko',theme:'basic',rate:1.1,voices:{},showPron:false,showKoPron:false,confirmWait:0,pending:null,listenLang:'ko',flash:null};
 (()=>{const s=loadJSON('travel_settings',{});const old=!(s.v>=7);
   let sp=old?({0:0,1:0,2:1,3:2})[s.speech??0]??0:(s.speech??0);
   const pre10=!(s.v>=10);if(pre10&&sp===2)sp=3;
-  Object.assign(state,{lang:s.lang>=0&&s.lang<LANGS.length?s.lang:0,koSize:s.koSize??2,foreignSize:Math.min(s.foreignSize??2,4),speech:Math.min(sp,3),recog:recogModes.includes(s.recog)?s.recog:'ko',theme:s.theme||'basic',rate:pre10?1.1:(s.rate||1.1),voices:s.voices||{},geminiVoice:s.geminiVoice||'',toneFollow:false,listenFrom:s.listenFrom==='ko'?'ko':'foreign',earListen:!!s.earListen,showPron:!!s.showPron,confirmWait:old?0:(s.confirmWait??0)});
+  Object.assign(state,{lang:s.lang>=0&&s.lang<LANGS.length?s.lang:0,koSize:s.koSize??2,foreignSize:Math.min(s.foreignSize??2,4),speech:Math.min(sp,3),recog:recogModes.includes(s.recog)?s.recog:'ko',theme:s.theme||'basic',rate:pre10?1.1:(s.rate||1.1),voices:s.voices||{},geminiVoice:s.geminiVoice||'',toneFollow:false,listenFrom:s.listenFrom==='ko'?'ko':'foreign',earListen:!!s.earListen,showPron:!!s.showPron,showKoPron:!!s.showKoPron,confirmWait:old?0:(s.confirmWait??0)});
 })();
 
 /* 자주 쓰는 문장 (제목+문장 목록, 추가·삭제 가능) */
@@ -350,6 +363,12 @@ if(!Array.isArray(notes)){
   notes=DEFAULT_NOTES.map(n=>({t:n.t,x:old[n.t]??n.x}));
 }
 const saveNotes=()=>store('travel_notes_v2',JSON.stringify(notes));
+if(!load('notes_add_v12')){
+  let at=Math.max(0,notes.findIndex(n=>n.t==='방문 목적')+1)||2;
+  ['숙소','일정표'].forEach(t=>{if(!notes.some(n=>n.t===t)){const d=DEFAULT_NOTES.find(n=>n.t===t);notes.splice(at,0,{t,x:d.x});at++}else at=notes.findIndex(n=>n.t===t)+1});
+  saveNotes();store('notes_add_v12','1');
+}
+const NOTE_TIP=['자기소개','방문 목적','숙소','일정표'];
 let customPhrases=loadJSON('custom_phrases',{});
 const saveCustom=()=>store('custom_phrases',JSON.stringify(customPhrases));
 function allPhrases(){const out={};for(const c of Object.keys(PHRASES))out[c]=[...PHRASES[c]];for(const c of Object.keys(customPhrases)){out[c]=[...(out[c]||[]),...customPhrases[c].filter(p=>!(out[c]||[]).includes(p))]}return out}
@@ -364,7 +383,7 @@ function glossaryHint(){const w=glossary.filter(g=>g.word).map(g=>g.out?`${g.wor
 
 (()=>{const h=loadJSON('travel_history',{});const fix=e=>{if(e.translation==='번역 중…'||e.correcting){e.correcting=false;if(!e.translation||e.translation==='번역 중…'){e.translation='번역 중단됨';e.failed=true}}return e};state.items=(h.items||[]).map(fix);state.listening=(h.listening||[]).map(fix)})();
 
-function persist(){store('travel_settings',JSON.stringify({v:10,listenFrom:state.listenFrom,geminiVoice:state.geminiVoice,toneFollow:state.toneFollow,earListen:state.earListen,lang:state.lang,koSize:state.koSize,foreignSize:state.foreignSize,speech:state.speech,recog:state.recog,theme:state.theme,rate:state.rate,voices:state.voices,showPron:state.showPron,confirmWait:state.confirmWait}))}
+function persist(){store('travel_settings',JSON.stringify({v:12,listenFrom:state.listenFrom,geminiVoice:state.geminiVoice,toneFollow:state.toneFollow,earListen:state.earListen,lang:state.lang,koSize:state.koSize,foreignSize:state.foreignSize,speech:state.speech,recog:state.recog,theme:state.theme,rate:state.rate,voices:state.voices,showPron:state.showPron,showKoPron:state.showKoPron,confirmWait:state.confirmWait}))}
 function saveHistory(){store('travel_history',JSON.stringify({items:state.items.slice(-300),listening:state.listening.slice(-300)}))}
 const active=()=>LANGS[state.lang];
 const langOf=code=>LANGS.find(l=>l.code===code);
@@ -376,7 +395,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='버전 11 · 2026.11.02';
+const APP_VERSION='버전 12 · 2026.11.02';
 const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
@@ -403,26 +422,38 @@ function voiceFor(code){
 }
 const GEMINI_VOICES=[['Kore','여성 · 또렷함'],['Aoede','여성 · 밝음'],['Leda','여성 · 젊음'],['Zephyr','여성 · 산뜻함'],['Puck','남성 · 경쾌함'],['Charon','남성 · 차분함'],['Fenrir','남성 · 힘참'],['Orus','남성 · 단단함']];
 let curAudio=null;
-function stopSpeech(){try{speechSynthesis.cancel()}catch{}try{curAudio?.pause()}catch{}curAudio=null;state.speaking=false;speakQ=0}
+function stopSpeech(){try{speechSynthesis.cancel()}catch{}try{curAudio?.pause()}catch{}curAudio=null;state.speaking=false;speakQ=0;setReading(null)}
+/* 지금 읽는 문장 옆 작은 막대 (읽는 속도) */
+let reading=null;
+function setReading(text,rate){reading=text?{text,rate:rate||1}:null;updateMeters()}
+function paintMeter(m,on){m.classList.toggle('on',!!on);if(!on)return;const r=reading.rate;m.style.setProperty('--h',Math.round(Math.min(100,Math.max(20,(r-0.6)/1.0*100)))+'%');m.querySelector('b').textContent=r.toFixed(1)+'배'}
+function meter(parent,text){const m=node('span','rate-m','',parent);m.innerHTML='<i></i><b></b>';m.dataset.for=text;paintMeter(m,reading&&reading.text===text);return m}
+function updateMeters(){document.querySelectorAll('.rate-m').forEach(m=>paintMeter(m,reading&&reading.text===m.dataset.for))}
 const useGemini=()=>!!state.geminiVoice&&aiReady()&&provider()==='gemini'&&navigator.onLine;
 function speak(text,code,tone){
   try{speechSynthesis.cancel()}catch{}try{curAudio?.pause()}catch{}
   pauseRecognizer();
   state.speaking=true;updateMic();
-  const done=()=>{state.speaking=false;updateMic();setTimeout(resumeRecognizer,450)};
-  if(useGemini()){
-    geminiAudio(text).then(a=>{if(!state.speaking){return}curAudio=a;a.playbackRate=Math.min(state.rate,2);a.volume=toneVolume(tone);a.onended=done;a.onerror=done;return a.play()}).catch(()=>deviceSpeak(text,code,tone,done));
+  const done=()=>{state.speaking=false;setReading(null);updateMic();setTimeout(resumeRecognizer,450)};
+  if(useGemini()&&text.length<=400){
+    geminiAudio(text).then(a=>{if(!state.speaking){return}curAudio=a;a.playbackRate=Math.min(state.rate,2);a.volume=toneVolume(tone);a.onended=done;a.onerror=done;setReading(text,a.playbackRate);return a.play()}).catch(()=>deviceSpeak(text,code,tone,done));
     return;
   }
   deviceSpeak(text,code,tone,done);
 }
 function deviceSpeak(text,code,tone,done){
   if(!('speechSynthesis'in window)){notify('음성 출력이 지원되지 않습니다.');return done?.()}
-  const s=new SpeechSynthesisUtterance(text);s.lang=localeOf(code);s.rate=state.rate;
-  const v=voiceFor(code);if(v)s.voice=v;
-  if(tone){s.pitch=tone.pitch;s.volume=toneVolume(tone)}
-  s.onend=done;s.onerror=done;
-  speechSynthesis.speak(s);
+  // 긴 글은 문장 단위로 나눠 이어 읽기 (한 번에 너무 길면 휴대폰이 중간에 멈춤)
+  const parts=text.length>220?splitText(text,200):[text];
+  const v=voiceFor(code);
+  parts.forEach((t,i)=>{
+    const s=new SpeechSynthesisUtterance(t);s.lang=localeOf(code);s.rate=state.rate;
+    if(v)s.voice=v;
+    if(tone){s.pitch=tone.pitch;s.volume=toneVolume(tone)}
+    if(i===0)s.onstart=()=>setReading(text,state.rate);
+    if(i===parts.length-1){s.onend=done;s.onerror=done}
+    speechSynthesis.speak(s);
+  });
 }
 /* 듣기 모드 · 이어폰: 마이크를 멈추지 않고 줄 서서 이어 읽기. 밀리면 1.3배 → 1.5배로 빨라짐 */
 let speakQ=0;
@@ -434,7 +465,8 @@ function queueSpeak(text,code,tone){
   const v=voiceFor(code);if(v)s.voice=v;
   if(tone){s.pitch=tone.pitch;s.volume=toneVolume(tone)}
   speakQ++;
-  const end=()=>{speakQ=Math.max(0,speakQ-1)};s.onend=end;s.onerror=end;
+  s.onstart=()=>setReading(text,s.rate);
+  const end=()=>{speakQ=Math.max(0,speakQ-1);if(!speakQ)setReading(null)};s.onend=end;s.onerror=end;
   speechSynthesis.speak(s);
 }
 function autoSpeak(text,code,tone){
@@ -663,19 +695,30 @@ function bubble(parent,item,index,field){
   const isOrig=field==='original';
   const text=isOrig?item.original:item.translation;
   const code=isOrig?item.source:item.target;
+  const other=isOrig?item.target:item.source;
   const failed=!isOrig&&item.failed;
-  const b=node('div','bubble '+(code==='ko'?'ko':'foreign')+(failed?' fail':'')+(isOrig&&code==='ko'?' has-edit':''),'',parent);
+  const busy=!text||text==='번역 중…'||/… 번역 중 \(/.test(text)||(isOrig&&item.correcting);
+  const b=node('div','bubble '+(code==='ko'?'ko':'foreign')+(failed?' fail':''),'',parent);
   b.style.fontSize=sizes[code==='ko'?state.koSize:state.foreignSize]+'px';
   node('span','',text,b).dir='auto';
   if(isOrig&&item.correcting)node('span','fixing','✨ AI 교정 중…',b);
-  b.onclick=()=>{if(!failed&&text&&text!=='번역 중…')openEnlarge(text,code,code!=='ko'?item.original:null)};
-  if(isOrig&&code==='ko'){const e=button('✎','edit',ev=>{ev.stopPropagation();openEdit(index)},b);e.setAttribute('aria-label','수정')}
-  if(code!=='ko'&&!failed&&text&&text!=='번역 중…'){
-    if(state.showPron)drawPron(b,text,code);
-    const c=node('div','ctrls','',b);
-    const pb=button('가','ctrl'+(state.showPron?' on':''),ev=>{ev.stopPropagation();state.showPron=!state.showPron;persist();render()},c);pb.title='한글 발음';pb.setAttribute('aria-label','한글 발음 보기');
-    iconButton(ICON.speaker(17),'ctrl','다시 듣기',ev=>{ev.stopPropagation();speak(text,code)},c);
+  b.onclick=()=>{if(!failed&&!busy)openEnlarge(text,code,isOrig?item.translation:item.original,other)};
+  if(busy)return;
+  if(!failed){
+    if(code!=='ko'&&state.showPron)drawPron(b,text,code);
+    if(code==='ko'&&other!=='ko'&&state.showKoPron)drawKoPron(b,text,other);
   }
+  const c=node('div','ctrls','',b);
+  if(!failed){
+    meter(c,text);
+    if(code!=='ko'){
+      const pb=button('가','ctrl'+(state.showPron?' on':''),ev=>{ev.stopPropagation();state.showPron=!state.showPron;persist();render()},c);pb.title='한글 발음';pb.setAttribute('aria-label','한글 발음 보기');
+    }else if(other!=='ko'){
+      const kb=button(scriptMark(other),'ctrl'+(state.showKoPron?' on':''),ev=>{ev.stopPropagation();state.showKoPron=!state.showKoPron;persist();render()},c);kb.title=nameOf(other)+' 글자로 한국어 발음';kb.setAttribute('aria-label',kb.title);
+    }
+  }
+  iconButton('✎','ctrl edit-ctrl',isOrig?'고치기 (고치면 다시 번역)':'번역 문장 고치기',ev=>{ev.stopPropagation();openEdit(index,field)},c);
+  if(!failed)iconButton(ICON.speaker(17),'ctrl','다시 듣기',ev=>{ev.stopPropagation();speak(text,code)},c);
 }
 function drawListen(parent){
   if(!state.listening.length&&!state.interim)hint(parent,'가이드의 외국어 설명을 듣고\n한국어로 누적 표시합니다.\n\n아래 🌐 버튼으로 듣는 언어를 바꿀 수 있어요.');
@@ -683,6 +726,7 @@ function drawListen(parent){
     const tg=x.target||'ko';
     const row=node('div','listen-row',x.translation,parent);row.style.fontSize=sizes[tg==='ko'?state.koSize:state.foreignSize]+'px';row.dir='auto';
     node('span','orig',x.original,row);
+    if(x.translation&&x.translation!=='번역 중…')meter(row,x.translation);
     row.onclick=()=>openEnlarge(x.translation,tg,tg!=='ko'?x.original:null);
   });
 }
@@ -733,6 +777,40 @@ function drawPron(parent,text,code){
   line.textContent='🗣 한글 발음 만드는 중…';
   makePron(text,code).then(()=>{if(line.isConnected)line.textContent='🗣 '+(pronCache[key]||'(만들지 못했어요)')});
 }
+/* 한국어 → 외국 사람이 읽을 수 있는 발음 */
+const LATIN_LANGS=['en','vi','id','ms','tl','fr','de','es','it','pt','pl','cs','tr'];
+const KO_SCRIPT={ja:'가타카나',['zh-CN']:'병음(성조 표시 없는 로마자)',['zh-TW']:'병음(성조 표시 없는 로마자)',th:'태국 문자',hi:'데바나가리 문자',mn:'몽골어 키릴 문자',ru:'러시아어 키릴 문자',ar:'아랍 문자'};
+function scriptMark(code){return{ru:'Аб',mn:'Аб',ar:'أب',hi:'अ',th:'ก',ja:'カ'}[code]||'Ab'}
+function romanizeKo(text){
+  const I=['g','kk','n','d','tt','r','m','b','pp','s','ss','','j','jj','ch','k','t','p','h'];
+  const V=['a','ae','ya','yae','eo','e','yeo','ye','o','wa','wae','oe','yo','u','wo','we','wi','yu','eu','ui','i'];
+  const F=['','k','k','k','n','n','n','t','l','k','m','l','l','l','p','l','m','p','p','t','t','ng','t','t','k','t','p','t'];
+  const FL=['','g','kk','g','n','n','n','d','r','g','m','b','s','t','p','h','m','b','s','s','ss','ng','j','ch','k','t','p',''];
+  const ch=[...text];let out='';
+  for(let i=0;i<ch.length;i++){
+    const c=ch[i].charCodeAt(0)-0xAC00;
+    if(c<0||c>11171){out+=ch[i];continue}
+    const ini=Math.floor(c/588),med=Math.floor(c%588/28),fin=c%28;
+    out+=I[ini]+V[med];
+    const nx=(ch[i+1]||'').charCodeAt(0)-0xAC00;
+    const nextVowel=nx>=0&&nx<=11171&&Math.floor(nx/588)===11;
+    const nasal=nx>=0&&nx<=11171&&[2,6].includes(Math.floor(nx/588));
+    if(fin)out+=nextVowel&&fin!==21?FL[fin]:nasal?({k:'ng',t:'n',p:'m'}[F[fin]]||F[fin]):F[fin];
+  }
+  return out.replace(/(^|[.!?]\s+)([a-z])/g,(m,a,b)=>a+b.toUpperCase());
+}
+function drawKoPron(parent,text,lang){
+  const line=node('span','pron','',parent);
+  const key='ko>'+lang+'|'+text;
+  if(LATIN_LANGS.includes(lang)){line.textContent='🗣 '+romanizeKo(text);return}
+  if(pronCache[key]){line.textContent='🗣 '+pronCache[key];return}
+  const roman=romanizeKo(text);
+  if(!aiReady()||!navigator.onLine){line.textContent='🗣 '+roman;node('small','pron-note',aiReady()?' (인터넷이 될 때 '+nameOf(lang)+' 글자로 바뀝니다)':' (AI 키를 넣으면 '+nameOf(lang)+' 글자로 보여 줍니다)',line);return}
+  line.textContent='🗣 '+nameOf(lang)+' 글자로 만드는 중…';
+  const prompt=`다음 한국어 문장을 ${nameOf(lang)}를 쓰는 사람이 소리 내어 읽을 수 있도록, 한국어 실제 발음을 ${KO_SCRIPT[lang]||nameOf(lang)+' 문자'}로만 적어 주세요. 번역하지 말고 소리만 옮겨 적으세요. 설명, 따옴표, 원문 없이 한 줄로만 출력하세요.\n\n${text}`;
+  if(!pronInflight[key])pronInflight[key]=withTimeout(aiAsk(prompt),12000).then(r=>{pronCache[key]=r;store('pron_cache',JSON.stringify(pronCache))}).catch(()=>{}).finally(()=>{delete pronInflight[key]});
+  pronInflight[key].then(()=>{if(line.isConnected)line.textContent='🗣 '+(pronCache[key]||roman)});
+}
 const pronInflight={};
 function makePron(text,code){
   const key=code+'|'+text;
@@ -751,11 +829,12 @@ function drawDrawer(parent){
   d.addEventListener('touchstart',e=>touch=e.touches[0].clientX,{passive:true});
   d.addEventListener('touchend',e=>{if(e.changedTouches[0].clientX-touch>70){state.side=false;render()}},{passive:true});
   const w=button('⌨ 글로 통역하기','drawer-item strong',()=>openText(),d);node('small','','붙여넣기 · 파일 올리기 · 말로 입력',w);
+  const ph=button('📷 사진 통역','drawer-item',()=>openPhoto(),d);node('small','','메뉴판·안내판 번역 · Gemini 키 필요',ph);
   const p=button('📚 여행 문구','drawer-item',()=>openPhrases(),d);node('small','',offlineFor(active().code)?.full?'받아 둔 문구 · 인터넷 없어도 사용':'설정에서 받아 두면 인터넷 없이 사용',p);
   notes.forEach((n,i)=>{
     let timer,long=false;
     const b=button('','drawer-item',()=>{if(long){long=false;return}useNote(i)},d);
-    b.textContent=n.t;if(i<2)node('em','long-tip',' (길게 누르면 수정)',b);node('small','',n.x||'(비어 있음 · 길게 눌러 입력)',b);
+    b.textContent=n.t;if(NOTE_TIP.includes(n.t))node('em','long-tip',' (길게 누르면 수정)',b);node('small','',n.x||'(비어 있음 · 길게 눌러 입력)',b);
     b.addEventListener('pointerdown',()=>{long=false;timer=setTimeout(()=>{long=true;openNote(i)},600)});
     ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>clearTimeout(timer)));
     b.oncontextmenu=e=>e.preventDefault();
@@ -770,10 +849,11 @@ async function useNote(i){
   if(state.speech===3)notify('소리가 "끔"으로 되어 있습니다. 아래 스피커 버튼으로 켤 수 있어요.');
 }
 function openNote(i){state.side=false;state.modal={type:'note',index:i};render()}
-function openEnlarge(text,code,sub){state.modal={type:'enlarge',text,code,sub,rotated:false};render()}
-function openEdit(index){stopSpeech();state.modal={type:'edit',index};render()}
+function openEnlarge(text,code,sub,other){state.modal={type:'enlarge',text,code,sub,other:other||(code==='ko'?active().code:'ko'),rotated:false};render()}
+function openEdit(index,field){stopSpeech();state.modal={type:'edit',index,field:field||'original'};render()}
 function openSettings(){state.modal={type:'settings'};render()}
 function openText(){state.side=false;state.modal={type:'text'};render()}
+function openPhoto(){stopDictation();state.side=false;state.modal={type:'photo',dir:'ko'};render()}
 function openPhrases(){state.side=false;state.modal={type:'phrases',cat:Object.keys(allPhrases())[0]};render()}
 
 function voiceRow(parent,area,getCode,onChange,goLabel,onGo){
@@ -795,7 +875,7 @@ function drawModal(root){
     button('‹ 뒤로','home-btn',closeLayer,nav);
   }else button('‹ 뒤로','plain',()=>{if(data.type==='fixPending'){stopDictation();state.modal=null;if(state.pending)state.pending.wait=0;render()}else closeLayer()},header);
   const badge=node('span','ai-badge','',header);badge.id='aiBadge';badge.innerHTML='<i></i><b>AI 교정 중</b>';
-  const titles={help:'사용법',enlarge:'문장 확대',edit:'문장 수정',note:data.index<0?'문장 추가':'자주 쓰는 문장',text:'글로 통역하기',settings:'설정',phrases:'여행 문구 · '+active().name,addPhrase:'여행 문구 추가',fixPending:'고친 뒤 보내기'};
+  const titles={help:'사용법',enlarge:'문장 확대',edit:data.field==='translation'?'번역 문장 고치기':'문장 고치기',photo:'사진 통역',note:data.index<0?'문장 추가':'자주 쓰는 문장',text:'글로 통역하기',settings:'설정',phrases:'여행 문구 · '+active().name,addPhrase:'여행 문구 추가',fixPending:'고친 뒤 보내기'};
   node('h2','',titles[data.type],header);
   const body=node('div','modal-content','',modal),actions=node('div','actions','',modal);
 
@@ -804,23 +884,30 @@ function drawModal(root){
     if(data.sub)node('div','sub-text',data.sub,eb);
     const big=node('div','big-text',data.text,eb);big.dir='auto';if(data.rotated)big.classList.add('rotated');
     if(data.code!=='ko'&&state.showPron){const pw=node('div','',null,eb);pw.style.fontSize='20px';drawPron(pw,data.text,data.code)}
+    if(data.code==='ko'&&data.other!=='ko'&&state.showKoPron){const pw=node('div','',null,eb);pw.style.fontSize='20px';drawKoPron(pw,data.text,data.other)}
     node('div','tap-tip','빈 곳을 누르면 돌아갑니다',eb);
     if(data.code!=='ko'){
       button('180° 회전','action',()=>{data.rotated=!data.rotated;big.classList.toggle('rotated')},actions);
       button(state.showPron?'가 한글 발음 끄기':'가 한글 발음 켜기','action',()=>{state.showPron=!state.showPron;persist();render()},actions);
       button('🔊 발음 듣기','action primary',()=>speak(data.text,data.code),actions);
+    }else{
+      if(data.other!=='ko')button(state.showKoPron?scriptMark(data.other)+' 발음 끄기':scriptMark(data.other)+' '+nameOf(data.other)+' 글자 발음','action',()=>{state.showKoPron=!state.showKoPron;persist();render()},actions);
+      button('🔊 듣기','action primary',()=>speak(data.text,'ko'),actions);
     }
     modal.onclick=e=>{if(!e.target.closest('button,.big-text,.sub-text,.pron'))closeLayer()};
   }
 
   if(data.type==='edit'||data.type==='fixPending'){
     const item=data.type==='edit'?state.items[data.index]:null;
-    const code=item?item.source:data.source;
-    const area=node('textarea','editor','',body);area.value=item?item.original:data.text;area.placeholder='말로 입력하거나 직접 쓰세요';
+    const trField=!!item&&data.field==='translation';
+    const code=item?(trField?item.target:item.source):data.source;
+    if(item)node('p','tiny',trField?`번역된 ${nameOf(code)} 문장을 직접 고칩니다. (원래 문장: ${item.original})`:`${nameOf(code)} 문장을 고치면 ${nameOf(item.target)}로 다시 번역합니다.`,body);
+    const area=node('textarea','editor','',body);area.value=item?(trField?(item.failed?'':item.translation):item.original):data.text;area.placeholder='말로 입력하거나 직접 쓰세요';
     const save=async()=>{
       const val=area.value.trim();if(!val)return notify('문장을 입력하세요');
       stopDictation();
       if(!item){clearPending();state.modal=null;render();consume(val,code,{fromMic:true,skipAI:true});return}
+      if(trField){item.translation=val;item.failed=false;state.modal=null;render();return}
       item.original=val;item.translation='번역 중…';item.failed=false;state.modal=null;render();
       try{item.translation=await translate(val,item.source,item.target)}catch(e){item.translation='번역 실패 · '+e.message;item.failed=true}
       render();
@@ -874,15 +961,75 @@ function drawModal(root){
     file.onchange=async()=>{const f=file.files[0];if(!f)return;try{const t=await f.text();inp.value=inp.value?inp.value+'\n'+t:t;upd();notify(`"${f.name}" 내용을 넣었습니다.`)}catch{notify('파일을 읽지 못했습니다.')}file.value=''};
     button('📁 파일 올리기','action',()=>file.click(),rb);
     button('지우기','action',()=>{inp.value='';upd()},rb);
-    node('p','tiny','말이 끝나고 잠시 조용하면 마이크가 자동으로 멈춥니다.'+(aiReady()?' 멈추면 AI가 문장을 다듬어 줍니다.':' (설정에 AI 키를 넣으면 말한 문장을 AI가 다듬어 줍니다.)')+' 파일은 글자 파일(.txt)을 올릴 수 있습니다.',body);
+    const pr=node('div','row-btns','',body);pr.style.marginTop='8px';
+    const pbt=button('📷 사진으로 통역','action',()=>openPhoto(),pr);node('small','faint',' Gemini 키 필요',pbt);
+    node('p','tiny','번역이 끝나면 바로 소리로 읽어 줍니다 (아래 소리 버튼이 "끔"이면 읽지 않음). 말이 끝나고 잠시 조용하면 마이크가 자동으로 멈춥니다.'+(aiReady()?' 멈추면 AI가 문장을 다듬어 줍니다.':' (설정에 AI 키를 넣으면 말한 문장을 AI가 다듬어 줍니다.)')+' 파일은 글자 파일(.txt)을 올릴 수 있습니다.',body);
   }
 
+  if(data.type==='photo')drawPhoto(body,data,actions);
   if(data.type==='help')drawHelp(body);
   if(data.type==='phrases')drawPhrases(body,data);
   if(data.type==='addPhrase')drawAddPhrase(body,data);
   if(data.type==='settings')drawSettings(body);
 }
 
+/* ── 사진 통역 (Gemini) ── */
+function shrinkImage(file,max=1600){return new Promise((res,rej)=>{const url=URL.createObjectURL(file);const im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',0.85))};im.onerror=()=>{URL.revokeObjectURL(url);rej(Error('사진을 열지 못했습니다'))};im.src=url})}
+async function photoTranslate(dataUrl,target){
+  const key=load('ai_key').trim();
+  const prompt=`이 사진에 있는 글자를 모두 읽고 ${nameOf(target)}로 번역해 주세요. 메뉴판이나 목록이면 항목마다 줄을 나눠 주세요. 아래 JSON 형식으로만 답하세요.\n{"original":"사진 속 글자 그대로","translation":"${nameOf(target)} 번역"}\n글자가 없으면 {"original":"","translation":""}`;
+  const body={contents:[{parts:[{inline_data:{mime_type:'image/jpeg',data:dataUrl.split(',')[1]}},{text:prompt}]}],generationConfig:{temperature:0.2,response_mime_type:'application/json'}};
+  const models=[...new Set([load('ai_model').trim(),'gemini-flash-latest','gemini-flash-lite-latest'].filter(Boolean))];
+  let lastErr;
+  for(const m of models){
+    try{
+      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(key)}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(45000)});
+      const j=await res.json();if(!res.ok)throw Error(j.error?.message||res.status);
+      const out=(j.candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('').trim();
+      try{const o=JSON.parse(out.replace(/^```(json)?|```$/g,''));return{original:String(o.original||'').trim(),translation:String(o.translation||'').trim()}}
+      catch{return{original:'',translation:out}}
+    }catch(e){lastErr=e}
+  }
+  throw lastErr||Error('사진 통역 실패');
+}
+function drawPhoto(body,data,actions){
+  const ready=provider()==='gemini';
+  node('p','tiny faint',ready?'Gemini 키로 사진 속 글자를 읽어 번역합니다. 사진은 번역에만 쓰고 저장하지 않습니다.':'사진 통역은 Gemini 키가 필요해요. 설정 → AI 키에 Gemini 키(AIza…)를 넣어 주세요.',body);
+  const sel=node('select','text-field','',body);
+  [['ko','사진 속 글 → 한국어'],['foreign','사진 속 한국어 → '+active().name]].forEach(([v,t])=>{const o=node('option','',t,sel);o.value=v});
+  sel.value=data.dir;sel.onchange=()=>{data.dir=sel.value};
+  const rb=node('div','row-btns','',body);rb.style.marginTop='10px';
+  const pick=capture=>{
+    if(!ready)return notify('사진 통역은 Gemini 키가 필요해요. 설정에서 넣어 주세요.');
+    if(!navigator.onLine)return notify('사진 통역은 인터넷이 필요합니다.');
+    const f=document.createElement('input');f.type='file';f.accept='image/*';if(capture)f.setAttribute('capture','environment');
+    f.onchange=async()=>{
+      const file=f.files[0];if(!file)return;
+      try{
+        data.img=await shrinkImage(file);data.result=null;data.busy=true;data.err='';render();
+        const target=data.dir==='ko'?'ko':active().code;
+        data.result={...await photoTranslate(data.img,target),target};
+      }catch(e){data.err=e.message}
+      data.busy=false;if(state.modal===data)render();
+    };
+    f.click();
+  };
+  button('📷 사진 찍기','action primary',()=>pick(true),rb);
+  button('🖼 사진 고르기','action',()=>pick(false),rb);
+  if(data.img){const im=node('img','photo-prev','',body);im.src=data.img;im.alt='고른 사진'}
+  if(data.busy)node('p','tiny','🔎 사진 속 글자를 읽고 번역하는 중… (10~20초)',body);
+  if(data.err)node('p','tiny','번역 실패 · '+data.err,body);
+  const r=data.result;
+  if(r){
+    if(!r.translation){node('p','tiny','사진에서 글자를 찾지 못했습니다. 글자가 크게 나오도록 다시 찍어 보세요.',body);return}
+    const box=node('div','photo-out','',body);
+    node('div','photo-tr',r.translation,box).dir='auto';
+    if(r.original)node('div','photo-orig',r.original,box).dir='auto';
+    button('🔊 듣기','action primary',()=>speak(r.translation,r.target),actions);
+    button('크게 보기','action',()=>openEnlarge(r.translation,r.target,r.original),actions);
+    button('복사','action',async()=>{try{await navigator.clipboard.writeText(r.translation+(r.original?'\n\n'+r.original:''));notify('복사했습니다.')}catch{notify('복사가 막혀 있습니다.')}},actions);
+  }
+}
 function drawPhrases(body,data){
   const code=active().code;const off=offlineFor(code);const all=allPhrases();
   if(!off?.full){
@@ -1049,10 +1196,11 @@ function drawHelp(body){
     ['🗣 대화 모드','현지인과 주고받을 때 씁니다. 큰 마이크를 누르고 말하면 글자가 실시간으로 보이고, 말이 끝나면 잠깐 "고치기 / 보내기"를 고를 수 있습니다. 그대로 두면 자동으로 번역해서 소리로 들려줍니다.'],
     ['👂 듣기 모드','가이드 설명처럼 외국어를 계속 들을 때 씁니다. 외국어를 한국어로 번역해 아래로 쌓아 줍니다. 🌐 버튼으로 듣는 언어를 바꿀 수 있습니다. 🌐 버튼을 누르면 "외국어→한국어"와 "한국어→외국어"가 바뀌고, 길게 누르면 다른 외국어를 고를 수 있습니다. 🎧 버튼을 켜면 번역된 한국어를 이어폰으로 끊지 않고 계속 읽어 주고, 밀리면 읽는 속도를 1.3배·1.5배로 올려 따라잡습니다. 꼭 이어폰을 꽂고 쓰세요.\n🌙 화면 어둡게: 화면을 까맣게 덮어 배터리를 아끼고, 마이크는 계속 듣습니다. 두 번 누르거나 "화면 되돌리기"로 밝아집니다. (화면을 완전히 끄면 마이크가 멈추니 끄지 마세요)\n⏱ 2분 동안 말이 없으면 자동으로 어두워지고, 그 뒤 5분 더 없으면 마이크와 화면이 꺼집니다. 대화 모드는 2분 동안 말이 없으면 마이크가 꺼집니다.'],
     ['⬇ 아래 버튼','🎤 알아듣기: 누를 때마다 한국어 → 외국어 → 번갈아\n🔊 소리: 양쪽 → 한국어 → 외국어 → 끔\n⌨ 글로 통역: 붙여넣기·파일·말로 입력\n가 / A: 한국어·외국어 글씨 크기'],
-    ['💬 말풍선','한국어 말풍선의 ✎로 고치면 다시 번역합니다. 외국어 말풍선의 "가"는 한글 발음, 🔊는 다시 듣기입니다. 말풍선을 누르면 크게 보여 주고, 빈 곳을 누르면 돌아갑니다.'],
+    ['💬 말풍선','모든 말풍선에 ✎(고치기)와 🔊(듣기)가 있습니다. 원래 문장을 고치면 다시 번역하고, 번역 문장은 직접 고칠 수 있습니다. 한국어 말풍선의 Ab 버튼은 외국 사람이 읽을 수 있게 외국 글자로 발음을 보여 줍니다. 소리가 나오는 동안 작은 막대가 읽는 속도를 보여 줍니다. 한국어 말풍선의 ✎로 고치면 다시 번역합니다. 외국어 말풍선의 "가"는 한글 발음, 🔊는 다시 듣기입니다. 말풍선을 누르면 크게 보여 주고, 빈 곳을 누르면 돌아갑니다.'],
     ['◀ 자주 쓰는 문장','오른쪽 ◀ 탭을 누르면 나옵니다. 짧게 누르면 통역, 길게 누르면 고치기·지우기. 맨 아래 "문장 추가하기"로 새 문장을 넣을 수 있습니다.'],
     ['📚 인터넷 없을 때','설정 → "인터넷 없을 때 쓸 여행 문구"에서 언어별로 받기를 눌러 두세요. 인터넷이 끊겨도 여행 문구와 자주 쓰는 문장을 글씨와 소리로 쓸 수 있습니다. (소리는 휴대폰에 그 언어 음성 데이터가 있어야 합니다)'],
     ['🔑 AI 키','설정에서 Gemini 키를 넣으면 말한 문장을 AI가 다듬고, 외국어의 한글 발음을 만들어 줍니다. 키가 없어도 번역은 무료로 됩니다.'],
+    ['📷 사진 통역','◀ 서랍이나 "글로 통역"에서 "사진 통역"을 누르고 메뉴판·안내판을 찍으면 글자를 읽어 번역합니다. Gemini 키가 필요합니다.'],
     ['📤 전체 보내기','위쪽 공유 버튼을 누르면 대화 기록 전체를 카톡 등으로 보낼 수 있습니다.'],
     ['📲 설치','크롬 메뉴(⋮) → "앱 설치"를 누르면 주소창 없는 전체 화면 앱이 됩니다. 아이폰은 음성 인식이 잘 안 되니 "글로 통역"과 키보드 마이크를 써 주세요.']
   ];
@@ -1211,8 +1359,9 @@ async function consume(text,source,opt={}){
     entry.translation=await translate(source==='ko'?protectWords(entry.original):entry.original,source,target,progress);
     if(opt.note&&source==='ko')cacheTr(target,entry.original,entry.translation);
     render();scrollEnd();
-    if(!toListen&&!opt.fromText)autoSpeak(entry.translation,target,opt.tone);
-    if(toListen&&state.earListen)queueSpeak(entry.translation,target,opt.tone);
+    if(opt.fromText){if(state.speech!==3)speak(entry.translation,target)}
+    else if(!toListen)autoSpeak(entry.translation,target,opt.tone);
+    if(toListen&&state.earListen&&!opt.fromText)queueSpeak(entry.translation,target,opt.tone);
   }catch(err){entry.translation='번역 실패 · '+err.message;entry.failed=true;render();scrollEnd()}
 }
 
