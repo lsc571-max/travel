@@ -592,7 +592,7 @@ function render(){
   }
 
   const top=node('header','top','',s);
-  const versionTag=node('span','', 'V21',top);
+  const versionTag=node('span','', APP_VERSION.split(' ')[0],top);
   versionTag.title=APP_VERSION;
   versionTag.style.cssText='position:absolute;top:2px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:400;opacity:.65;pointer-events:none;z-index:2;line-height:1;white-space:nowrap';
   const tl=node('div','top-left','',top);
@@ -661,7 +661,7 @@ function scrollEnd(){const t=$('#transcript');if(t)t.scrollTo({top:t.scrollHeigh
 
 function drawHome(root){
   const h=node('main','home','',root);const L=active();
-  const versionTag=node('span','', 'V21',h);versionTag.title=APP_VERSION;versionTag.style.cssText='position:absolute;top:max(6px, env(safe-area-inset-top));right:10px;font-size:10px;font-weight:400;opacity:.7;z-index:20;pointer-events:none';
+  const versionTag=node('span','', APP_VERSION.split(' ')[0],h);versionTag.title=APP_VERSION;versionTag.style.cssText='position:absolute;top:max(6px, env(safe-area-inset-top));right:10px;font-size:10px;font-weight:400;opacity:.7;z-index:20;pointer-events:none';
   /* 사진을 먼저 보여 주고, 사진을 못 받으면(오프라인 등) 직접 그린 그림을 대신 보여 줌 */
   const showPhoto=()=>{h.style.backgroundImage=`url("${L.image}")`;const sv=h.querySelector('.home-scene');if(sv)sv.remove()};
   if(L.bg){h.style.backgroundColor=L.bg[1];h.insertAdjacentHTML('afterbegin',sceneSVG(L))}
