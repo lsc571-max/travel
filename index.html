@@ -395,7 +395,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='ChatGPT 수정본 · 버전 15 (통합 테스트) · 2026.11.02';
+const APP_VERSION='ChatGPT 수정본 · 버전 16 (마이크 복구) · 2026.11.02';
 const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
@@ -1428,11 +1428,30 @@ function activity(){
 }
 function setDim(on){state.dim=on;render()}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&state.mic)keepAwake()});
-function stopMic(){stopTone();state.mic=false;pauseRecognizer();state.interim='';clearTimeout(idle1);clearTimeout(idle2);releaseWake()}
+function stopMic(){clearTimeout(micRetryTimer);clearTimeout(micWatchdog);stopTone();state.mic=false;pauseRecognizer();state.interim='';clearTimeout(idle1);clearTimeout(idle2);releaseWake()}
+let micRetry=0,micLastError='',micRetryTimer=null,micWatchdog=null,micStartingAt=0;
+function micDiagnostic(message){
+  micLastError=message;
+  let e=document.getElementById('micDiagnostic');
+  if(!e&&state.page==='main'){e=document.createElement('div');e.id='micDiagnostic';e.setAttribute('role','status');e.style.cssText='position:fixed;bottom:95px;left:12px;right:12px;z-index:9999;background:#fff4df;color:#472b00;border:2px solid #c17a00;border-radius:12px;padding:10px 14px;font-size:15px;line-height:1.4;box-shadow:0 2px 8px #0003';document.body.appendChild(e)}
+  if(e)e.textContent='🎙 마이크 상태: '+message;
+}
+function scheduleMicRetry(message){
+  clearTimeout(micWatchdog);clearTimeout(micRetryTimer);
+  if(!state.mic)return;
+  micDiagnostic(message);
+  if(micRetry>=3){state.mic=false;state.recognizer=null;updateMic();micDiagnostic('자동 복구에 실패했습니다. 크롬에서 직접 열고, 사이트 마이크 권한을 확인해 주세요. 최근 오류: '+message);return}
+  const delay=[500,1200,2500][micRetry++];
+  micRetryTimer=setTimeout(()=>{if(state.mic&&!state.recognizer)startRecognition()},delay);
+}
 function toggleMic(){
-  if(state.mic){stopMic();clearPending();render();return}
-  if(!SR){notify('이 브라우저에는 음성 인식 기능이 없습니다. "글로 통역"을 이용해 주세요.');return}
+  if(state.mic){stopMic();clearPending();clearTimeout(micRetryTimer);clearTimeout(micWatchdog);document.getElementById('micDiagnostic')?.remove();render();return}
+  if(!SR){micDiagnostic('이 브라우저에서는 음성 인식이 지원되지 않습니다. Chrome을 이용해 주세요.');return}
+  clearTimeout(micRetryTimer);clearTimeout(micWatchdog);micRetry=0;micLastError='';
   state.mic=true;state.sourceTurn=0;activity();render();
+  // Explicit start preserves user-gesture context and avoids a silent 'on' state.
+  if(!state.recognizer)startRecognition();
+  if(!state.recognizer&&state.mic)scheduleMicRetry('음성 인식 시작을 다시 시도합니다.');
 }
 function startRecognition(){
   if(!SR||!state.mic||state.modal||state.speaking||state.pending||state.page!=='main')return;
@@ -1457,7 +1476,9 @@ function startRecognition(){
       catch(err){if(e.translation==='번역 중…')e.translation='번역 실패 · '+err.message;render()}
     });
   };
-  r.onresult=event=>{
+  r.onstart=()=>{clearTimeout(micWatchdog);micRetry=0;micDiagnostic('마이크 연결됨 · 음성을 듣고 있습니다.');};
+  r.onaudiostart=()=>{clearTimeout(micWatchdog);micDiagnostic('소리 입력 확인됨 · 말씀해 주세요.');};
+  r.onresult=event=>{clearTimeout(micWatchdog);micRetry=0;micDiagnostic('음성 인식됨 · 번역 처리 중');
     if(state.recognizer!==r||state.speaking)return;
     activity();
     const res=event.results[event.results.length-1];const t=res[0].transcript.trim();
@@ -1480,9 +1501,13 @@ function startRecognition(){
     updateLive();
   };
   r.onerror=e=>{
-    if(e.error==='not-allowed'||e.error==='service-not-allowed'){state.mic=false;state.recognizer=null;notify('마이크 권한이 허용되지 않았습니다.');render()}
-    else if(e.error==='network'){notify('음성 인식은 인터넷이 필요합니다.')}
-    else if(e.error!=='aborted'&&e.error!=='no-speech')notify('음성 인식: '+e.error);
+    clearTimeout(micWatchdog);
+    if(e.error==='aborted')return;
+    if(e.error==='not-allowed'||e.error==='service-not-allowed'){
+      state.mic=false;state.recognizer=null;render();
+      micDiagnostic('마이크/음성 인식 권한 거부 ('+e.error+'). Chrome 사이트 설정을 확인해 주세요.');
+    }else if(e.error==='no-speech'){micDiagnostic('소리가 인식되지 않았습니다. 재시도합니다.')}
+    else{micDiagnostic('음성 인식 오류: '+e.error);if(e.error==='network')notify('음성 인식 서버와 연결할 수 없습니다. 인터넷 연결을 확인해 주세요.')}
   };
   r.onend=()=>{
     if(state.recognizer!==r)return;
@@ -1506,9 +1531,13 @@ function startRecognition(){
       else consume(finalText,source,{tone:takeTone()});
     }else updateLive();
     updateMic();
-    setTimeout(resumeRecognizer,250);
+    if(state.mic&&!state.speaking&&!state.pending){scheduleMicRetry(micLastError||'음성 인식이 종료되어 다시 연결합니다.')}else setTimeout(resumeRecognizer,250);
   };
-  try{r.start()}catch(e){state.recognizer=null;state.mic=false;notify('마이크 시작 실패: '+e.message);updateMic()}
+  try{
+    r.start();micStartingAt=Date.now();
+    micWatchdog=setTimeout(()=>{if(state.recognizer!==r||!state.mic)return;state.recognizer=null;try{r.abort()}catch{}scheduleMicRetry('마이크 시작 응답 없음 (8초)')},8000);
+    micDiagnostic('마이크 연결 시도 중…');
+  }catch(e){state.recognizer=null;scheduleMicRetry('마이크 시작 실패: '+e.message);updateMic()}
 }
 
 /* ── 전체 화면 / 설치 ── */
