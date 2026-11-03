@@ -395,7 +395,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='V24 · 듣기 마이크 안정화 · 설정 위치 유지 · 2026.11.03';
+const APP_VERSION='V25 · V12 정확도 우선 듣기 · 2026.11.03';
 const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
@@ -462,9 +462,9 @@ function deviceSpeak(text,code,tone,done){
   });
 }
 /* 설정 화면의 숨겨진 관리자 메뉴에서만 변경 가능한 테스트 옵션. */
-const TEST_DEFAULTS={fastInterim:true,adaptiveSpeed:true,volumeFollow:false};
+const TEST_DEFAULTS={fastInterim:false,adaptiveSpeed:true,volumeFollow:false};
 let testOptions={...TEST_DEFAULTS,...loadJSON('travel_v15_test_options',{})};
-testOptions.volumeFollow=false;state.toneFollow=false;
+testOptions.fastInterim=false;testOptions.volumeFollow=false;state.toneFollow=false;
 function saveTestOptions(){store('travel_v15_test_options',JSON.stringify(testOptions))}
 /* 듣기 모드 · 이어폰: 밀린 음성 수에 따라 1.1 → 1.3 → 1.5 → 1.7 → 최대 2.0배로 따라잡기. */
 let speakQ=0;
@@ -1205,7 +1205,7 @@ function drawSettings(body){
   node('h4','','🧪 통합 기능 테스트',testArea);
   node('p','tiny','일반 화면에는 표시되지 않습니다. 기능별로 켜고 끈 뒤 같은 문장으로 비교하세요. 설정은 이 기기에만 저장됩니다.',testArea);
   const testLabels=[
-    ['fastInterim','중간 번역 미리 시작','14버전 기능 · 문장이 끝나기 전 안정된 구간부터 번역'],
+    ['fastInterim','중간 번역 미리 시작 (정확도 우선으로 일시 중지)','V12 방식 복원 · 문장이 확정된 후 전체 문장을 번역'],
     ['adaptiveSpeed','최대 2배속 따라잡기','14버전 기능 · 한국어 음성이 밀리면 읽기 속도 증가'],
     ['volumeFollow','말소리 강약 반영','말소리 크기와 높낮이를 출력에 반영'],
      ['autoVoice','남성형·여성형 음성 자동 선택','목소리 높낮이에 따라 출력 음색 자동 선택 (성별 판정 아님)']
@@ -1215,6 +1215,7 @@ function drawSettings(body){
     const label=node('span','','',row);label.style.cssText='flex:1;font-size:14px';
     node('b','',title,label).style.display='block';node('small','tiny',desc,label).style.display='block';
     const toggle=node('input','','',row);toggle.type='checkbox';toggle.checked=k==='autoVoice'?state.autoVoice:!!testOptions[k];toggle.style.cssText='width:22px;height:22px;flex:0 0 auto';
+    if(k==='fastInterim'){toggle.checked=false;toggle.disabled=true;toggle.title='V25에서는 정확도 보호를 위해 사용하지 않습니다.';}
     toggle.onchange=()=>{if(k==='autoVoice')state.autoVoice=toggle.checked;else testOptions[k]=toggle.checked;if(k==='volumeFollow')state.toneFollow=toggle.checked;if(state.mic&&(state.toneFollow||state.autoVoice))startTone();else if(!state.toneFollow&&!state.autoVoice)stopTone();saveTestOptions();persist();notify(title+(toggle.checked?' 켬':' 끔')+' · 다음 문장부터 적용됩니다.')};
   });
   button('테스트 옵션 초기화','action',()=>{testOptions={...TEST_DEFAULTS};state.toneFollow=false;state.autoVoice=true;stopTone();saveTestOptions();persist();render();notify('테스트 옵션을 기본값으로 되돌렸습니다.')},testArea);
@@ -1504,7 +1505,7 @@ function startRecognition(){
     state.interim=t;
     // ChatGPT v13: Translate stable interim clauses without waiting for end-of-speech.
     // Require the same prefix in two consecutive speech-recognition updates.
-    if(live&&testOptions.fastInterim&&!res.isFinal&&Date.now()-sess.last>=900&&t.startsWith(sess.sent)){
+    if(false&&live&&testOptions.fastInterim&&!res.isFinal&&Date.now()-sess.last>=900&&t.startsWith(sess.sent)){
       const rest=t.slice(sess.sent.length);
       const stable=rest&&sess.prev.startsWith(sess.sent)&&t.startsWith(sess.prev);
       let piece='';
