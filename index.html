@@ -22,15 +22,16 @@
 #app[data-theme=kids]{--accent:#f29e0c;--accent2:#ff7a59;--bg:#fffbea;--surface:#fff1c2;--text:#3b2f12;--muted:#8a7646;--line:#f5e3a6;--ko:#ffe7a1;--fg:#e3f2ff;--blue:#3a9ad9;--radius:22px;--font:'Jua',system-ui,sans-serif}
 
 *{box-sizing:border-box}
-body{margin:0;background:#f2f5f4}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+body{margin:0;background:#f2f5f4;position:fixed;inset:0}
 button,input,textarea,select{font:inherit;color:inherit}
 button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 button:focus-visible{outline:3px solid #177bc0;outline-offset:3px}
 svg{display:block}
-#app{width:100%;min-height:100dvh;max-width:750px;margin:auto;background:var(--bg);color:var(--text);font-family:var(--font);position:relative;overflow:hidden}
+#app{--app-h:100dvh;width:100%;height:var(--app-h);max-width:750px;margin:auto;background:var(--bg);color:var(--text);font-family:var(--font);position:relative;overflow:hidden}
 
 /* ── 첫 화면 ── */
-.home{height:100dvh;position:relative;background:#456 center/cover no-repeat;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:calc(46px + env(safe-area-inset-bottom))}
+.home{height:var(--app-h);overflow:hidden;touch-action:manipulation;position:relative;background:#456 center/cover no-repeat;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:calc(46px + env(safe-area-inset-bottom))}
 .home:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#0003,transparent 40%,#0006)}
 .lang{position:relative;border:1px solid #fff9;background:#fffffff0;color:#1e3038;border-radius:40px;padding:13px 26px;font-size:19px;box-shadow:0 4px 16px #0004}
 .home-tip{position:relative;color:#fff;font-size:15px;margin-top:16px;text-shadow:0 1px 4px #000c}
@@ -38,14 +39,14 @@ svg{display:block}
 .select-pop button{display:block;width:100%;border:0;background:white;padding:12px 10px;text-align:left;border-radius:10px;font-size:15px}.select-pop button.on{background:#e3f4e9;font-weight:700}
 
 /* ── 본 화면 ── */
-.screen{display:flex;flex-direction:column;height:100dvh;--acc:var(--accent)}
+.screen{display:flex;flex-direction:column;height:var(--app-h);overflow:hidden;--acc:var(--accent)}
 .screen.listen{--acc:var(--accent2)}
 .top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:4px;padding:calc(12px + env(safe-area-inset-top)) 10px 10px;border-bottom:1px solid var(--line)}
 .top-left{justify-self:start}.top-right{justify-self:end;display:flex}
 .home-btn{display:flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:7px 9px;font-size:14px;font-weight:650;white-space:nowrap}
 .mode{font-size:21px;font-weight:780;color:var(--acc);border:none;background:none;padding:4px;white-space:nowrap}
 .icon-btn{border:0;background:none;padding:7px;color:var(--muted);border-radius:10px}
-.transcript{flex:1;min-height:0;overflow-y:auto;padding:16px 16px 18px}
+.transcript{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:16px 16px 18px}
 .hint{color:var(--muted);text-align:center;margin:13vh 0 0;font-size:15px;line-height:1.8;white-space:pre-line}
 .hint svg{margin:0 auto 10px}
 .pair{margin:0 0 15px;display:flex;flex-direction:column;gap:6px}
@@ -79,7 +80,7 @@ svg{display:block}
 
 /* 서랍 */
 .side-tab{position:absolute;top:45%;right:0;transform:translateY(-50%);width:24px;height:84px;border-radius:9px 0 0 9px;border:0;background:var(--accent);color:#fff;font-size:14px;z-index:3}
-.drawer{position:absolute;top:0;bottom:0;right:0;width:min(84vw,320px);z-index:6;box-shadow:-7px 0 25px #0003;background:var(--bg);padding:calc(22px + env(safe-area-inset-top)) 16px 18px;overflow-y:auto}
+.drawer{position:absolute;top:0;bottom:0;right:0;width:min(84vw,320px);z-index:6;box-shadow:-7px 0 25px #0003;background:var(--bg);padding:calc(22px + env(safe-area-inset-top)) 16px 18px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .overlay{position:absolute;inset:0;background:#0005;z-index:5}
 .drawer-close{float:right;background:none;border:0;font-size:24px}
 .drawer h3{margin:18px 0 6px}
@@ -97,7 +98,7 @@ svg{display:block}
 .ai-badge.show{display:flex}
 .ai-badge i{width:8px;height:8px;border-radius:50%;background:#fff;animation:blink 1s infinite}
 @keyframes blink{50%{opacity:.2}}
-.modal-content{flex:1;min-height:0;overflow:auto;padding-top:16px}
+.modal-content{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding-top:16px}
 .enlarge-body{display:flex;flex-direction:column;justify-content:center;min-height:100%}
 .sub-text{font-size:17px;color:var(--muted);margin-bottom:14px}
 .big-text{font-size:clamp(27px,8vw,52px);font-weight:700;line-height:1.5;overflow-wrap:anywhere;transition:transform .2s;align-self:flex-start}
@@ -255,12 +256,24 @@ svg{display:block}
 .admin-box h4{margin:0 0 6px}
 .admin-link{display:block;text-align:center;text-decoration:none;margin:8px 0}
 .help-text{margin:0;font-size:15px;line-height:1.7;white-space:pre-line}
-@media(min-width:750px){.home,.screen{height:min(100dvh,920px);min-height:650px}#app{min-height:650px;margin:2vh auto;border-radius:22px;box-shadow:0 0 22px #0001}}
+@media(min-width:750px){body{position:static;overflow:auto}#app{--app-h:min(100dvh,920px);min-height:650px;margin:2vh auto;border-radius:22px;box-shadow:0 0 22px #0001}.home,.screen{min-height:650px}}
+/* v33: 첫 화면 버전·언어 표시 */
+.home-corner{position:absolute;top:max(8px, env(safe-area-inset-top));font-size:13px;font-weight:500;color:#fff;opacity:.7;z-index:20;pointer-events:none;text-shadow:0 1px 3px #000a}
+.top-right .snd.off{color:#c0392b}
+.top-right{gap:0}
+@media(max-width:400px){.top{padding-left:8px;padding-right:6px;gap:2px}.top-right .icon-btn{padding:4px 3px}.top-right .icon-btn svg{width:20px;height:20px}.mode{font-size:18px;padding:4px 2px}.home-btn{padding:7px 7px;font-size:13px}.bar{gap:4px;padding-left:6px;padding-right:6px}.sbtn{min-width:44px;padding:3px 3px}}
+.sbtn.wipe{color:var(--muted)}
 </style>
 </head>
 <body><div id="app"></div>
 <script>
 'use strict';
+/* V33: 휴대폰마다 다른 실제 화면 높이에 딱 맞춤 (위아래로 밀리지 않게) */
+(function fitScreen(){
+  const set=()=>{const h=Math.round(window.visualViewport?.height||window.innerHeight);const a=document.getElementById('app');if(a&&innerWidth<750)a.style.setProperty('--app-h',h+'px');else if(a)a.style.removeProperty('--app-h');window.scrollTo(0,0)};
+  set();addEventListener('resize',set);addEventListener('orientationchange',()=>setTimeout(set,300));window.visualViewport?.addEventListener('resize',set);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(set,100)});
+})();
 const LANGS=[
   {name:'일본어',code:'ja',flag:'🇯🇵',locale:'ja-JP',image:'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=1400&q=85'},
   {name:'중국어',code:'zh-CN',flag:'🇨🇳',locale:'zh-CN',image:'https://images.unsplash.com/photo-1508804185872-d7badad00f7d?w=1400&q=85'},
@@ -341,6 +354,7 @@ const ICON={
   gear:w=>svg(w,'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
   help:w=>svg(w,'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6"/><path d="M12 17h.01"/>'),
   full:w=>svg(w,'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'),
+  trash:w=>svg(w,'<path d="M4 7h16"/><path d="M9 7V4.5h6V7"/><path d="M6.5 7l1 13h9l1-13"/><path d="M10 11v5M14 11v5"/>'),
   camera:w=>svg(w,'<path d="M4 8h3l1.5-2.5h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
   exitFull:w=>svg(w,'<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>')
 };
@@ -375,11 +389,13 @@ function store(k,v){try{localStorage.setItem(k,v)}catch{}}
 function load(k,d=''){try{return localStorage.getItem(k)??d}catch{return d}}
 function loadJSON(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}}
 
-const state={listenFrom:'foreign',geminiVoice:'',toneFollow:false,autoVoice:false,dim:false,earListen:false,adminOpen:false,page:'home',mode:'conversation',lang:2,items:[],listening:[],speech:0,koSize:2,foreignSize:2,mic:false,recognizer:null,side:false,modal:null,interim:'',sourceTurn:0,speaking:false,recog:'ko',theme:'basic',rate:1.1,voices:{},showPron:false,showKoPron:false,confirmWait:0,pending:null,listenLang:'ko',flash:null};
+const state={listenFrom:'foreign',geminiVoice:'',toneFollow:false,autoVoice:false,dim:false,earListen:false,adminOpen:false,page:'home',mode:'conversation',lang:2,items:[],listening:[],speech:0,koSize:2,foreignSize:2,mic:false,recognizer:null,side:false,modal:null,interim:'',sourceTurn:0,speaking:false,recog:'ko',theme:'basic',rate:1.3,voices:{},confirmWait:0,pending:null,listenLang:'ko',flash:null};
 (()=>{const s=loadJSON('travel_settings',{});const old=!(s.v>=7);
   let sp=old?({0:0,1:0,2:1,3:2})[s.speech??0]??0:(s.speech??0);
   const pre10=!(s.v>=10);if(pre10&&sp===2)sp=3;
-  Object.assign(state,{lang:s.lang>=0&&s.lang<LANGS.length?s.lang:2,koSize:s.koSize??2,foreignSize:Math.min(s.foreignSize??2,4),speech:sp===3?3:0,recog:recogModes.includes(s.recog)?s.recog:'ko',theme:s.theme||'basic',rate:pre10?1.1:(s.rate||1.1),voices:s.voices||{},geminiVoice:'',toneFollow:false,autoVoice:!!s.autoVoice,listenFrom:s.listenFrom==='ko'?'ko':'foreign',earListen:!!s.earListen,showPron:!!s.showPron,showKoPron:!!s.showKoPron,confirmWait:0});
+  Object.assign(state,{lang:s.lang>=0&&s.lang<LANGS.length?s.lang:2,koSize:s.koSize??2,foreignSize:Math.min(s.foreignSize??2,4),speech:sp===3?3:0,recog:recogModes.includes(s.recog)?s.recog:'ko',theme:s.theme||'basic',rate:pre10?1.3:(s.rate||1.3),voices:s.voices||{},geminiVoice:'',toneFollow:false,autoVoice:false,listenFrom:s.listenFrom==='ko'?'ko':'foreign',earListen:!!s.earListen,confirmWait:0});
+  // V33 첫 실행: 기본값(속도 1.3배 · 테마 기본 · 바로 번역 · 휴대폰 기본 목소리)으로 한 번 맞춤
+  if(!(s.v>=33)){state.rate=1.3;state.theme='basic';state.confirmWait=0;state.voices={}}
 })();
 
 /* 자주 쓰는 문장 (제목+문장 목록, 추가·삭제 가능) */
@@ -409,7 +425,7 @@ function glossaryHint(){const w=glossary.filter(g=>g.word).map(g=>g.out?`${g.wor
 
 (()=>{const h=loadJSON('travel_history',{});const fix=e=>{if(e.translation==='번역 중…'||e.correcting){e.correcting=false;if(!e.translation||e.translation==='번역 중…'){e.translation='번역 중단됨';e.failed=true}}return e};state.items=(h.items||[]).map(fix);state.listening=(h.listening||[]).map(fix)})();
 
-function persist(){store('travel_settings',JSON.stringify({v:12,listenFrom:state.listenFrom,geminiVoice:state.geminiVoice,toneFollow:state.toneFollow,autoVoice:state.autoVoice,earListen:state.earListen,lang:state.lang,koSize:state.koSize,foreignSize:state.foreignSize,speech:state.speech,recog:state.recog,theme:state.theme,rate:state.rate,voices:state.voices,showPron:state.showPron,showKoPron:state.showKoPron,confirmWait:state.confirmWait}))}
+function persist(){store('travel_settings',JSON.stringify({v:33,listenFrom:state.listenFrom,geminiVoice:state.geminiVoice,toneFollow:state.toneFollow,autoVoice:state.autoVoice,earListen:state.earListen,lang:state.lang,koSize:state.koSize,foreignSize:state.foreignSize,speech:state.speech,recog:state.recog,theme:state.theme,rate:state.rate,voices:state.voices,confirmWait:state.confirmWait}))}
 function saveHistory(){store('travel_history',JSON.stringify({items:state.items.slice(-300),listening:state.listening.slice(-300)}))}
 const active=()=>LANGS[state.lang];
 const langOf=code=>LANGS.find(l=>l.code===code);
@@ -421,7 +437,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='V32 · 자동 버튼·듣기 소리·사진 통역 버튼 · 2026.11.05';
+const APP_VERSION='V33 · 화면 맞춤·소리 버튼·문장별 발음 · 2026.11.05';
 const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
@@ -489,18 +505,19 @@ function deviceSpeak(text,code,tone,done){
 }
 /* 설정 화면의 숨겨진 관리자 메뉴에서만 변경 가능한 테스트 옵션. */
 const TEST_DEFAULTS={fastInterim:true,adaptiveSpeed:true,volumeFollow:false};
+// V33: 말소리 강약 반영 · 남성형/여성형 음성 자동 선택 기능은 뺌 (항상 꺼짐)
 const IS_ANDROID=/Android/i.test(navigator.userAgent);
 let testOptions={...TEST_DEFAULTS,...loadJSON('travel_v15_test_options',{})};
 function saveTestOptions(){store('travel_v15_test_options',JSON.stringify(testOptions))}
 // V27 첫 실행: 기본값(중간 번역 켬 · 2배속 켬 · 강약 끔 · 음성 자동 선택 끔)으로 한 번 맞춤
 if(!load('test_defaults_v27')){testOptions={...TEST_DEFAULTS};state.autoVoice=false;saveTestOptions();store('test_defaults_v27','1');setTimeout(()=>{try{persist()}catch{}},0)}
-state.toneFollow=!!testOptions.volumeFollow;
+testOptions.volumeFollow=false;state.toneFollow=false;state.autoVoice=false;
 // 안드로이드 웹에서는 음성 인식과 별도 마이크 분석을 동시에 쓰면 인식이 끝나지 않음 → 분석 기능 사용 안 함
 if(IS_ANDROID){testOptions.volumeFollow=false;state.toneFollow=false;state.autoVoice=false}
 /* 듣기 모드 · 이어폰: 밀린 음성 수에 따라 1.1 → 1.3 → 1.5 → 1.7 → 최대 2.0배로 따라잡기. */
 let speakQ=0;
 function queueSpeak(text,code,tone){
-  if(!('speechSynthesis'in window))return;
+  if(!('speechSynthesis'in window)||state.speech===3)return;
   const s=new SpeechSynthesisUtterance(text);s.lang=localeOf(code);
   const base=Math.max(state.rate,1.1);
   const catchup=testOptions.adaptiveSpeed?(speakQ>=4?2.0:speakQ>=3?1.7:speakQ>=2?1.5:speakQ>=1?1.3:1.1):1.1;
@@ -638,6 +655,7 @@ function render(){
   button(listen?'듣기 모드 ⇄':'대화 모드 ⇄','mode',()=>{stopMic();clearPending();state.dim=false;state.mode=listen?'conversation':'listen';render()},top);
   const tr=node('div','top-right','',top);
   iconButton(ICON.share(21),'icon-btn','전체 보내기',shareAll,tr);
+  {const off=state.speech===3;const sb=iconButton(off?ICON.mute(21):ICON.speaker(21),'icon-btn snd'+(off?' off':''),off?'소리 켜기':'소리 끄기',()=>{state.speech=state.speech===3?0:3;persist();if(state.speech===3){stopSpeech();notify('🔇 소리를 껐습니다.')}else notify('🔊 소리를 켰습니다.');render()},tr)}
   if(!isInstalled()&&document.documentElement.requestFullscreen)iconButton(document.fullscreenElement?ICON.exitFull(21):ICON.full(21),'icon-btn','전체 화면',toggleFullscreen,tr);
   iconButton(ICON.help(21),'icon-btn','사용법',()=>{state.modal={type:'help'};render()},tr);
   iconButton(ICON.gear(22),'icon-btn','설정',openSettings,tr);
@@ -655,10 +673,6 @@ function render(){
     const tb=button('','talk k-'+k,()=>{if(tb._long){tb._long=false;return}pressTalk(k)},tr2);
     tb.dataset.k=k;tb.innerHTML=`<span>${label}</span><small></small>`;
     if(k==='foreign')longPress(tb,()=>showLangPop(s));
-    if(k==='auto'){ // 자동: 듣는 중 3초간 누르면 꺼짐
-      let ht;tb.addEventListener('pointerdown',()=>{tb._long=false;if(!(state.mic&&state.recog==='auto'))return;ht=setTimeout(()=>{tb._long=true;if(state.mic&&state.recog==='auto'){toggleMic();notify('자동 듣기를 껐습니다.')}},3000)});
-      ['pointerup','pointercancel','pointerleave'].forEach(ev=>tb.addEventListener(ev,()=>clearTimeout(ht)));tb.oncontextmenu=e=>e.preventDefault();
-    }
   });
   const bar=node('footer','bar slim','',s);
   const bl=node('div','bar-left','',bar);
@@ -668,6 +682,7 @@ function render(){
   }
   smallButton(ICON.keyboard(19),'글로 통역','',()=>openText(),listen?br:bl,'text');
   smallButton(ICON.camera(19),'사진 통역','',()=>openPhoto(),listen?br:bl,'photo');
+  smallButton(ICON.trash(19),'기록 삭제','wipe',()=>askConfirm('대화 기록을 모두 지울까요?\n지운 기록은 되살릴 수 없습니다.','삭제',()=>{state.items=[];state.listening=[];saveHistory();render();notify('대화 기록을 지웠습니다.')}),listen?br:bl,'wipe');
   const mw=node('div','bar-mid','',bar);bar.insertBefore(mw,br);
   node('span','mic-state','',mw).id='micState';
   node('span','ai-state'+(engine()!=='free'?' on':''),engineName(),mw);
@@ -696,6 +711,8 @@ function render(){
 const talkKey=()=>state.mode==='listen'?(state.listenFrom==='ko'?'ko':'foreign'):state.recog;
 function pressTalk(k){
   const cur=talkKey();
+  // V33: 자동으로 듣는 중에 한국어·외국어 버튼을 누르면 그 언어로 시작하지 않고 자동만 끔
+  if(state.mic&&state.mode==='conversation'&&cur==='auto'&&k!=='auto'){toggleMic();notify('자동 듣기를 껐습니다.');return}
   if(state.mic&&cur===k){
     if(k==='auto'){state.sourceTurn=state.listenLang==='ko'?1:0;stopSpeech();clearPending();pauseRecognizer();render();return}
     toggleMic();return}
@@ -711,7 +728,7 @@ function updateMic(){
     const sm=b.querySelector('small'),big=b.querySelector('span'),auto=b.dataset.k==='auto';
     b.classList.toggle('as-ko',on&&auto&&state.listenLang==='ko');b.classList.toggle('as-foreign',on&&auto&&state.listenLang!=='ko');
     if(auto&&big)big.textContent=on?nameOf(state.listenLang):'자동';
-    if(sm){sm.classList.toggle('dim',on&&auto);sm.textContent=!on?(state.mode==='listen'?'눌러서 듣기':'눌러서 말하기'):auto?'3초간 누르면 꺼짐':state.speaking?'말하는 중':state.pending?'확인 중':'듣는 중 · 누르면 멈춤'}
+    if(sm){sm.classList.toggle('dim',on&&auto);sm.textContent=!on?(state.mode==='listen'?'눌러서 듣기':'눌러서 말하기'):auto?'옆 버튼 누르면 꺼짐':state.speaking?'말하는 중':state.pending?'확인 중':'듣는 중 · 누르면 멈춤'}
   });
   if(m)m.textContent=!state.mic?'':state.speaking?'말하는 중':state.pending?'확인 중':nameOf(state.listenLang)+' 듣는 중';
 }
@@ -719,7 +736,8 @@ function scrollEnd(){const t=$('#transcript');if(t)t.scrollTo({top:t.scrollHeigh
 
 function drawHome(root){
   const h=node('main','home','',root);const L=active();
-  const versionTag=node('span','', APP_VERSION.split(' ')[0],h);versionTag.title=APP_VERSION;versionTag.style.cssText='position:absolute;top:max(6px, env(safe-area-inset-top));right:10px;font-size:10px;font-weight:400;opacity:.7;z-index:20;pointer-events:none';
+  const versionTag=node('span','home-corner', APP_VERSION.split(' ')[0],h);versionTag.title=APP_VERSION;versionTag.style.right='12px';
+  const langTag=node('span','home-corner',L.name,h);langTag.style.left='12px';
   /* 사진을 먼저 보여 주고, 사진을 못 받으면(오프라인 등) 직접 그린 그림을 대신 보여 줌 */
   const showPhoto=()=>{h.style.backgroundImage=`url("${L.image}")`;const sv=h.querySelector('.home-scene');if(sv)sv.remove()};
   if(L.bg){h.style.backgroundColor=L.bg[1];h.insertAdjacentHTML('afterbegin',sceneSVG(L))}
@@ -776,17 +794,19 @@ function bubble(parent,item,index,field){
   if(isOrig&&item.correcting)node('span','fixing','✨ AI 교정 중…',b);
   b.onclick=()=>{if(!failed&&!busy)openEnlarge(text,code,isOrig?item.translation:item.original,other)};
   if(busy)return;
-  if(!failed){
-    if(code!=='ko'&&state.showPron)drawPron(b,text,code);
-    if(code==='ko'&&other!=='ko'&&state.showKoPron)drawKoPron(b,text,other);
+  /* V33: 발음은 기본으로 만들지 않음. 문장마다 "가"를 누르면 그 문장만 만들어 보여 줌 */
+  const pk=isOrig?'pronO':'pronT';
+  if(!failed&&item[pk]){
+    if(code!=='ko')drawPron(b,text,code);
+    else if(other!=='ko')drawKoPron(b,text,other);
   }
   const c=node('div','ctrls','',b);
   if(!failed){
     meter(c,text);
-    if(code!=='ko'&&aiReady()){
-      const pb=button('가','ctrl'+(state.showPron?' on':''),ev=>{ev.stopPropagation();state.showPron=!state.showPron;persist();render()},c);pb.title='한글 발음';pb.setAttribute('aria-label','한글 발음 보기');
-    }else if(other!=='ko'){
-      const kb=button(scriptMark(other),'ctrl'+(state.showKoPron?' on':''),ev=>{ev.stopPropagation();state.showKoPron=!state.showKoPron;persist();render()},c);kb.title=nameOf(other)+' 글자로 한국어 발음';kb.setAttribute('aria-label',kb.title);
+    const canPron=code!=='ko'?aiReady():other!=='ko';
+    if(canPron){
+      const pb=button('가','ctrl'+(item[pk]?' on':''),ev=>{ev.stopPropagation();item[pk]=!item[pk];saveHistory();render()},c);
+      pb.title=code!=='ko'?'한글로 발음 보기 (한국 사람이 읽기)':nameOf(other)+' 글자로 한국어 발음 보기 ('+nameOf(other)+' 사람이 읽기)';pb.setAttribute('aria-label',pb.title);
     }
   }
   iconButton('✎','ctrl edit-ctrl',isOrig?'고치기 (고치면 다시 번역)':'번역 문장 고치기',ev=>{ev.stopPropagation();openEdit(index,field)},c);
@@ -851,7 +871,7 @@ function drawPron(parent,text,code){
 }
 /* 한국어 → 외국 사람이 읽을 수 있는 발음 */
 const LATIN_LANGS=['en','vi','id','ms','tl','fr','de','es','it','pt','pl','cs','tr'];
-const KO_SCRIPT={ja:'가타카나',['zh-CN']:'병음(성조 표시 없는 로마자)',['zh-TW']:'병음(성조 표시 없는 로마자)',th:'태국 문자',hi:'데바나가리 문자',mn:'몽골어 키릴 문자',ru:'러시아어 키릴 문자',ar:'아랍 문자'};
+const KO_SCRIPT={ja:'가타카나',['zh-CN']:'소리가 비슷한 간체 한자(중국 사람이 읽으면 한국어 소리가 나도록, 영어 알파벳·병음 쓰지 말 것)',['zh-TW']:'소리가 비슷한 번체 한자(대만 사람이 읽으면 한국어 소리가 나도록, 영어 알파벳·병음 쓰지 말 것)',th:'태국 문자',hi:'데바나가리 문자',mn:'몽골어 키릴 문자',ru:'러시아어 키릴 문자',ar:'아랍 문자'};
 function scriptMark(code){return{ru:'Аб',mn:'Аб',ar:'أب',hi:'अ',th:'ก',ja:'カ'}[code]||'Ab'}
 function romanizeKo(text){
   const I=['g','kk','n','d','tt','r','m','b','pp','s','ss','','j','jj','ch','k','t','p','h'];
@@ -873,7 +893,7 @@ function romanizeKo(text){
 }
 function drawKoPron(parent,text,lang){
   const line=node('span','pron','',parent);
-  const key='ko>'+lang+'|'+text;
+  const key='ko2>'+lang+'|'+text;
   if(LATIN_LANGS.includes(lang)){line.textContent='🗣 '+romanizeKo(text);return}
   if(pronCache[key]){line.textContent='🗣 '+pronCache[key];return}
   const roman=romanizeKo(text);
@@ -917,7 +937,7 @@ async function useNote(i){
   if(!text)return openNote(i);
   state.side=false;state.mode='conversation';render();
   await consume(text,'ko',{note:true});
-  if(state.speech===3)notify('소리가 꺼져 있습니다. 설정 → 기본에서 켤 수 있어요.');
+  if(state.speech===3)notify('소리가 꺼져 있습니다. 위쪽 🔇 버튼을 누르면 켜집니다.');
 }
 function openNote(i){state.side=false;state.modal={type:'note',index:i};render()}
 function openEnlarge(text,code,sub,other){state.modal={type:'enlarge',text,code,sub,other:other||(code==='ko'?active().code:'ko'),rotated:false};render()}
@@ -954,15 +974,15 @@ function drawModal(root){
     const eb=node('div','enlarge-body','',body);
     if(data.sub)node('div','sub-text',data.sub,eb);
     const big=node('div','big-text',data.text,eb);big.dir='auto';if(data.rotated)big.classList.add('rotated');
-    if(data.code!=='ko'&&state.showPron&&aiReady()){const pw=node('div','',null,eb);pw.style.fontSize='20px';drawPron(pw,data.text,data.code)}
-    if(data.code==='ko'&&data.other!=='ko'&&state.showKoPron){const pw=node('div','',null,eb);pw.style.fontSize='20px';drawKoPron(pw,data.text,data.other)}
+    if(data.code!=='ko'&&data.showP&&aiReady()){const pw=node('div','',null,eb);pw.style.fontSize='20px';drawPron(pw,data.text,data.code)}
+    if(data.code==='ko'&&data.other!=='ko'&&data.showP){const pw=node('div','',null,eb);pw.style.fontSize='20px';drawKoPron(pw,data.text,data.other)}
     node('div','tap-tip','빈 곳을 누르면 돌아갑니다',eb);
     if(data.code!=='ko'){
       button('180° 회전','action',()=>{data.rotated=!data.rotated;big.classList.toggle('rotated')},actions);
-      if(aiReady())button(state.showPron?'가 한글 발음 끄기':'가 한글 발음 켜기','action',()=>{state.showPron=!state.showPron;persist();render()},actions);
+      if(aiReady())button(data.showP?'가 한글 발음 끄기':'가 한글 발음 보기','action',()=>{data.showP=!data.showP;render()},actions);
       button('🔊 발음 듣기','action primary',()=>speak(data.text,data.code),actions);
     }else{
-      if(data.other!=='ko')button(state.showKoPron?scriptMark(data.other)+' 발음 끄기':scriptMark(data.other)+' '+nameOf(data.other)+' 글자 발음','action',()=>{state.showKoPron=!state.showKoPron;persist();render()},actions);
+      if(data.other!=='ko')button(data.showP?'가 발음 끄기':'가 '+nameOf(data.other)+' 글자 발음','action',()=>{data.showP=!data.showP;render()},actions);
       button('🔊 듣기','action primary',()=>speak(data.text,'ko'),actions);
     }
     modal.onclick=e=>{if(!e.target.closest('button,.big-text,.sub-text,.pron'))closeLayer()};
@@ -1156,14 +1176,10 @@ function drawSettings(body){
   const fbtns=node('div','row-btns','',sec);
   if(installEvent&&!isInstalled())button('📲 휴대폰에 앱 설치','action primary',installApp,fbtns);
   button('🔗 앱 주소 복사·보내기','action primary',()=>shareAppLink(),fbtns);
-  button('📤 대화 기록 보내기','action',()=>shareAll(),fbtns);
-  const fb2=node('div','row-btns','',sec);
-  button('🗑 대화 기록 삭제','action',()=>askConfirm('대화 기록을 모두 지울까요?\n지운 기록은 되살릴 수 없습니다.','삭제',()=>{state.items=[];state.listening=[];saveHistory();notify('대화 기록을 지웠습니다.')}),fb2);
-  button('↺ 자주 쓰는 문장 기본값','action',()=>askConfirm('자주 쓰는 문장을 처음 기본 문구로 되돌릴까요?\n직접 고치거나 추가한 문장은 사라집니다.','되돌리기',()=>{notes=DEFAULT_NOTES.map(n=>({...n}));saveNotes();notify('기본 문구로 되돌렸습니다.')}),fb2);
+  button('↺ 자주 쓰는 문장 기본값','action',()=>askConfirm('자주 쓰는 문장을 처음 기본 문구로 되돌릴까요?\n직접 고치거나 추가한 문장은 사라집니다.','되돌리기',()=>{notes=DEFAULT_NOTES.map(n=>({...n}));saveNotes();notify('기본 문구로 되돌렸습니다.')}),fbtns);
 
   sec=node('div','sec','',body);node('h4','','소리',sec);
-  {const r=node('label','sw-row','',sec);node('span','','🔇 소리 끄기',r);const c=node('input','','',r);c.type='checkbox';c.checked=state.speech===3;c.onchange=()=>{state.speech=c.checked?3:0;persist();notify(c.checked?'소리를 껐습니다.':'소리를 켰습니다. 번역된 말을 상대 언어로 읽어 줍니다.')}}
-  node('p','tiny','켜 두면 번역된 말을 상대 언어로 자동으로 읽어 줍니다. (한국어로 말하면 외국어 소리, 외국어로 말하면 한국어 소리) 소리는 휴대폰 목소리를 씁니다.',sec);
+  node('p','tiny','번역된 말을 상대 언어로 자동으로 읽어 줍니다. (한국어로 말하면 외국어 소리, 외국어로 말하면 한국어 소리) 소리는 휴대폰 목소리를 쓰고, 대화·듣기 화면 위쪽 🔊 버튼으로 바로 끄고 켤 수 있어요.',sec);
   node('h4','','목소리',sec);
   const voices=speechSynthesis.getVoices?.()||[];
   [['ko','한국어'],[active().code,active().name]].forEach(([code,name])=>{
@@ -1298,8 +1314,6 @@ function drawSettings(body){
   const testLabels=[
     ['fastInterim','중간 번역 미리 시작','듣기 모드 · 말하는 도중 번역을 미리 보여 주고, 문장이 끝나면 전체 문장으로 다시 번역해 바꿈 (이어폰은 완성된 문장만 읽음)'],
     ['adaptiveSpeed','최대 2배속 따라잡기','14버전 기능 · 한국어 음성이 밀리면 읽기 속도 증가'],
-    ['volumeFollow','말소리 강약 반영','대화 모드 · 말소리 크기와 높낮이를 출력에 반영'+(IS_ANDROID?' · 안드로이드에서는 마이크 충돌로 사용할 수 없음 (PC 크롬 전용)':'')],
-    ['autoVoice','남성형·여성형 음성 자동 선택','대화 모드 · 목소리 높낮이에 따라 출력 음색 자동 선택 (성별 판정 아님)'+(IS_ANDROID?' · 안드로이드에서는 마이크 충돌로 사용할 수 없음 (PC 크롬 전용)':'')]
   ];
   testLabels.forEach(([k,title,desc])=>{
     const row=node('label','dl-row','',testArea);row.style.cssText='gap:8px;align-items:flex-start';
@@ -1309,8 +1323,8 @@ function drawSettings(body){
     if(IS_ANDROID&&(k==='volumeFollow'||k==='autoVoice')){toggle.checked=false;toggle.disabled=true;row.style.opacity='.55'}
     toggle.onchange=()=>{if(k==='autoVoice')state.autoVoice=toggle.checked;else testOptions[k]=toggle.checked;if(k==='volumeFollow')state.toneFollow=toggle.checked;if(state.mic&&(state.toneFollow||state.autoVoice))startTone();else if(!state.toneFollow&&!state.autoVoice)stopTone();saveTestOptions();persist();notify(title+(toggle.checked?' 켬':' 끔')+' · 다음 문장부터 적용됩니다.')};
   });
-  button('테스트 옵션 초기화','action',()=>{testOptions={...TEST_DEFAULTS};state.toneFollow=false;state.autoVoice=false;stopTone();saveTestOptions();persist();render();notify('기본값: 중간 번역 미리 시작 켬 · 2배속 따라잡기 켬 · 나머지 끔')},testArea);
-  node('p','tiny','기본값: 중간 번역 미리 시작 · 최대 2배속 따라잡기만 켜짐. 강약 반영과 음성 자동 선택은 마이크를 하나 더 열어 목소리를 재기 때문에, 안드로이드 웹에서는 음성 인식이 끝나지 않는 문제(마이크가 안 꺼짐)가 생겨 PC 크롬에서만 켤 수 있습니다. 듣기 모드에서는 항상 쉽니다.',testArea);
+  button('테스트 옵션 초기화','action',()=>{testOptions={...TEST_DEFAULTS};state.toneFollow=false;state.autoVoice=false;stopTone();saveTestOptions();persist();render();notify('기본값: 중간 번역 미리 시작 켬 · 2배속 따라잡기 켬')},testArea);
+  node('p','tiny','기본값: 중간 번역 미리 시작 · 최대 2배속 따라잡기 켜짐.',testArea);
   node('p','tiny','화면 자동 어두워짐(2분)과 듣기 자동 종료(추가 5분)는 변경하지 않았습니다. 음높이 기반 음색 선택으로 실제 성별을 판정하지 않으며, 기기마다 지원 음성이 다릅니다.',testArea);
   node('h4','','🔧 관리자 메뉴 (새 버전 올리기)',admin);
   node('p','tiny','① 받은 zip을 "내 파일"에서 압축 풀기 ② 아래 버튼 → "choose your files"로 파일 5개 모두 선택 ③ 맨 아래 초록 "Commit changes" ④ 1~2분 뒤 앱을 껐다 켜면 새 버전',admin);
@@ -1324,7 +1338,7 @@ function drawHelp(body){
   const H=[
     ['🗣 대화 모드','현지인과 주고받을 때 씁니다. 아래 한국어 / 외국어 / 자동 버튼 중 하나를 누르고 말하면 글자가 실시간으로 보이고, 말이 끝나면 잠깐 "고치기 / 보내기"를 고를 수 있습니다. 그대로 두면 자동으로 번역해서 소리로 들려줍니다.'],
     ['👂 듣기 모드','가이드 설명처럼 외국어를 계속 들을 때 씁니다. 외국어를 한국어로 번역해 아래로 쌓아 줍니다. 외국어 버튼을 누르면 외국어를 한국어로, 한국어 버튼을 누르면 한국어를 외국어로 번역합니다. 외국어 버튼을 길게 누르면 다른 외국어를 고를 수 있습니다. 🎧 버튼을 켜면 번역된 한국어를 이어폰으로 끊지 않고 계속 읽어 주고, 밀리면 읽는 속도를 1.3배·1.5배로 올려 따라잡습니다. 꼭 이어폰을 꽂고 쓰세요.\n🌙 화면 어둡게: 화면을 까맣게 덮어 배터리를 아끼고, 마이크는 계속 듣습니다. 두 번 누르거나 "화면 되돌리기"로 밝아집니다. (화면을 완전히 끄면 마이크가 멈추니 끄지 마세요)\n⏱ 2분 동안 말이 없으면 자동으로 어두워지고, 그 뒤 5분 더 없으면 마이크와 화면이 꺼집니다. 대화 모드는 2분 동안 말이 없으면 마이크가 꺼집니다.'],
-    ['⬇ 아래 버튼','한국어 · 외국어 · 자동: 누르면 그 언어로 듣기 시작, 다시 누르면 멈춤. 자동은 한 사람이 말을 마치면 다음 언어로 번갈아 듣고, 듣는 중에 짧게 누르면 듣는 언어가 바로 바뀌며, 3초간 누르면 꺼집니다. 외국어 버튼을 길게 누르면 다른 외국어를 고를 수 있어요.\n🔊 번역된 말은 상대 언어로 자동으로 읽어 줍니다. 소리 끄기는 설정 → 기본에 있습니다.\n⌨ 글로 통역: 붙여넣기·파일·말로 입력\n가 / A: 한국어·외국어 글씨 크기'],
+    ['⬇ 아래 버튼','한국어 · 외국어 · 자동: 누르면 그 언어로 듣기 시작, 다시 누르면 멈춤. 자동은 한 사람이 말을 마치면 다음 언어로 번갈아 듣고, 듣는 중에 짧게 누르면 듣는 언어가 바로 바뀌며, 옆의 한국어·외국어 버튼을 누르면 꺼집니다. 외국어 버튼을 길게 누르면 다른 외국어를 고를 수 있어요.\n🔊 번역된 말은 상대 언어로 자동으로 읽어 줍니다. 위쪽 공유 버튼 옆 🔊 버튼으로 소리를 끄고 켭니다.\n가 (문장 아래): 누른 문장만 발음을 보여 줍니다.\n⌨ 글로 통역: 붙여넣기·파일·말로 입력 · 🗑 기록 삭제: 대화 기록 모두 지우기\n가 / A: 한국어·외국어 글씨 크기'],
     ['💬 말풍선','모든 말풍선에 ✎(고치기)와 🔊(듣기)가 있습니다. 원래 문장을 고치면 다시 번역하고, 번역 문장은 직접 고칠 수 있습니다. 한국어 말풍선의 Ab 버튼은 외국 사람이 읽을 수 있게 외국 글자로 발음을 보여 줍니다. 소리가 나오는 동안 작은 막대가 읽는 속도를 보여 줍니다. 한국어 말풍선의 ✎로 고치면 다시 번역합니다. 외국어 말풍선의 "가"는 한글 발음, 🔊는 다시 듣기입니다. 말풍선을 누르면 크게 보여 주고, 빈 곳을 누르면 돌아갑니다.'],
     ['◀ 자주 쓰는 문장','오른쪽 ◀ 탭을 누르면 나옵니다. 제목이 두 줄로 보이고, 짧게 누르면 통역, 길게 누르면 내용 보기·고치기·지우기. 맨 아래 "문장 추가하기"로 새 문장을 넣을 수 있습니다.'],
     ['📚 인터넷 없을 때','설정 → "인터넷 없을 때 쓸 여행 문구"에서 언어별로 받기를 눌러 두세요. 인터넷이 끊겨도 여행 문구와 자주 쓰는 문장을 글씨와 소리로 쓸 수 있습니다. (소리는 휴대폰에 그 언어 음성 데이터가 있어야 합니다)'],
