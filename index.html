@@ -21,7 +21,9 @@
 #app[data-theme=night]{--accent:#4cc38a;--accent2:#5aa9f0;--bg:#12181b;--surface:#1c2428;--text:#e7eef0;--muted:#97a6ab;--line:#29343a;--ko:#1d3a2d;--fg:#283137;--blue:#3d8ad6}
 #app[data-theme=kids]{--accent:#f29e0c;--accent2:#ff7a59;--bg:#fffbea;--surface:#fff1c2;--text:#3b2f12;--muted:#8a7646;--line:#f5e3a6;--ko:#ffe7a1;--fg:#e3f2ff;--blue:#3a9ad9;--radius:22px;--font:'Jua',system-ui,sans-serif}
 
-*{box-sizing:border-box}
+*{box-sizing:border-box;scrollbar-width:none}
+*::-webkit-scrollbar{display:none;width:0;height:0}
+.modal-content,.drawer,.transcript,.select-pop{overflow-x:hidden!important}
 html,body{height:100%;overflow:hidden;overscroll-behavior:none}
 body{margin:0;background:#f2f5f4;position:fixed;inset:0}
 button,input,textarea,select{font:inherit;color:inherit}
@@ -192,7 +194,7 @@ svg{display:block}
 .home-flag{position:absolute;top:22%;left:50%;transform:translateX(-50%);font-size:150px;opacity:.9;filter:drop-shadow(0 8px 20px #0005)}
 .recent{position:relative;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:0 2px;margin-bottom:10px;max-width:min(92vw,380px);font-size:11px;color:#ffffffaa;text-shadow:0 1px 3px #000c}
 .recent span{margin-right:2px}
-.recent button{border:0;background:transparent;color:#ffffffc0;font-size:11px;padding:3px 6px;text-decoration:underline;text-underline-offset:2px}
+.recent button{border:0;background:transparent;color:#ffffffc0;font-size:11px;padding:3px 6px;text-decoration:none}
 .home-tip2{position:relative;color:#ffffffc8;font-size:12px;margin-top:6px;text-shadow:0 1px 3px #000c}
 .long-tip{font-style:normal;font-weight:400;font-size:11px;color:var(--muted);opacity:.8}
 .drawer-item.strong .long-tip{color:#fff}
@@ -437,7 +439,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='V34 · 스피커 기본 켬·듣기 모드 아래 줄 정리 · 2026.11.05';
+const APP_VERSION='V35 · 알림·스크롤 막대·밑줄 정리 · 2026.11.05';
 const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
@@ -709,7 +711,7 @@ const talkKey=()=>state.mode==='listen'?(state.listenFrom==='ko'?'ko':'foreign')
 function pressTalk(k){
   const cur=talkKey();
   // V33: 자동으로 듣는 중에 한국어·외국어 버튼을 누르면 그 언어로 시작하지 않고 자동만 끔
-  if(state.mic&&state.mode==='conversation'&&cur==='auto'&&k!=='auto'){toggleMic();notify('자동 듣기를 껐습니다.');return}
+  if(state.mic&&state.mode==='conversation'&&cur==='auto'&&k!=='auto'){toggleMic();return}
   if(state.mic&&cur===k){
     if(k==='auto'){state.sourceTurn=state.listenLang==='ko'?1:0;stopSpeech();clearPending();pauseRecognizer();render();return}
     toggleMic();return}
