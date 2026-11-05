@@ -201,8 +201,15 @@ svg{display:block}
 .talk:active{transform:scale(.95)}
 .talk small{font-size:11px;font-weight:500;opacity:.85;white-space:nowrap}
 .talk.k-foreign{--c:#2f78c9;--soft:#e1edfc}
-.talk.k-auto{--c:#7b4ed6;--soft:#eee5fb;flex:.8}
-.talk.big{flex:1.6}
+.talk.k-auto{--c:#7b4ed6;--soft:#eee5fb}
+.talk.k-auto.on.as-ko{--c:#2f9e63}
+.talk.k-auto.on.as-foreign{--c:#2f78c9}
+.talk small.dim{opacity:.6;font-size:10px}
+.screen.listen .talk-row{justify-content:center}
+.screen.listen .talk{flex:0 1 150px}
+.note-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.note-grid .drawer-item{margin:0;padding:12px 8px;text-align:center;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.note-grid .drawer-item.empty{opacity:.55}
 .talk.on{background:var(--c);color:#fff}
 .talk.on::after{content:"";position:absolute;inset:-2px;border-radius:16px;border:2px solid var(--c);animation:ring 1.8s ease-out infinite}
 .talk.on.speaking{background:#d9962f;border-color:#d9962f}
@@ -334,6 +341,7 @@ const ICON={
   gear:w=>svg(w,'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
   help:w=>svg(w,'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6"/><path d="M12 17h.01"/>'),
   full:w=>svg(w,'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'),
+  camera:w=>svg(w,'<path d="M4 8h3l1.5-2.5h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
   exitFull:w=>svg(w,'<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>')
 };
 const CHICK='<svg viewBox="0 0 120 120" width="110" height="110"><ellipse cx="60" cy="74" rx="38" ry="33" fill="#ffd23f"/><circle cx="60" cy="42" r="26" fill="#ffd23f"/><path d="M60 16q4-11 11-6q-7 2-7 9z" fill="#f5b82b"/><circle cx="50" cy="38" r="4" fill="#3b2f12"/><circle cx="70" cy="38" r="4" fill="#3b2f12"/><circle cx="51.5" cy="36.5" r="1.3" fill="#fff"/><circle cx="71.5" cy="36.5" r="1.3" fill="#fff"/><path d="M54 47h12l-6 8z" fill="#ff8c42"/><circle cx="41" cy="48" r="5" fill="#ffaa9a" opacity=".8"/><circle cx="79" cy="48" r="5" fill="#ffaa9a" opacity=".8"/><path d="M24 74q-12-3-13 9q12 2 18-3z" fill="#f5c22b"/><path d="M96 74q12-3 13 9q-12 2-18-3z" fill="#f5c22b"/><path d="M50 105v8M70 105v8" stroke="#ff8c42" stroke-width="4" stroke-linecap="round"/></svg>';
@@ -413,7 +421,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='V31 · 말하기 버튼 3개·설정 탭·ChatGPT · 2026.11.05';
+const APP_VERSION='V32 · 자동 버튼·듣기 소리·사진 통역 버튼 · 2026.11.05';
 const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
@@ -644,9 +652,13 @@ function render(){
   const keys=listen?['foreign','ko']:['ko','foreign','auto'];
   keys.forEach(k=>{
     const label={ko:'한국어',foreign:active().name,auto:'자동'}[k];
-    const tb=button('','talk k-'+k+(listen&&k==='foreign'?' big':''),()=>{if(tb._long){tb._long=false;return}pressTalk(k)},tr2);
+    const tb=button('','talk k-'+k,()=>{if(tb._long){tb._long=false;return}pressTalk(k)},tr2);
     tb.dataset.k=k;tb.innerHTML=`<span>${label}</span><small></small>`;
     if(k==='foreign')longPress(tb,()=>showLangPop(s));
+    if(k==='auto'){ // 자동: 듣는 중 3초간 누르면 꺼짐
+      let ht;tb.addEventListener('pointerdown',()=>{tb._long=false;if(!(state.mic&&state.recog==='auto'))return;ht=setTimeout(()=>{tb._long=true;if(state.mic&&state.recog==='auto'){toggleMic();notify('자동 듣기를 껐습니다.')}},3000)});
+      ['pointerup','pointercancel','pointerleave'].forEach(ev=>tb.addEventListener(ev,()=>clearTimeout(ht)));tb.oncontextmenu=e=>e.preventDefault();
+    }
   });
   const bar=node('footer','bar slim','',s);
   const bl=node('div','bar-left','',bar);
@@ -655,11 +667,12 @@ function render(){
     smallButton('<b style="font-size:18px;line-height:1">🎧</b>',state.earListen?'이어폰 켬':'이어폰 끔',state.earListen?'m-ko':'off',()=>{state.earListen=!state.earListen;persist();if(state.earListen)notify('🎧 이어폰을 꽂은 상태로 쓰세요. 번역된 한국어를 끊지 않고 이어서 읽어 줍니다. (스피커로 나오면 앱이 자기 소리를 다시 알아들을 수 있어요)');else try{speechSynthesis.cancel()}catch{};render()},bl,'ear');
   }
   smallButton(ICON.keyboard(19),'글로 통역','',()=>openText(),listen?br:bl,'text');
+  smallButton(ICON.camera(19),'사진 통역','',()=>openPhoto(),listen?br:bl,'photo');
   const mw=node('div','bar-mid','',bar);bar.insertBefore(mw,br);
   node('span','mic-state','',mw).id='micState';
   node('span','ai-state'+(engine()!=='free'?' on':''),engineName(),mw);
-  const fk=button('','font-btn'+(state.flash==='ko'?' flash':''),()=>{state.flash='ko';state.koSize=(state.koSize+1)%5;persist();render()},br);fk.innerHTML='가<small>한국어</small>';
-  const ff=button('','font-btn'+(state.flash==='fg'?' flash':''),()=>{state.flash='fg';state.foreignSize=(state.foreignSize+1)%5;persist();render()},br);ff.innerHTML='A<small>외국어</small>';
+  const fk=button('','font-btn'+(state.flash==='ko'?' flash':''),()=>{state.flash='ko';state.koSize=(state.koSize+1)%5;persist();render()},br);fk.innerHTML=`<span style="font-size:${[12,14,16,18,20][state.koSize]}px">가</span><small>한국어</small>`;
+  const ff=button('','font-btn'+(state.flash==='fg'?' flash':''),()=>{state.flash='fg';state.foreignSize=(state.foreignSize+1)%5;persist();render()},br);ff.innerHTML=`<span style="font-size:${[12,14,16,18,20][state.foreignSize]}px">A</span><small>외국어</small>`;
 
   if(listen&&!state.dim)button('🌙 화면 어둡게','dim-btn',()=>{if(!state.mic)notify('마이크를 켠 상태에서 쓰면 이어폰으로 계속 들을 수 있어요.');setDim(true)},s);
   if(state.dim&&state.page==='main'){
@@ -683,7 +696,9 @@ function render(){
 const talkKey=()=>state.mode==='listen'?(state.listenFrom==='ko'?'ko':'foreign'):state.recog;
 function pressTalk(k){
   const cur=talkKey();
-  if(state.mic&&cur===k){toggleMic();return}
+  if(state.mic&&cur===k){
+    if(k==='auto'){state.sourceTurn=state.listenLang==='ko'?1:0;stopSpeech();clearPending();pauseRecognizer();render();return}
+    toggleMic();return}
   if(state.mode==='listen')state.listenFrom=k==='ko'?'ko':'foreign';else state.recog=k;
   state.sourceTurn=0;persist();
   if(state.mic){stopSpeech();clearPending();pauseRecognizer();render()}else toggleMic();
@@ -693,7 +708,10 @@ function updateMic(){
   document.querySelectorAll('.talk').forEach(b=>{
     const on=state.mic&&b.dataset.k===cur;
     b.classList.toggle('on',on);b.classList.toggle('speaking',on&&state.speaking);
-    const sm=b.querySelector('small');if(sm)sm.textContent=!on?(state.mode==='listen'&&b.dataset.k==='foreign'?'눌러서 듣기':'눌러서 말하기'):state.speaking?'말하는 중':state.pending?'확인 중':(b.dataset.k==='auto'?nameOf(state.listenLang)+' 듣는 중':'듣는 중 · 누르면 멈춤');
+    const sm=b.querySelector('small'),big=b.querySelector('span'),auto=b.dataset.k==='auto';
+    b.classList.toggle('as-ko',on&&auto&&state.listenLang==='ko');b.classList.toggle('as-foreign',on&&auto&&state.listenLang!=='ko');
+    if(auto&&big)big.textContent=on?nameOf(state.listenLang):'자동';
+    if(sm){sm.classList.toggle('dim',on&&auto);sm.textContent=!on?(state.mode==='listen'?'눌러서 듣기':'눌러서 말하기'):auto?'3초간 누르면 꺼짐':state.speaking?'말하는 중':state.pending?'확인 중':'듣는 중 · 누르면 멈춤'}
   });
   if(m)m.textContent=!state.mic?'':state.speaking?'말하는 중':state.pending?'확인 중':nameOf(state.listenLang)+' 듣는 중';
 }
@@ -882,13 +900,12 @@ function drawDrawer(parent){
   let touch=0;
   d.addEventListener('touchstart',e=>touch=e.touches[0].clientX,{passive:true});
   d.addEventListener('touchend',e=>{if(e.changedTouches[0].clientX-touch>70){state.side=false;render()}},{passive:true});
-  const w=button('⌨ 글로 통역하기','drawer-item strong',()=>openText(),d);node('small','','붙여넣기 · 파일 올리기 · 말로 입력',w);
-  const ph=button('📷 사진 통역','drawer-item',()=>openPhoto(),d);node('small','','메뉴판·안내판 번역 · Gemini 키 필요',ph);
-  const p=button('📚 여행 문구','drawer-item',()=>openPhrases(),d);node('small','',offlineFor(active().code)?.full?'받아 둔 문구 · 인터넷 없어도 사용':'설정에서 받아 두면 인터넷 없이 사용',p);
+  const p=button('📚 여행 문구','drawer-item strong',()=>openPhrases(),d);node('small','',offlineFor(active().code)?.full?'받아 둔 문구 · 인터넷 없어도 사용':'설정에서 받아 두면 인터넷 없이 사용',p);
+  const grid=node('div','note-grid','',d);
   notes.forEach((n,i)=>{
     let timer,long=false;
-    const b=button('','drawer-item',()=>{if(long){long=false;return}useNote(i)},d);
-    b.textContent=n.t;if(NOTE_TIP.includes(n.t))node('em','long-tip',' (길게 누르면 수정)',b);node('small','',n.x||'(비어 있음 · 길게 눌러 입력)',b);
+    const b=button('','drawer-item'+(n.x?'':' empty'),()=>{if(long){long=false;return}useNote(i)},grid);
+    b.textContent=n.t;b.title=n.x||'(비어 있음 · 길게 눌러 입력)';
     b.addEventListener('pointerdown',()=>{long=false;timer=setTimeout(()=>{long=true;openNote(i)},600)});
     ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>clearTimeout(timer)));
     b.oncontextmenu=e=>e.preventDefault();
@@ -1307,12 +1324,12 @@ function drawHelp(body){
   const H=[
     ['🗣 대화 모드','현지인과 주고받을 때 씁니다. 아래 한국어 / 외국어 / 자동 버튼 중 하나를 누르고 말하면 글자가 실시간으로 보이고, 말이 끝나면 잠깐 "고치기 / 보내기"를 고를 수 있습니다. 그대로 두면 자동으로 번역해서 소리로 들려줍니다.'],
     ['👂 듣기 모드','가이드 설명처럼 외국어를 계속 들을 때 씁니다. 외국어를 한국어로 번역해 아래로 쌓아 줍니다. 외국어 버튼을 누르면 외국어를 한국어로, 한국어 버튼을 누르면 한국어를 외국어로 번역합니다. 외국어 버튼을 길게 누르면 다른 외국어를 고를 수 있습니다. 🎧 버튼을 켜면 번역된 한국어를 이어폰으로 끊지 않고 계속 읽어 주고, 밀리면 읽는 속도를 1.3배·1.5배로 올려 따라잡습니다. 꼭 이어폰을 꽂고 쓰세요.\n🌙 화면 어둡게: 화면을 까맣게 덮어 배터리를 아끼고, 마이크는 계속 듣습니다. 두 번 누르거나 "화면 되돌리기"로 밝아집니다. (화면을 완전히 끄면 마이크가 멈추니 끄지 마세요)\n⏱ 2분 동안 말이 없으면 자동으로 어두워지고, 그 뒤 5분 더 없으면 마이크와 화면이 꺼집니다. 대화 모드는 2분 동안 말이 없으면 마이크가 꺼집니다.'],
-    ['⬇ 아래 버튼','한국어 · 외국어 · 자동: 누르면 그 언어로 듣기 시작, 다시 누르면 멈춤. 자동은 한 사람이 말을 마치면 다음 언어로 번갈아 듣습니다. 외국어 버튼을 길게 누르면 다른 외국어를 고를 수 있어요.\n🔊 번역된 말은 상대 언어로 자동으로 읽어 줍니다. 소리 끄기는 설정 → 기본에 있습니다.\n⌨ 글로 통역: 붙여넣기·파일·말로 입력\n가 / A: 한국어·외국어 글씨 크기'],
+    ['⬇ 아래 버튼','한국어 · 외국어 · 자동: 누르면 그 언어로 듣기 시작, 다시 누르면 멈춤. 자동은 한 사람이 말을 마치면 다음 언어로 번갈아 듣고, 듣는 중에 짧게 누르면 듣는 언어가 바로 바뀌며, 3초간 누르면 꺼집니다. 외국어 버튼을 길게 누르면 다른 외국어를 고를 수 있어요.\n🔊 번역된 말은 상대 언어로 자동으로 읽어 줍니다. 소리 끄기는 설정 → 기본에 있습니다.\n⌨ 글로 통역: 붙여넣기·파일·말로 입력\n가 / A: 한국어·외국어 글씨 크기'],
     ['💬 말풍선','모든 말풍선에 ✎(고치기)와 🔊(듣기)가 있습니다. 원래 문장을 고치면 다시 번역하고, 번역 문장은 직접 고칠 수 있습니다. 한국어 말풍선의 Ab 버튼은 외국 사람이 읽을 수 있게 외국 글자로 발음을 보여 줍니다. 소리가 나오는 동안 작은 막대가 읽는 속도를 보여 줍니다. 한국어 말풍선의 ✎로 고치면 다시 번역합니다. 외국어 말풍선의 "가"는 한글 발음, 🔊는 다시 듣기입니다. 말풍선을 누르면 크게 보여 주고, 빈 곳을 누르면 돌아갑니다.'],
-    ['◀ 자주 쓰는 문장','오른쪽 ◀ 탭을 누르면 나옵니다. 짧게 누르면 통역, 길게 누르면 고치기·지우기. 맨 아래 "문장 추가하기"로 새 문장을 넣을 수 있습니다.'],
+    ['◀ 자주 쓰는 문장','오른쪽 ◀ 탭을 누르면 나옵니다. 제목이 두 줄로 보이고, 짧게 누르면 통역, 길게 누르면 내용 보기·고치기·지우기. 맨 아래 "문장 추가하기"로 새 문장을 넣을 수 있습니다.'],
     ['📚 인터넷 없을 때','설정 → "인터넷 없을 때 쓸 여행 문구"에서 언어별로 받기를 눌러 두세요. 인터넷이 끊겨도 여행 문구와 자주 쓰는 문장을 글씨와 소리로 쓸 수 있습니다. (소리는 휴대폰에 그 언어 음성 데이터가 있어야 합니다)'],
     ['🔑 AI 키','설정 → 고급에서 Gemini·Claude·ChatGPT 키를 넣을 수 있습니다. Gemini 키를 넣으면 말한 문장을 AI가 다듬고, 외국어의 한글 발음을 만들어 줍니다. 키가 없어도 번역은 무료로 됩니다.'],
-    ['📷 사진 통역','◀ 서랍이나 "글로 통역"에서 "사진 통역"을 누르고 메뉴판·안내판을 찍으면 글자를 읽어 번역합니다. Gemini 키가 필요합니다.'],
+    ['📷 사진 통역','아래쪽 "사진 통역" 버튼을 누르고 메뉴판·안내판을 찍으면 글자를 읽어 번역합니다. Gemini 키가 필요합니다.'],
     ['📤 전체 보내기','위쪽 공유 버튼을 누르면 대화 기록 전체를 카톡 등으로 보낼 수 있습니다.'],
     ['📲 설치','크롬 메뉴(⋮) → "앱 설치"를 누르면 주소창 없는 전체 화면 앱이 됩니다. 아이폰은 음성 인식이 잘 안 되니 "글로 통역"과 키보드 마이크를 써 주세요.']
   ];
@@ -1516,7 +1533,7 @@ async function consume(text,source,opt={}){
     render();scrollEnd();
     if(opt.fromText){if(state.speech!==3)speak(entry.translation,target)}
     else if(!toListen)autoSpeak(entry.translation,target,opt.tone);
-    if(toListen&&state.earListen&&!opt.fromText)queueSpeak(entry.translation,target,opt.tone);
+    if(toListen&&!opt.fromText){if(target!=='ko'){if(state.speech!==3)speak(entry.translation,target)}else if(state.earListen)queueSpeak(entry.translation,target,opt.tone)}
   }catch(err){entry.translation='번역 실패 · '+err.message;entry.failed=true;render();scrollEnd()}
 }
 
@@ -1615,7 +1632,7 @@ function startRecognition(){
   const finishEntry=(text)=>{
     const e=sess.entry;e.done=true;e.original=text;
     const tn=takeTone();
-    translate(text,source,listenTarget).then(tr=>{e.translation=tr;e.failed=false;e.preview=false;render();scrollEnd();if(state.earListen)queueSpeak(tr,listenTarget,tn)})
+    translate(text,source,listenTarget).then(tr=>{e.translation=tr;e.failed=false;e.preview=false;render();scrollEnd();if(listenTarget!=='ko'){if(state.speech!==3)speak(tr,listenTarget)}else if(state.earListen)queueSpeak(tr,listenTarget,tn)})
       .catch(err=>{e.preview=false;if(!e.translation||e.translation==='번역 중…'||e.translation==='…'){e.translation='번역 실패 · '+err.message;e.failed=true}render()});
   };
   r.onstart=()=>{clearTimeout(micWatchdog);micDiagnostic('마이크 연결됨 · 인식 언어 '+r.lang+' · 이 언어로 말씀해 주세요.');};
