@@ -439,7 +439,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='V35 · 알림·스크롤 막대·밑줄 정리 · 2026.11.05';
+const APP_VERSION='V36 · Gemini 빠름·균형·정확 선택 · 2026.11.07';
 const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
@@ -1069,7 +1069,7 @@ async function photoTranslate(dataUrl,target){
   const key=load('ai_key').trim();
   const prompt=`이 사진에 있는 글자를 모두 읽고 ${nameOf(target)}로 번역해 주세요. 메뉴판이나 목록이면 항목마다 줄을 나눠 주세요. 아래 JSON 형식으로만 답하세요.\n{"original":"사진 속 글자 그대로","translation":"${nameOf(target)} 번역"}\n글자가 없으면 {"original":"","translation":""}`;
   const body={contents:[{parts:[{inline_data:{mime_type:'image/jpeg',data:dataUrl.split(',')[1]}},{text:prompt}]}],generationConfig:{temperature:0.2,response_mime_type:'application/json'}};
-  const models=[...new Set([load('ai_model').trim(),'gemini-flash-latest','gemini-flash-lite-latest'].filter(Boolean))];
+  const models=[...new Set([gemModel(),'gemini-flash-latest',GEM_FALLBACK].filter(Boolean))];
   let lastErr;
   for(const m of models){
     try{
@@ -1242,8 +1242,13 @@ function drawSettings(body){
   const kl=node('a','action key-link','🔑 Gemini 키 받으러 가기',sec);kl.href='https://aistudio.google.com/apikey';kl.target='_blank';kl.rel='noopener';
   node('p','tiny','① 위 버튼 → 구글 계정으로 로그인 ② "API 키 만들기"(Create API key) ③ 프로젝트 선택 → 만들기 ④ "AIza…"로 시작하는 키를 복사해 아래 칸에 붙여넣고 저장',sec);
   const key=node('input','text-field','',sec);key.type='password';key.value=load('ai_key');key.placeholder='AIza…';key.autocomplete='off';
-  node('label','field','모델 이름 (비워 두면 기본값)',sec);
-  const model=node('input','text-field','',sec);model.value=load('ai_model');model.placeholder='기본: gemini-flash-lite-latest';
+  node('label','field','번역 모델 (빠름 ↔ 정확)',sec);
+  const tc=node('div','chips','',sec);tc.style.margin='6px 0 4px';
+  GEM_TIERS.forEach(([v,t])=>button(t,'chip'+(!load('ai_model').trim()&&gemTier()===v?' on':''),()=>{store('gem_tier',v);store('ai_model','');render()},tc));
+  const ti=GEM_TIERS.find(x=>x[0]===gemTier());
+  node('p','tiny faint',load('ai_model').trim()?'직접 적은 모델 사용 중: '+load('ai_model').trim():ti[1]+' — '+ti[3]+' ('+ti[2]+'). 안 되면 자동으로 기본 모델로 번역합니다.',sec);
+  node('label','field','모델 이름 직접 입력 (보통은 비워 두세요)',sec);
+  const model=node('input','text-field','',sec);model.value=load('ai_model');model.placeholder='비우면 위에서 고른 모델';
   const kr=node('div','row-btns','',sec);
   const result=node('div','ai-result','',sec);result.hidden=true;
   const show=(t,bad)=>{result.hidden=false;result.textContent=t;result.classList.toggle('bad',!!bad)};
@@ -1460,6 +1465,12 @@ function splitText(text,max=380){
 function decodeEntities(s){if(!s)return s;const t=document.createElement('textarea');let prev;do{prev=s;t.innerHTML=s;s=t.value}while(s!==prev&&/&[#a-z0-9]+;/i.test(s));return s}
 /* 번역 엔진: 무료(MyMemory) · Claude · Gemini. AI가 실패하면 무료 번역기로 자동 전환 */
 const ENGINES=[['free','무료 번역기'],['claude','Claude'],['gemini','Gemini'],['openai','ChatGPT']];
+/* V36: Gemini 번역 모델 단계 선택 (빠름·균형·정확). 모델 이름을 직접 적으면 그게 우선 */
+const GEM_TIERS=[['fast','⚡ 빠름','gemini-3.5-flash-lite','가장 빠르고 아주 저렴'],['balanced','⚖️ 균형','gemini-3.8-flash','추천 · 문맥 잘 이해, 빠름'],['accurate','🎯 정확','gemini-4-argon','이상한 말도 가장 잘 알아들음 · 느리고 비쌈']];
+const GEM_FALLBACK='gemini-flash-lite-latest';
+function gemTier(){const t=load('gem_tier','');return GEM_TIERS.some(x=>x[0]===t)?t:'balanced'}
+function gemModel(){return load('ai_model').trim()||GEM_TIERS.find(x=>x[0]===gemTier())[2]}
+function gemCfg(m){const c={temperature:0.2};if(/argon/.test(m))c.thinkingConfig={thinkingLevel:'low'};return c}
 function engine(){const e=load('tr_engine','');if(!e){if(claudeKey())return'claude';if(geminiKey())return'gemini';if(openaiKey())return'openai';return'free'}if(e==='claude'&&claudeKey())return'claude';if(e==='gemini'&&geminiKey())return'gemini';if(e==='openai'&&openaiKey())return'openai';return'free'}
 const engineName=()=>({free:'무료 번역기',claude:'Claude 번역기',gemini:'Gemini 번역기',openai:'ChatGPT 번역기'})[engine()];
 function aiTrPrompt(text,src,target){
@@ -1473,11 +1484,16 @@ async function claudeTranslate(text,src,target){
   const out=(j.content||[]).map(x=>x.text||'').join('').trim();if(!out)throw Error('Claude 빈 응답');return out;
 }
 async function geminiTranslate(text,src,target){
-  const m=load('ai_model').trim()||'gemini-flash-lite-latest';
-  const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(load('ai_key').trim())}`,{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({contents:[{parts:[{text:aiTrPrompt(text,src,target)}]}],generationConfig:{temperature:0.2}}),signal:AbortSignal.timeout(25000)});
-  const j=await res.json().catch(()=>({}));if(!res.ok)throw Error(j.error?.message||('Gemini 오류 '+res.status));
-  const out=(j.candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('').trim();if(!out)throw Error('Gemini 빈 응답');return out;
+  const models=[...new Set([gemModel(),GEM_FALLBACK])];let err;
+  for(const m of models){
+    try{
+      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(load('ai_key').trim())}`,{method:'POST',headers:{'content-type':'application/json'},
+        body:JSON.stringify({contents:[{parts:[{text:aiTrPrompt(text,src,target)}]}],generationConfig:gemCfg(m)}),signal:AbortSignal.timeout(/argon/.test(m)?40000:25000)});
+      const j=await res.json().catch(()=>({}));if(!res.ok)throw Error(j.error?.message||('Gemini 오류 '+res.status));
+      const out=(j.candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('').trim();if(!out)throw Error('Gemini 빈 응답');return out;
+    }catch(e){err=e}
+  }
+  throw err;
 }
 async function openaiTranslate(text,src,target){
   const res=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json',Authorization:'Bearer '+openaiKey()},
