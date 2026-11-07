@@ -440,7 +440,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='L1 · Claude · 경량화·문장 끝 자르기 · 2026.11.07';
+const APP_VERSION='L2 · Claude · 바로 번역·반복 막기 · 2026.11.07';
 const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
@@ -505,7 +505,9 @@ function pumpOut(){
     if(i>=parts.length){outBusy=false;state.speaking=false;speakEnd=Date.now();if(outCur){outCur.speakingNow=false;outCur=null}setReading(null);if(state.mode==='listen'&&q.entry)render();else updateMic();pumpOut();return}
     // 문장 하나 읽을 때마다 뒤에 밀린 수를 다시 보고 속도를 정함
     const u=new SpeechSynthesisUtterance(parts[i++]);u.lang=localeOf(q.code);u.rate=outRate(q.text.length);if(v)u.voice=v;
-    let fired=false;const fin=()=>{if(fired)return;fired=true;next()};
+    let fired=false,wd=null;const fin=()=>{if(fired)return;fired=true;clearTimeout(wd);next()};
+    // L2: 휴대폰 목소리가 끝 신호를 안 보내고 멈추는 경우 대비 — 예상 시간이 지나면 다음 문장으로
+    wd=setTimeout(fin,4000+parts[i-1].length*220/u.rate);
     u.onstart=()=>setReading(q.text,u.rate);u.onend=fin;u.onerror=fin;
     speechSynthesis.speak(u);
   };
@@ -1402,8 +1404,23 @@ async function shareAll(){
 }
 
 /* ── 실시간 음성 인식 ── */
+/* L2: 크롬이 마이크를 다시 켤 때 예전 문장을 다시 보내는 경우가 있어, 최근 번역한 문장과 같으면 버리고 앞에 붙어 오면 잘라 냄 */
+let recentSent=[];
+const nzs=x=>String(x).replace(/[\s.,!?。、！？…]+/g,'');
+function dropChars(txt,n){let k=0,i=0;while(i<txt.length&&k<n){if(!/[\s.,!?。、！？…]/.test(txt[i]))k++;i++}return txt.slice(i).trim()}
+function dedupe(txt){
+  const now=Date.now();recentSent=recentSent.filter(r=>now-r.at<180000);
+  let changed=true;
+  while(changed&&txt){changed=false;const n=nzs(txt);if(!n)return'';
+    for(const r of recentSent){
+      if(n.length>=6&&r.n.includes(n))return'';           // 이미 번역한 문장 (또는 그 일부)
+      if(r.n.length>=4&&n.startsWith(r.n)){txt=dropChars(txt,r.n.length);changed=true;break}  // 앞에 다시 붙어 온 부분
+    }}
+  if(txt&&nzs(txt)){recentSent.push({n:nzs(txt),at:now});if(recentSent.length>12)recentSent.shift()}
+  return txt;
+}
 let lastFinal={text:'',at:0};
-function pauseRecognizer(){const r=state.recognizer;state.recognizer=null;try{r?.abort()}catch{}if(state.interim){state.interim='';updateLive()}}
+function pauseRecognizer(){const r=state.recognizer;state.recognizer=null;try{r?._flush?.()}catch(e){console.warn("flush",e)}try{r?.abort()}catch{}if(state.interim){state.interim='';updateLive()}}
 function resumeRecognizer(){if(state.mic&&!state.recognizer&&!state.modal&&!dict&&state.page==='main')startRecognition()}
 /* ── 화면 꺼짐 방지와 자동 종료 ──
    대화 모드: 2분 동안 말이 없으면 마이크 끄고 화면도 원래대로.
@@ -1467,6 +1484,7 @@ function startRecognition(){
   // 문장 하나가 정해지면 바로 번역으로 보냄 (마이크는 계속 켜 둔 채)
   const gotFinal=txt=>{
     const now=Date.now();gotFin=true;
+    if(live){txt=dedupe(txt);if(!txt)return}
     if(isEmptyText(txt)||(txt===lastFinal.text&&now-lastFinal.at<5000))return;
     lastFinal={text:txt,at:now};state.sourceTurn++;
     if(state.mode==='conversation'){if(state.pending)sendPending();startPending(txt,source)}
@@ -1481,6 +1499,7 @@ function startRecognition(){
   const KO_END=/(습니다|습니까|입니다|입니까|합니다|합니까|됩니다|됩니까|었다|았다|였다|했다|한다|된다|있다|없다|이다|하다|겠다|는다|같다|좋다|많다|쉽다|싶다|않다|세요|에요|예요|어요|아요|해요|네요|군요|래요|대요|지요|까요|데요|게요|나요|가요|거든요|죠)[.?!]?(?=\s|$)|[.?!](?=\s|$)/g;
   const JA_END=/(ます|ました|ません|でした|です|でしょう|ましょう|ください|だった|である)(?!が|けど|けれ|から|ので|のに|し|と|て|ば)[かねよわ]*[。！？!?]?|[。！？!?]/g;
   const PUNCT=/[。？！]|[.?!](?=\s|$)/g;
+  const endsDone=t=>{const re=lg==='ko'?KO_END:lg==='ja'?JA_END:PUNCT;re.lastIndex=0;let m,last=null;while((m=re.exec(t))){last=m;if(!m[0].length)re.lastIndex++}return !!last&&!t.slice(last.index+last[0].length).trim()};
   const findCut=t=>{const re=lg==='ko'?KO_END:lg==='ja'?JA_END:PUNCT;re.lastIndex=0;let c=-1,m;while((m=re.exec(t))){const e=m.index+m[0].length;if(t.slice(e).trim())c=e;if(!m[0].length)re.lastIndex++}return c};
   // 안드로이드는 말하는 도중 조각("잘"→"잘 안"→"잘 안 되는")을 각각 확정으로 보내므로 이어 붙여 한 덩어리로 봄
   let sentFrom=0,lastLen=0,sentEcho=false,gapTimer=null,winRaw='',rem='',lastCommit='',cutN=0;
@@ -1495,6 +1514,7 @@ function startRecognition(){
     const drop=sentEcho;sentEcho=false;state.interim='';updateLive();
     if(txt&&!drop)gotFinal(txt);
   };
+  r._flush=()=>{clearTimeout(gapTimer);if(rem)commit()};
   r.onresult=event=>{clearTimeout(micWatchdog);micRetry=0;
     if(state.recognizer!==r)return;
     // 대화 모드: 앱이 소리 내는 동안(+0.6초) 들린 말은 앱 자기 목소리일 수 있어 버림. 듣기 모드는 이어폰이라 그대로 받음
@@ -1504,7 +1524,9 @@ function startRecognition(){
     winRaw=joinPieces(event.results);
     rem=dropN(stripDone(winRaw),cutN);
     if(live&&rem){const c=findCut(rem);if(c>0){const piece=rem.slice(0,c).trim();cutN+=nz(piece).length;rem=rem.slice(c).trim();gotFinal(piece)}}
-    clearTimeout(gapTimer);gapTimer=setTimeout(()=>{if(state.recognizer===r)commit()},PAUSE);
+    // L2: 끝이 종결어미면 다음 말을 기다리지 않고 0.4초 뒤 바로 번역 (그사이 말이 이어지면 취소)
+    const endNow=live&&rem&&endsDone(rem);
+    clearTimeout(gapTimer);gapTimer=setTimeout(()=>{if(state.recognizer===r)commit()},endNow?400:PAUSE);
     const t=sentEcho?'':rem;
     micDiagnostic('인식 결과: '+(t||'(빈 결과)'));
     if(t){micRetry=0;micLastError='';}
@@ -1528,7 +1550,7 @@ function startRecognition(){
     updateLive();updateMic();
     if(state.mic){
       // 크롬이 혼자 끊은 것(조용함 등)은 고장이 아니므로 바로 다시 듣기
-      if(gotFin||gotAudio){micRetry=0;setTimeout(resumeRecognizer,120)}
+      if(gotFin||gotAudio){micRetry=0;resumeRecognizer()}
       else scheduleMicRetry(micLastError||'음성 인식 결과 없이 종료됨 · 인식 언어 '+r.lang);
     }
   };
