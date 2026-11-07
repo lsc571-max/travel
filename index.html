@@ -508,7 +508,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='L5 · Claude · 첫 화면 당겨서 업데이트 · 2026.11.07';
+const APP_VERSION='L6 · Claude · 속도·대화 첫 번역 빠르게 · 2026.11.07';
 const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
@@ -555,9 +555,12 @@ function speak(text,code,tone){
 const outQ=[];let outBusy=false,outGen=0,outCur=null,speakEnd=0;
 function outReserve(code,entry){const q={code,entry,text:null,ready:false};if(entry)entry.queued=true;outQ.push(q);return q}
 function outReady(q,text,tone){if(!q)return;q.text=text||'';q.tone=tone;q.ready=true;pumpOut()}
-function outRate(len){const w=outQ.length;const c=w>=4?2:w===3?1.7:w>=1?1.5:0;
-  // L1: 문장이 길면 밀린 게 없어도 빠르게 (50자↑ 1.5 · 80자↑ 1.7 · 120자↑ 2배), 둘 중 빠른 쪽
-  const l=len>120?2:len>80?1.7:len>50?1.5:0;return Math.min(2,Math.max(state.rate,c,l))}
+function outRate(len){
+  // L6: 대화 모드는 설정의 말하는 속도 그대로
+  if(state.mode!=='listen')return state.rate;
+  // 듣기 모드: 밀리거나 문장이 길면 빠르게, 단 최대 1.5배 (1~2개 밀림·50자↑ 1.4 / 3개 이상·80자↑ 1.5)
+  const w=outQ.length,c=w>=3?1.5:w>=1?1.4:0,l=len>80?1.5:len>50?1.4:0;
+  return Math.max(state.rate,Math.min(1.5,Math.max(c,l)))}
 function splitSentences(t){const out=[];String(t).split(/(?<=[.!?。！？])\s*/).forEach(p=>{p=p.trim();if(!p)return;if(p.length>200)out.push(...splitText(p,200));else out.push(p)});return out.length?out:[String(t)]}
 function pumpOut(){
   if(outBusy)return;
@@ -587,7 +590,11 @@ let speakQ=0;
 const takeTone=()=>null,startTone=()=>{},stopTone=()=>{};
 
 /* ── 이동 ── */
-function goMain(){state.page='main';try{history.pushState({app:'main'},'')}catch{}render()}
+/* L6: 첫 번역이 늦지 않게 Gemini 서버와 미리 연결해 둠 (모델 정보만 묻는 요청이라 크레딧 0) */
+let warmAt=0;
+function warmGemini(){if(!geminiKey()||!navigator.onLine||Date.now()-warmAt<60000)return;warmAt=Date.now();
+  const k=encodeURIComponent(load('ai_key').trim());[gemModel(),'gemini-flash-lite-latest'].forEach(m=>fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}?key=${k}`).catch(()=>{}))}
+function goMain(){setTimeout(warmGemini,0);state.page='main';try{history.pushState({app:'main'},'')}catch{}render()}
 function goHome(){state.modal=null;stopDictation();if(history.state?.app==='main')history.back();else home()}
 function home(){state.dim=false;stopMic();stopDictation();stopSpeech();clearPending();state.page='home';state.modal=null;state.side=false;render()}
 function closeLayer(){state.modal=null;state.side=false;stopDictation();render()}
@@ -1583,7 +1590,7 @@ async function consume(text,source,opt={}){
   // 대화 모드에서 말로 한 문장은 번역 전에 AI가 다듬음 (5초 넘으면 원래 문장 사용)
   if(!toListen&&opt.fromMic&&!opt.skipAI&&aiReady()&&navigator.onLine&&!cached(text,source,target)){
     entry.correcting=true;render();scrollEnd();
-    try{const fixed=await withTimeout(aiCorrect(text,source),5000);if(fixed&&fixed.length<text.length*3+20)entry.original=fixed}catch{}
+    try{const fixed=await withTimeout(aiCorrect(text,source),2000);if(fixed&&fixed.length<text.length*3+20)entry.original=fixed}catch{}
     entry.correcting=false;
   }
   entry.translation='번역 중…';
@@ -1682,7 +1689,7 @@ function toggleMic(){
   if(state.mic){stopMic();clearPending();clearTimeout(micRetryTimer);clearTimeout(micWatchdog);document.getElementById('micDiagnostic')?.remove();render();return}
   if(!SR){micDiagnostic('이 브라우저에서는 음성 인식이 지원되지 않습니다. Chrome을 이용해 주세요.');return}
   clearTimeout(micRetryTimer);clearTimeout(micWatchdog);micRetry=0;micLastError='';
-  state.mic=true;state.sourceTurn=0;activity();startTone();render();
+  state.mic=true;state.sourceTurn=0;activity();startTone();render();warmGemini();
   // Explicit start preserves user-gesture context and avoids a silent 'on' state.
   if(!state.recognizer)startRecognition();
   if(!state.recognizer&&state.mic)scheduleMicRetry('음성 인식 시작을 다시 시도합니다.');
@@ -1745,7 +1752,7 @@ function startRecognition(){
     rem=dropN(stripDone(winRaw),cutN);
     if(live&&rem){const c=findCut(rem);if(c>0){const piece=rem.slice(0,c).trim();cutN+=nz(piece).length;rem=rem.slice(c).trim();gotFinal(piece)}}
     // L2: 끝이 종결어미면 다음 말을 기다리지 않고 0.4초 뒤 바로 번역 (그사이 말이 이어지면 취소)
-    const endNow=live&&rem&&endsDone(rem);
+    const endNow=rem&&!sentEcho&&endsDone(rem); // L6: 대화 모드도 종결어미면 바로
     clearTimeout(gapTimer);gapTimer=setTimeout(()=>{if(state.recognizer===r)commit()},endNow?400:PAUSE);
     const t=sentEcho?'':rem;
     micDiagnostic('인식 결과: '+(t||'(빈 결과)'));
