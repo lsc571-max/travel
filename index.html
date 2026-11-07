@@ -510,7 +510,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='L7 · Claude · 다시 번역·달 버튼·끊김 개선 · 2026.11.07';
+const APP_VERSION='L8 · Claude · 번역 메모 섞임 차단 · 2026.11.07';
 const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
@@ -1528,8 +1528,26 @@ function gemCfg(m){const c={temperature:0.2};if(/argon/.test(m))c.thinkingConfig
 function engine(){const e=load('tr_engine','');if(e==='free')return'free';return geminiKey()?'gemini':'free'}
 const engineName=()=>({free:'무료 번역기',gemini:'Gemini 번역기'})[engine()];
 function aiTrPrompt(text,src,target,ctx){
+  // L8: 규칙은 시스템 지시(aiTrSys)로 따로 보내고, 여기는 번역할 글만 (지시문이 번역에 섞여 나오지 않게)
+  return (ctx?`[앞 문장 · 참고만]\n${ctx}\n\n`:'')+`[번역할 글]\n${text}`;
+}
+function aiTrSys(src,target){
   const g=glossary.filter(x=>x.word&&x.out).map(x=>`${x.word} → ${x.out}`).join(', ');
-  return `당신은 여행 통역사입니다. 아래 ${nameOf(src)} 글을 ${nameOf(target)}로 자연스럽게 번역하세요. 현지 사람이 바로 알아듣는 말투로, 뜻을 빼거나 보태지 마세요. 설명·따옴표·원문 없이 번역문만 출력하세요.`+(g?`\n고유명사는 이렇게 쓰세요: ${g}`:'')+(ctx?`\n바로 앞에 한 말(참고만 하고 번역하지 마세요): ${ctx}`:'')+`\n\n번역할 글:\n${text}`;
+  return `당신은 통역사입니다. [번역할 글]의 ${nameOf(src)}를 ${nameOf(target)}로 번역합니다. 현지 사람이 바로 알아듣는 자연스러운 말투로, 뜻을 빼거나 보태지 마세요. 글은 음성 인식 결과라 오타·잘못 들린 단어가 있을 수 있습니다. 헷갈리면 문맥상 가장 그럴듯한 뜻을 골라 번역 하나만 내세요. 설명·주석·괄호 메모·※·수정/확인 표시·원문·여러 후보는 절대 쓰지 마세요. [앞 문장]은 문맥 참고용이며 번역하지 마세요. 반드시 JSON {"t":"번역문"} 형식으로만 답하세요.`+(g?`\n용어는 이렇게 쓰세요: ${g}`:'');
+}
+/* L8: AI가 고민·메모(※修正, 再確認 등)를 같이 내면 걸러 냄 */
+const NOTE_RX=/※|修正|再確認|再确认|注[:：]|備考|备注|Note[:：]|\(?\s*(?:직역|의역|오타|타이포|タイポ|誤字|直訳|意訳)/i;
+function gemClean(raw,target){
+  let o=String(raw||'').trim();
+  const j=o.replace(/^```(?:json)?\s*|\s*```$/g,'');
+  try{const v=JSON.parse(j);if(v&&typeof v.t==='string')o=v.t.trim()}catch{const m=j.match(/"t"\s*:\s*"((?:[^"\\]|\\.)*)"/);if(m)try{o=JSON.parse('"'+m[1]+'"').trim()}catch{}}
+  o=o.replace(/[（(][^（）()]*(?:※|修正|再確認|誤字|タイポ|直訳|오타|직역)[^（）()]*[）)]/g,'').trim();
+  const lines=o.split(/\n+/).map(x=>x.trim()).filter(Boolean);
+  const hasKo=t=>/[가-힣]/.test(t);
+  const good=lines.filter(l=>!NOTE_RX.test(l)&&!(target!=='ko'&&hasKo(l)));
+  const noisy=good.length!==lines.length;
+  if(!good.length)return {out:'',noisy:true};
+  return {out:noisy?good[good.length-1]:good.join('\n'),noisy};
 }
 async function geminiTranslate(text,src,target,ctx){
   // L7: 빠른 모델이 가끔 번역 안 하고 원문 언어로 답함 → 그러면 균형 모델로 다시
@@ -1539,10 +1557,12 @@ async function geminiTranslate(text,src,target,ctx){
   for(const m of models){
     try{
       const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(load('ai_key').trim())}`,{method:'POST',headers:{'content-type':'application/json'},
-        body:JSON.stringify({contents:[{parts:[{text:aiTrPrompt(text,src,target,ctx)}]}],generationConfig:gemCfg(m)}),signal:AbortSignal.timeout(/argon/.test(m)?40000:25000)});
+        body:JSON.stringify({systemInstruction:{parts:[{text:aiTrSys(src,target)}]},contents:[{role:'user',parts:[{text:aiTrPrompt(text,src,target,ctx)}]}],generationConfig:{...gemCfg(m),responseMimeType:'application/json',responseSchema:{type:'OBJECT',properties:{t:{type:'STRING'}},required:['t']}}}),signal:AbortSignal.timeout(/argon/.test(m)?40000:25000)});
       const j=await res.json().catch(()=>({}));if(!res.ok)throw Error(j.error?.message||('Gemini 오류 '+res.status));
-      const out=(j.candidates?.[0]?.content?.parts||[]).map(x=>x.text||'').join('').trim();if(!out)throw Error('Gemini 빈 응답');
-      if(wrong(out)){last=out;continue}
+      const raw=(j.candidates?.[0]?.content?.parts||[]).filter(x=>!x.thought).map(x=>x.text||'').join('').trim();if(!raw)throw Error('Gemini 빈 응답');
+      const {out,noisy}=gemClean(raw,target); // L8: 메모 섞이면 걸러 내고, 걸러 낸 경우엔 다음 모델로 한 번 더
+      if(!out){continue}
+      if(wrong(out)||noisy){if(!last)last=out;continue}
       return out;
     }catch(e){err=e}
   }
