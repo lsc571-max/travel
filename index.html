@@ -201,10 +201,12 @@ svg{display:block}
 .listen-row .pron{display:block;font-size:13px;color:var(--muted);margin-top:4px}
 .share-pick{display:flex;flex-direction:column;gap:8px}
 .gl-row.editing{background:rgba(63,157,110,.10)}
-.gl-groups{display:flex;flex-direction:column;gap:6px;margin-top:6px}
-.gg-big{text-align:left;font-weight:700;border:0;background:var(--surface);border-radius:10px;padding:9px 12px}
-.gg-big.on{background:rgba(63,157,110,.16);color:#2a7a52}
-.gg-subs{display:flex;flex-wrap:wrap;gap:6px;padding-left:10px}
+.wg-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line)}
+.wg-chk{flex:1;min-width:0;text-align:left;font-weight:700;border:0;background:var(--surface);border-radius:10px;padding:10px 12px}
+.wg-row.on .wg-chk{background:rgba(63,157,110,.16);color:#2a7a52}
+.wg-n{font-size:12px;color:var(--muted);white-space:nowrap}
+.wg-found{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.wg-paste{width:100%;min-height:120px;margin-top:6px}
 .gg-sub{border:1px solid var(--line);background:transparent;border-radius:16px;padding:5px 10px;font-size:13px}
 .gg-sub.on{border-color:#3f9d6e;color:#2a7a52;background:rgba(63,157,110,.08)}
 .saved-row{display:flex;gap:6px;align-items:stretch}
@@ -248,7 +250,7 @@ svg{display:block}
 .bar.slim{border-top:0;padding-top:4px}
 .bar-mid{display:flex;flex-direction:column;align-items:stretch;gap:2px;min-width:0;padding:0 2px}.bar-mid .mic-state{text-align:center}
 .set-tabs{position:sticky;top:-16px;z-index:2;display:flex;gap:4px;background:var(--bg);padding:6px 0 10px;margin-top:-6px}
-.set-tabs button{flex:1;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:12px;padding:9px 4px;font-size:14px;font-weight:600}
+.set-tabs button{flex:1;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:12px;padding:9px 2px;font-size:13px;font-weight:600}
 .set-tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .sw-row{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:15px}
 .sw-row span{flex:1}.sw-row input{width:22px;height:22px}
@@ -448,9 +450,10 @@ const isCustom=(cat,ko)=>(customPhrases[cat]||[]).includes(ko);
 let pronCache=loadJSON('pron_cache',{});
 let glossary=loadJSON('glossary',[]);   // [{word:'이승철', heard:'이성철,이승처', out:'Lee Seung-chul'}]
 const saveGlossary=()=>store('glossary',JSON.stringify(glossary));
-/* L3: 분야별 단어 그룹 — 체크한 그룹만 씀 (체크 상태와 내 단어장은 휴대폰에 저장, 새 버전에도 유지)
+/* L5: 단어 그룹은 모두 휴대폰에 저장 (설정 → 단어 그룹 탭에서 만들기·고치기·지우기).
+   아래 SEED_GROUPS는 L4까지 쓰던 그룹을 처음 한 번만 휴대폰으로 옮길 때 씀. 그 뒤엔 휴대폰 저장만 씀.
    단어 형식: '바른 말|잘못 들리는 말,잘못 들리는 말' */
-const GLOSS_GROUPS=[
+const SEED_GROUPS=[
  {id:'mold',name:'금형',subs:[
   {id:'inj',name:'사출금형',w:['스프루|스푸루,스프로,스프루우,스푸르','런너|러너,런어,런나','게이트|게이드,게잇','캐비티|캐비트,캐비디,캐비티이','코어|코아','파팅 라인|파팅라인,파이팅 라인,파딩 라인,파팅 나인','이젝터 핀|이젝트 핀,이젝터핀,이젝터 빈,이젝트핀','이젝터 플레이트|이젝트 플레이트','리턴 핀|리턴핀','가이드 핀|가이드핀','가이드 부시|가이드 부쉬','스프루 부시|스프루 부쉬,스푸루 부시','로케이트 링|로케이팅 링,로케이트링','슬라이드 코어|슬라이드코어','경사 핀|경사핀,앵귤러 핀','언더컷|언더 컷','냉각 채널|냉각채널','핫 러너|핫러너,핫 런너','콜드 러너|콜드러너','서브마린 게이트|서브마린게이트','핀 포인트 게이트|핀포인트 게이트','사이드 게이트','필름 게이트','다이렉트 게이트','이단 금형|이단금형,2단 금형','삼단 금형|삼단금형,3단 금형','고정측|고정 측','가동측|가동 측','고정측 형판','가동측 형판','받침판','스페이서 블록','성형품','웰드 라인|웰드라인','싱크 마크|싱크마크','쇼트 샷|숏샷,숏 샷','플래시|후래시','보압','사출 압력|사출압력','형체력','사출성형기|사출 성형기','에어 벤트|에어벤트','빼기 구배|빼기구배','수축률|수축율','이형제','스트리퍼 플레이트','노즐','호퍼']},
   {id:'press',name:'프레스금형',w:['펀치','다이','스트리퍼','블랭킹|블랭킨,브랭킹','피어싱|피어씽','트리밍','노칭','벤딩','드로잉|드로우잉','디프 드로잉|딥 드로잉','버링','엠보싱','컬링','펀치 플레이트','다이 플레이트','백킹 플레이트|배킹 플레이트','다이 세트|다이세트','상형','하형','녹아웃|노크아웃','클리어런스|클리어 런스','스프링백|스프링 백','전단','프레스 금형|프레스금형']},
@@ -471,9 +474,20 @@ const GLOSS_GROUPS=[
   {id:'fam',name:'가족 이름',w:['이양우|이양후,이양오,이 양우']}
  ]}
 ];
-let glossOn=loadJSON('gloss_groups',[]);   // 켠 작은 그룹 id 목록
-const saveGlossOn=()=>store('gloss_groups',JSON.stringify(glossOn));
-function groupWords(){const out=[];GLOSS_GROUPS.forEach(g=>g.subs.forEach(sb=>{if(!glossOn.includes(sb.id))return;sb.w.forEach(x=>{const [w,h]=x.split('|');out.push({word:w,heard:h||'',out:''})})}));return out}
+let wordGroups=loadJSON('word_groups',null);   // [{id,name,on,w:['바른 말|잘못 들리는 말']}]
+const saveWG=()=>store('word_groups',JSON.stringify(wordGroups));
+if(!Array.isArray(wordGroups)){const on=loadJSON('gloss_groups',[]);wordGroups=SEED_GROUPS.flatMap(g=>g.subs.map(sb=>({id:sb.id,name:sb.name,on:on.includes(sb.id),w:[...sb.w]})));saveWG()}
+const wgWord=x=>x.split('|')[0].trim();
+function groupWords(){const out=[];wordGroups.forEach(g=>{if(!g.on)return;g.w.forEach(x=>{const [w,h]=x.split('|');out.push({word:w.trim(),heard:(h||'').trim(),out:''})})});return out}
+/* L5: 붙여넣은 목록 → 단어 배열 (번호·글머리표·설명 지움, 한 줄에 하나 / 한 줄이면 쉼표로 나눔) */
+function parseWordList(text){
+  let lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(lines.length===1&&!lines[0].includes('|'))lines=lines[0].split(/[,，、]/);
+  return lines.map(l=>l.replace(/\*\*/g,'').replace(/^\s*(?:[-*•·▪]|\d+\s*[.)]|\(\d+\))\s*/,'').replace(/\s+[-–—:]\s+.*$/,'').replace(/[:：]\s.*$/,'').trim())
+    .map(l=>{const [w,...h]=l.split('|');const hh=h.join(',').split(/[,，、]/).map(x=>x.trim()).filter(Boolean).join(',');return w.trim()?(hh?w.trim()+'|'+hh:w.trim()):''})
+    .filter(x=>x&&wgWord(x).length<=40);
+}
+function addToGroup(g,list){const have=new Set(g.w.map(x=>wgWord(x).toLowerCase()));let n=0;list.forEach(x=>{const k=wgWord(x).toLowerCase();if(!k||have.has(k))return;have.add(k);g.w.push(x);n++});saveWG();return n}
 function allGloss(){return glossary.concat(groupWords())}
 const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 function fixHeard(text){let t=text;for(const g of allGloss()){for(const w of (g.heard||'').split(',').map(x=>x.trim()).filter(Boolean)){t=t.replace(new RegExp(esc(w),'g'),g.word)}}return t}
@@ -494,7 +508,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='L4 · Claude · 첫 화면 당겨서 업데이트 · 2026.11.07';
+const APP_VERSION='L5 · Claude · 첫 화면 당겨서 업데이트 · 2026.11.07';
 const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
@@ -951,17 +965,86 @@ function drawDrawer(parent){
     node('b','',v.t,b).dir='auto';node('small','',v.o,b);
     button('✕','saved-x',()=>askConfirm('저장한 문장을 지울까요?\n'+v.t,'지우기',()=>{savedSents=savedSents.filter(z=>z!==v);saveSaved();render()}),row);
   });
-  node('h3','','📚 단어 그룹',d);
-  drawGroupChecks(d);
 }
-/* L3: 단어 그룹 체크 목록 (설정·서랍 공용) — 큰 그룹을 누르면 안의 작은 그룹 모두 켜고 끔 */
-function drawGroupChecks(parent){
-  const box=node('div','gl-groups','',parent);
-  GLOSS_GROUPS.forEach(g=>{
-    const ids=g.subs.map(x=>x.id),on=ids.filter(i=>glossOn.includes(i)).length;
-    const head=button((on===ids.length?'☑ ':on?'◩ ':'☐ ')+g.name,'gg-big'+(on?' on':''),()=>{if(on===ids.length)glossOn=glossOn.filter(i=>!ids.includes(i));else glossOn=[...new Set(glossOn.concat(ids))];saveGlossOn();render()},box);
-    if(g.subs.length>1){const sw=node('div','gg-subs','',box);g.subs.forEach(sb=>{const o=glossOn.includes(sb.id);button((o?'☑ ':'☐ ')+sb.name+' '+sb.w.length,'gg-sub'+(o?' on':''),()=>{glossOn=o?glossOn.filter(i=>i!==sb.id):glossOn.concat(sb.id);saveGlossOn();render()},sw)})}
-  });
+/* L5: 설정 → 단어 그룹 탭 — 그룹 만들기·켜고 끄기·이름 바꾸기·단어 추가/수정/삭제·붙여넣기·Gemini로 찾기 (모두 휴대폰에 저장) */
+function drawWordGroups(body){
+  const top=()=>{const c=$('.modal-content');if(c)c.scrollTop=0};
+  const g=wordGroups.find(x=>x.id===state.wgOpen);
+  let sec=node('div','sec','',body);
+  if(!g){
+    node('h4','','📚 단어 그룹',sec);
+    node('p','tiny','분야별 전문 용어를 그룹으로 모아 두세요. ☑ 체크한 그룹만 음성 인식 교정과 번역에 씁니다. 많이 켜 두면 번역이 느려지고 크레딧이 더 드니 필요한 그룹만 켜세요. 모두 이 휴대폰에 저장됩니다.',sec);
+    if(!wordGroups.length)node('p','tiny','아직 그룹이 없습니다. 아래에서 새 그룹을 만드세요.',sec);
+    wordGroups.forEach(x=>{const r=node('div','wg-row'+(x.on?' on':''),'',sec);
+      button((x.on?'☑ ':'☐ ')+x.name,'wg-chk',()=>{x.on=!x.on;saveWG();render()},r);
+      node('span','wg-n',x.w.length+'개',r);
+      button('열기 ✎','action',()=>{state.wgOpen=x.id;state.wgFound=null;state.wgTopic=undefined;state.wgEditW=null;state.wgPaste='';render();top()},r)});
+    const nm=node('input','text-field','',sec);nm.placeholder='새 그룹 이름 (예: 프레스금형)';nm.style.marginTop='12px';
+    const br=node('div','row-btns','',sec);br.style.marginTop='8px';
+    button('＋ 새 그룹 만들기','action primary',()=>{const n=nm.value.trim();if(!n)return notify('그룹 이름을 입력하세요');const ng={id:'g'+Date.now(),name:n,on:true,w:[]};wordGroups.push(ng);saveWG();state.wgOpen=ng.id;state.wgFound=null;state.wgTopic=undefined;state.wgPaste='';render();top()},br);
+    return;
+  }
+  const back=node('div','row-btns','',sec);
+  button('← 그룹 목록','action',()=>{state.wgOpen=null;state.wgFound=null;state.wgEditW=null;render();top()},back);
+  button((g.on?'☑ 켜짐':'☐ 꺼짐'),'action'+(g.on?' primary':''),()=>{g.on=!g.on;saveWG();render()},back);
+  node('label','field','그룹 이름',sec);
+  const nm=node('input','text-field','',sec);nm.value=g.name;
+  const nb=node('div','row-btns','',sec);nb.style.marginTop='6px';
+  button('이름 바꾸기','action',()=>{const n=nm.value.trim();if(!n)return notify('그룹 이름을 입력하세요');g.name=n;saveWG();render();notify('이름을 바꿨습니다.')},nb);
+  button('🗑 그룹 지우기','action',()=>askConfirm(`"${g.name}" 그룹과 단어 ${g.w.length}개를 지울까요?`,'지우기',()=>{wordGroups=wordGroups.filter(x=>x!==g);saveWG();state.wgOpen=null;render();top()}),nb);
+
+  // 단어 하나 추가·수정
+  sec=node('div','sec','',body);node('h4','','＋ 단어 하나 넣기·고치기',sec);
+  const ed=state.wgEditW,ew=ed!=null?g.w[ed]:null;
+  const ww=node('input','text-field','',sec);ww.placeholder='바른 말 (예: 스트리퍼)';
+  const wh=node('input','text-field','',sec);wh.placeholder='잘못 들리는 말, 쉼표로 (선택)';wh.style.marginTop='6px';
+  if(ew!=null){const [a,b]=ew.split('|');ww.value=a;wh.value=b||''}
+  const wb=node('div','row-btns','',sec);wb.style.marginTop='8px';
+  button(ew!=null?'✔ 수정 저장':'＋ 단어 추가','action primary',()=>{const w=ww.value.trim();if(!w)return notify('바른 말을 입력하세요');const h=wh.value.split(/[,，、]/).map(x=>x.trim()).filter(Boolean).join(',');const v=h?w+'|'+h:w;
+    if(ew!=null){g.w[ed]=v;state.wgEditW=null;saveWG();render();notify('고쳤습니다.')}
+    else{if(!addToGroup(g,[v]))return notify('이미 있는 단어입니다.');render();notify('추가했습니다.')}},wb);
+  if(ew!=null)button('취소','action',()=>{state.wgEditW=null;render()},wb);
+
+  // 붙여넣기로 한꺼번에
+  sec=node('div','sec','',body);node('h4','','📋 붙여넣기로 한꺼번에 넣기',sec);
+  node('p','tiny','ChatGPT 등에서 받은 목록을 붙여넣으세요. 한 줄에 하나씩 씁니다. 번호·설명은 자동으로 지우고, 이미 있는 단어는 건너뜁니다. 형식: 바른 말|잘못 들리는 말,잘못 들리는 말 (| 뒤는 없어도 됨)',sec);
+  const pb=node('div','row-btns','',sec);
+  button('📋 ChatGPT 요청문 복사','action',async()=>{const t=`"${g.name}" 분야에서 현장에서 실제로 쓰는 한국어 전문 용어 100개를 한 줄에 하나씩 써 줘. 형식: 용어|음성 인식이 잘못 받아 적을 만한 비슷한 발음(쉼표로 구분, 없으면 생략). 번호·설명·머리말 없이 목록만.`;try{await navigator.clipboard.writeText(t);notify('복사했습니다. ChatGPT에 붙여넣으세요.')}catch{notify('복사가 막혀 있습니다.')}},pb);
+  button('📥 복사한 글 붙여넣기','action',async()=>{try{const t=await navigator.clipboard.readText();if(!t)return notify('복사된 글이 없습니다.');state.wgPaste=(state.wgPaste?state.wgPaste+'\n':'')+t;render()}catch{notify('아래 칸을 길게 눌러 붙여넣으세요.')}},pb);
+  const ta=node('textarea','editor wg-paste','',sec);ta.placeholder='예)\n스트리퍼\n파일럿 핀|파이럿 핀,파일롯 핀\n블랭킹|브랭킹';ta.value=state.wgPaste||'';ta.oninput=()=>{state.wgPaste=ta.value};
+  const pb2=node('div','row-btns','',sec);pb2.style.marginTop='8px';
+  button('＋ 한꺼번에 넣기','action primary',()=>{const list=parseWordList(ta.value);if(!list.length)return notify('넣을 단어가 없습니다.');const n=addToGroup(g,list);state.wgPaste='';render();notify(`${n}개 넣었습니다.`+(list.length-n?` (겹친 ${list.length-n}개 건너뜀)`:''))},pb2);
+  button('칸 비우기','action',()=>{state.wgPaste='';render()},pb2);
+
+  // Gemini로 찾기
+  sec=node('div','sec','',body);node('h4','','🔎 Gemini로 전문 용어 찾기',sec);
+  node('p','tiny','분야를 적고 찾기를 누르면 Gemini가 용어를 찾아 줍니다. 마음에 드는 것만 골라 넣으세요. 한 번에 50~100개씩, 여러 번 나눠 찾으면 됩니다.',sec);
+  const tq=node('input','text-field','',sec);tq.placeholder='예: 프레스 금형 부품 이름';tq.value=state.wgTopic??g.name;tq.oninput=()=>{state.wgTopic=tq.value};
+  const cnt=state.wgCnt||50,cc=node('div','chips','',sec);cc.style.marginTop='6px';
+  [30,50,100].forEach(v=>button(v+'개','chip'+(cnt===v?' on':''),()=>{state.wgCnt=v;render()},cc));
+  const sb=node('div','row-btns','',sec);sb.style.marginTop='8px';
+  button(state.wgBusy?'찾는 중…':'🔎 찾기','action primary',async()=>{
+    if(state.wgBusy)return;if(!geminiKey())return notify('고급 탭에서 Gemini 키를 먼저 넣어 주세요.');if(!navigator.onLine)return notify('인터넷이 필요합니다.');
+    const topic=tq.value.trim()||g.name;state.wgBusy=true;render();
+    try{const have=g.w.map(wgWord);const out=await aiAsk(`"${topic}" 분야에서 현장에서 실제로 쓰는 한국어 전문 용어 ${cnt}개를 골라 주세요. 한 줄에 하나씩, 형식: 용어|음성 인식이 잘못 받아 적을 만한 비슷한 발음(쉼표로 구분, 없으면 생략). 번호·설명·머리말 없이 목록만 쓰세요.${have.length?`\n이미 있는 단어는 빼세요: ${have.slice(-300).join(', ')}`:''}`,{max:6000});
+      const hs=new Set(have.map(x=>x.toLowerCase()));state.wgFound=parseWordList(out).filter(x=>!hs.has(wgWord(x).toLowerCase())).map(t=>({t,on:true}));
+      if(!state.wgFound.length)notify('새로 찾은 단어가 없습니다.')}
+    catch(e){notify('찾기 실패: '+(e.message||e))}
+    state.wgBusy=false;render()},sb);
+  const f=state.wgFound;
+  if(f&&f.length){
+    node('p','tiny',`찾은 단어 ${f.length}개 — 누르면 골라짐(☑)/빠짐(☐)`,sec);
+    const fb=node('div','wg-found','',sec);
+    f.forEach(x=>button((x.on?'☑ ':'☐ ')+x.t.replace('|',' ← '),'gg-sub'+(x.on?' on':''),()=>{x.on=!x.on;render()},fb));
+    const ab=node('div','row-btns','',sec);ab.style.marginTop='8px';
+    button(`＋ 고른 ${f.filter(x=>x.on).length}개 넣기`,'action primary',()=>{const n=addToGroup(g,f.filter(x=>x.on).map(x=>x.t));state.wgFound=null;render();notify(`${n}개 넣었습니다.`)},ab);
+    const all=f.every(x=>x.on);button(all?'모두 빼기':'모두 고르기','action',()=>{f.forEach(x=>x.on=!all);render()},ab);
+    button('닫기','action',()=>{state.wgFound=null;render()},ab);
+  }
+  sec=node('div','sec','',body);node('h4','',`📄 들어 있는 단어 ${g.w.length}개 — 수정을 누르면 맨 위 칸에서 고칩니다`,sec);
+  g.w.forEach((x,i)=>{const r=node('div','gl-row'+(ed===i?' editing':''),'',sec);const [a,b]=x.split('|');node('span','',a+(b?` ← ${b}`:''),r);
+    button('수정','action',()=>{state.wgEditW=i;render();top()},r);
+    button('✕','action',()=>{g.w.splice(i,1);if(state.wgEditW!=null)state.wgEditW=null;saveWG();render()},r)});
 }
 /* L3: ★ 저장한 문장 — 원문과 번역을 휴대폰에 저장 (새 버전에도 유지, 다시 번역 안 해서 크레딧 0) */
 let savedSents=loadJSON('saved_sents',[]);
@@ -1214,7 +1297,7 @@ function drawAddPhrase(body,data){
 function drawSettings(body){
   const tab=state.setTab||'basic';
   const tabs=node('div','set-tabs','',body);
-  [['basic','기본'],['words','단어장'],['phrases','여행 문구'],['adv','고급']].forEach(([k,t])=>button(t,k===tab?'on':'',()=>{state.setTab=k;render();const c=$('.modal-content');if(c)c.scrollTop=0},tabs));
+  [['basic','기본'],['words','단어장'],['groups','단어 그룹'],['phrases','여행 문구'],['adv','고급']].forEach(([k,t])=>button(t,k===tab?'on':'',()=>{state.setTab=k;render();const c=$('.modal-content');if(c)c.scrollTop=0},tabs));
   let sec;
   if(tab==='basic'){
   sec=node('div','sec','',body);node('h4','','자주 쓰는 기능',sec);
@@ -1264,11 +1347,10 @@ function drawSettings(body){
   const gbr=node('div','row-btns','',sec);gbr.style.marginTop='8px';
   button(eg?'✔ 수정 저장':'＋ 단어 추가','action primary',()=>{const w=gw.value.trim();if(!w)return notify('바른 말을 입력하세요');const v={word:w,heard:gh.value.trim(),out:go.value.trim()};if(eg){glossary[ed]=v;state.glEdit=null}else glossary.push(v);saveGlossary();render();notify(eg?'고쳤습니다.':'단어장에 추가했습니다.')},gbr);
   if(eg)button('취소','action',()=>{state.glEdit=null;render()},gbr);
-  sec=node('div','sec','',body);node('h4','','📚 분야별 단어 그룹',sec);
-  node('p','tiny','체크한 그룹의 전문 용어만 씁니다. 잘못 알아들은 말을 바르게 고쳐 줍니다. 대화 화면 오른쪽 ◀ 서랍에서도 바로 켜고 끌 수 있어요.',sec);
-  drawGroupChecks(sec);
+  node('p','tiny','분야별 전문 용어는 위쪽 "단어 그룹" 탭에서 만들고 고칩니다.',sec);
 
   }
+  if(tab==='groups')drawWordGroups(body);
   if(tab==='phrases'){
   sec=node('div','sec','',body);node('h4','','인터넷 없을 때 쓸 여행 문구',sec);
   node('p','tiny','인터넷이 될 때 받아 두면, 여행 문구·직접 추가한 문구·자주 쓰는 문장을 인터넷 없이도 보여 주고 들려줍니다. (실시간 음성 통역은 인터넷이 있어야 합니다.)',sec);
