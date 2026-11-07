@@ -450,7 +450,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='V38 · 순서대로·자동 배속·마이크 계속 켜기 · 2026.11.07';
+const APP_VERSION='V39 · 말 조각 합치기 · 2026.11.07';
 const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
@@ -722,7 +722,7 @@ function render(){
   // V37: Gemini일 때 번역기 표시를 누르면 빠름 → 균형 → 정확 순으로 바뀜
   if(engine()==='gemini'){
     const ti=GEM_TIERS.find(x=>x[0]===gemTier());
-    const gb=node('span','ai-state on tier','Gemini 번역기 · '+(load('ai_model').trim()?'직접':ti[1]),mw);
+    const gb=node('span','ai-state on tier','Gemini · '+(load('ai_model').trim()?'직접':ti[1]),mw);
     gb.onclick=()=>{const i=GEM_TIERS.findIndex(x=>x[0]===gemTier());const n=load('ai_model').trim()?GEM_TIERS[i]:GEM_TIERS[(i+1)%GEM_TIERS.length];store('gem_tier',n[0]);store('ai_model','');render()};
   }else node('span','ai-state'+(engine()!=='free'?' on':''),engineName(),mw);
   const fk=button('','font-btn'+(state.flash==='ko'?' flash':''),()=>{state.flash='ko';state.koSize=(state.koSize+1)%5;persist();render()},br);fk.innerHTML=`<span style="font-size:${[12,14,16,18,20][state.koSize]}px">가</span><small>한국어</small>`;
@@ -1679,7 +1679,7 @@ function startRecognition(){
   const source=foreign?active().code:'ko';
   state.listenLang=source;updateMic();
   micDiagnostic('인식 언어: '+r.lang+' · 이 언어로 말해야 글자가 나타납니다.');
-  let lastHeard='',gotAudio=false,gotFin=false,doneIdx=0,lastFin='';const seen={};
+  let lastHeard='',gotAudio=false,gotFin=false;
   const live=state.mode==='listen';
   const listenTarget=source==='ko'?active().code:'ko';
   const noSpace=/^(ja|zh|th)/.test(source);
@@ -1715,24 +1715,27 @@ function startRecognition(){
     else consume(txt,source,{tone:takeTone()});
     sess.entry=null;sess.sent='';sess.prev='';lastHeard='';
   };
+  // V39: 안드로이드는 말하는 도중 조각("잘"→"잘 안"→"잘 안 되는")을 각각 확정으로 보내므로
+  // 조각을 이어 붙여 한 문장으로 만들고, 말이 0.9초 끊기면 그때 한 문장으로 번역
+  let sentFrom=0,lastLen=0,sentEcho=false,gapTimer=null;
+  const joinPieces=results=>{const ps=[];for(let i=sentFrom;i<results.length;i++){const tx=results[i][0].transcript.trim();if(!tx)continue;const L=ps[ps.length-1];if(L!==undefined&&tx.startsWith(L))ps[ps.length-1]=tx;else if(L!==undefined&&L.startsWith(tx))continue;else ps.push(tx)}return ps.join(' ').replace(/\s+/g,' ').trim()};
+  let curText='';
+  const commit=()=>{
+    clearTimeout(gapTimer);const txt=curText;sentFrom=lastLen;curText='';
+    const drop=sentEcho;sentEcho=false;state.interim='';updateLive();
+    if(!txt)return;
+    if(drop){sess.entry=null;sess.sent='';sess.prev='';lastHeard='';return}
+    gotFinal(txt);
+  };
   r.onresult=event=>{clearTimeout(micWatchdog);micRetry=0;
     if(state.recognizer!==r)return;
-    // 대화 모드: 앱이 소리 내는 동안(+0.6초) 들린 말은 앱 자기 목소리일 수 있어 버림. 듣기 모드는 이어폰이라 그대로 받음
-    const echo=state.mode==='conversation'&&(state.speaking||Date.now()-speakEnd<600);
+    // 대화 모드: 앱이 소리 내는 동안(+0.6초) 들린 말은 앱 자기 목소리일 수 있어 그 문장은 버림. 듣기 모드는 이어폰이라 그대로 받음
+    if(state.mode==='conversation'&&(state.speaking||Date.now()-speakEnd<600))sentEcho=true;
     activity();
-    let t='';
-    for(let i=event.resultIndex;i<event.results.length;i++){
-      const res=event.results[i],tx=res[0].transcript.trim();
-      if(echo)seen[i]=true;
-      if(res.isFinal){
-        if(i<doneIdx)continue;doneIdx=i+1;
-        if(seen[i]||!tx)continue;
-        let txt=tx;if(lastFin.length>=6&&txt.startsWith(lastFin))txt=txt.slice(lastFin.length).trim();
-        lastFin=tx;state.interim='';
-        if(txt)gotFinal(txt);
-      }else if(!seen[i])t+=(t?' ':'')+tx;
-    }
-    t=t.trim();
+    lastLen=event.results.length;
+    let t=joinPieces(event.results);curText=t;
+    clearTimeout(gapTimer);gapTimer=setTimeout(()=>{if(state.recognizer===r)commit()},900);
+    if(sentEcho)t='';
     micDiagnostic('인식 결과: '+(t||'(빈 결과)'));
     if(t){micRetry=0;micLastError='';}
     state.interim=t;if(t)lastHeard=t;
@@ -1763,8 +1766,9 @@ function startRecognition(){
   };
   r.onend=()=>{
     if(state.recognizer!==r)return;
-    state.recognizer=null;state.interim='';
-    if(sess.entry&&!sess.entry.done&&lastHeard)finishEntry(lastHeard);
+    clearTimeout(gapTimer);state.recognizer=null;
+    if(curText)commit();else if(sess.entry&&!sess.entry.done&&lastHeard)finishEntry(lastHeard);
+    state.interim='';
     updateLive();updateMic();
     if(state.mic){
       // 크롬이 혼자 끊은 것(조용함 등)은 고장이 아니므로 바로 다시 듣기
