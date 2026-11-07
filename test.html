@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>녹음 교정 테스트</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif;background:#f4f6f8;color:#1d2733}
+body{display:flex;flex-direction:column}
+header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#fff;border-bottom:1px solid #e3e8ee}
+header h1{font-size:19px;margin:0;color:#1f6fd1}
+header .ver{font-size:12px;color:#99a3ae}
+#setup{padding:10px 16px;background:#fff;border-bottom:1px solid #e3e8ee;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#setup input{flex:1;min-width:150px;padding:9px 10px;border:1px solid #ccd5df;border-radius:10px;font-size:14px}
+#setup select{padding:9px 6px;border:1px solid #ccd5df;border-radius:10px;font-size:14px;background:#fff}
+#stat{display:flex;gap:14px;padding:8px 16px;font-size:13px;color:#5b6773;background:#fff;border-bottom:1px solid #e3e8ee;align-items:center}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#c4ccd4;margin-right:4px;vertical-align:middle}
+.on{background:#2fa05a}.bad{background:#e0443c}
+#meter{flex:1;height:8px;background:#e6ebf0;border-radius:4px;overflow:hidden}
+#meter i{display:block;height:100%;width:0;background:#2fa05a;transition:width .08s}
+#live{padding:10px 16px;min-height:44px;font-size:16px;color:#7a8794;background:#fffbe8;border-bottom:1px solid #efe6bf}
+#list{flex:1;overflow-y:auto;padding:12px 12px 20px;scrollbar-width:none}
+#list::-webkit-scrollbar{display:none}
+.card{background:#fff;border-radius:16px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 3px #0000000d}
+.lab{font-size:12px;font-weight:700;margin-bottom:3px}
+.chrome .lab{color:#8a96a3}.gem .lab{color:#1f6fd1}
+.chrome .tx{font-size:15px;color:#6b7783}
+.gem{margin-top:8px}.gem .tx{font-size:18px;font-weight:600}
+.same{color:#2fa05a;font-size:12px;font-weight:600}.diff{color:#d9822b;font-size:12px;font-weight:600}
+.meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:12px;color:#99a3ae}
+.meta button{border:1px solid #d5dde5;background:#fff;border-radius:16px;padding:4px 10px;font-size:12px;color:#4b5763}
+footer{display:flex;gap:10px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #e3e8ee}
+footer button{flex:1;border:none;border-radius:18px;padding:16px 8px;font-size:18px;font-weight:700}
+#go{background:#1f6fd1;color:#fff}#go.stop{background:#e0443c}
+#cut{flex:.6;background:#e9eef4;color:#33404d}
+#clr{flex:.45;background:#e9eef4;color:#33404d;font-size:15px}
+#sum{font-size:12px;color:#5b6773}
+</style>
+</head>
+<body>
+<header><h1>🎙️ 녹음 교정 테스트</h1><span class="ver">T0 · Claude</span></header>
+<div id="setup">
+  <input id="key" type="password" placeholder="Gemini API 키 (앱에 넣은 키가 있으면 자동)">
+  <select id="model">
+    <option value="gemini-3.5-flash-lite">⚡ 빠름</option>
+    <option value="gemini-3.8-flash" selected>⚖️ 균형</option>
+    <option value="gemini-4-argon">🎯 정확</option>
+  </select>
+</div>
+<div id="stat">
+  <span><span id="dRec" class="dot"></span>받아쓰기</span>
+  <span><span id="dMic" class="dot"></span>녹음</span>
+  <div id="meter"><i></i></div>
+  <span id="sum"></span>
+</div>
+<div id="live">시작을 누르고 강의하듯 말씀해 보세요.</div>
+<div id="list"></div>
+<footer>
+  <button id="clr">지우기</button>
+  <button id="cut">문장 끝</button>
+  <button id="go">시작</button>
+</footer>
+<script>
+/* T0: 크롬 받아쓰기(위·회색)와, 같은 문장 녹음을 Gemini가 다시 들은 받아쓰기(아래·파랑)를 비교하는 시험 */
+const $=id=>document.getElementById(id);
+const ls={get:(k,d='')=>{try{return localStorage.getItem(k)??d}catch{return d}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch{}}};
+$('key').value=ls.get('ai_key');
+$('key').onchange=()=>ls.set('ai_key',$('key').value.trim());
+$('model').value=ls.get('t0_model','gemini-3.8-flash');
+$('model').onchange=()=>ls.set('t0_model',$('model').value);
+
+/* 분야 용어 (앱 단어장 + 기본 금형·가공 용어) */
+const BASE_TERMS='게이트,러너,스프루,캐비티,코어,파팅라인,이젝터,이젝터 핀,성형품,사출,사출금형,프레스금형,순차이송금형,몰드베이스,언더컷,슬라이드,경사핀,냉각수 회로,핫러너,콜드러너,웰드라인,싱크마크,버,플래시,후가공,일체,인서트,다이,펀치,스트리퍼,파일럿,블랭킹,피어싱,벤딩,드로잉,CNC 선반,밀링,엔드밀,공작물,절삭,이송,절삭속도,공차,인벤터,오토캐드,한국폴리텍대학 서울정수캠퍼스';
+function terms(){let g=[];try{g=(JSON.parse(ls.get('glossary','[]'))||[]).map(x=>x.word).filter(Boolean)}catch{}return [...new Set([...g,...BASE_TERMS.split(',')])].slice(0,200).join(', ')}
+
+/* ── 녹음: 16kHz로 계속 쌓아 두기 (최근 90초) ── */
+let ac,src,proc,stream,RATE=16000,buf=[],bufStart=0,total=0;
+function nowSample(){return total}
+function pushPCM(f){
+  buf.push(new Float32Array(f));total+=f.length;
+  let keep=RATE*90;let len=total-bufStart;
+  while(buf.length&&len-buf[0].length>keep){bufStart+=buf[0].length;len-=buf[0].length;buf.shift()}
+  let m=0;for(let i=0;i<f.length;i+=32)m=Math.max(m,Math.abs(f[i]));
+  $('meter').firstChild.style.width=Math.min(100,m*180)+'%';
+}
+function slice(a,b){
+  a=Math.max(a,bufStart);b=Math.min(b,total);if(b<=a)return null;
+  const out=new Float32Array(b-a);let pos=bufStart,o=0;
+  for(const c of buf){const ce=pos+c.length;if(ce>a&&pos<b){const s=Math.max(a,pos)-pos,e=Math.min(b,ce)-pos;out.set(c.subarray(s,e),o);o+=e-s}pos=ce}
+  return out;
+}
+function down(f,from){if(from===RATE)return f;const r=from/RATE,n=Math.floor(f.length/r),o=new Float32Array(n);for(let i=0;i<n;i++){const s=Math.floor(i*r),e=Math.min(f.length,Math.floor((i+1)*r));let v=0;for(let j=s;j<e;j++)v+=f[j];o[i]=v/Math.max(1,e-s)}return o}
+function wav(f){
+  const b=new ArrayBuffer(44+f.length*2),v=new DataView(b);const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
+  w(0,'RIFF');v.setUint32(4,36+f.length*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,RATE,true);v.setUint32(28,RATE*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,f.length*2,true);
+  for(let i=0;i<f.length;i++){const s=Math.max(-1,Math.min(1,f[i]));v.setInt16(44+i*2,s<0?s*0x8000:s*0x7fff,true)}
+  return new Blob([b],{type:'audio/wav'});
+}
+async function startMic(){
+  stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+  try{ac=new AudioContext({sampleRate:16000})}catch{ac=new AudioContext()}
+  const inRate=ac.sampleRate;
+  src=ac.createMediaStreamSource(stream);proc=ac.createScriptProcessor(4096,1,1);
+  proc.onaudioprocess=e=>{if(running)pushPCM(down(e.inputBuffer.getChannelData(0),inRate))};
+  src.connect(proc);proc.connect(ac.destination);
+  $('dMic').className='dot on';
+  stream.getAudioTracks()[0].onended=()=>{$('dMic').className='dot bad';$('live').textContent='⚠️ 녹음이 끊겼습니다 (받아쓰기와 마이크가 부딪힘?)'};
+}
+function stopMic(){try{proc.disconnect();src.disconnect()}catch{}try{stream.getTracks().forEach(t=>t.stop())}catch{}try{ac.close()}catch{}$('dMic').className='dot';$('meter').firstChild.style.width='0'}
+
+/* ── 크롬 받아쓰기 + 문장 자르기 ── */
+const KO_END=/(습니다|습니까|입니다|입니까|합니다|합니까|됩니다|됩니까|었다|았다|였다|했다|한다|된다|있다|없다|이다|하다|겠다|는다|같다|좋다|많다|쉽다|싶다|않다|세요|에요|예요|어요|아요|해요|네요|군요|래요|대요|지요|까요|데요|게요|나요|가요|거든요|죠)[.?!]?\s*$|[.?!]\s*$/;
+let rec,running=false,segStart=0,pending='',interim='',pauseT=null,lastHeard=0,recOK=false;
+const items=[];let ctx=[];
+function setupRec(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){$('live').textContent='⚠️ 이 브라우저는 받아쓰기가 안 됩니다 (크롬에서 열어 주세요)';return false}
+  rec=new SR();rec.lang='ko-KR';rec.continuous=true;rec.interimResults=true;
+  rec.onstart=()=>{$('dRec').className='dot on'};
+  rec.onresult=e=>{
+    recOK=true;interim='';
+    for(let i=e.resultIndex;i<e.results.length;i++){const r=e.results[i];if(r.isFinal)pending=(pending+' '+r[0].transcript).trim();else interim+=r[0].transcript}
+    if(!segStartSet){segStart=Math.max(bufStart,lastCut-Math.round(RATE*0.2),nowSample()-RATE*2.5);segStartSet=true}
+    lastHeard=Date.now();
+    $('live').textContent=(pending+' '+interim).trim()||'…';
+    clearTimeout(pauseT);
+    if(!interim&&KO_END.test(pending))pauseT=setTimeout(cut,400);   // 종결어미면 바로
+    else pauseT=setTimeout(()=>{if(pending||interim)cut()},2000);    // 아니면 2초 쉬면
+  };
+  rec.onerror=e=>{if(e.error==='no-speech'||e.error==='aborted')return;$('dRec').className='dot bad';$('live').textContent='⚠️ 받아쓰기 오류: '+e.error+(e.error==='audio-capture'?' (녹음과 마이크가 부딪힘)':'')};
+  rec.onend=()=>{$('dRec').className='dot';if(running)setTimeout(()=>{try{rec.start()}catch{}},120)};
+  return true;
+}
+let segStartSet=false,lastCut=0;
+function cut(){
+  clearTimeout(pauseT);
+  const text=(pending+' '+interim).trim();pending='';interim='';
+  if(!text){return}
+  const a=segStart,b=nowSample()+Math.round(RATE*0.3);
+  segStartSet=false;lastCut=nowSample();
+  const it={chrome:text,gem:'',st:'wait',a,b,ms:0};items.push(it);draw();
+  setTimeout(()=>send(it),300); // 끝 꼬리 소리가 들어오게 0.3초 기다렸다가 자르기
+  $('live').textContent='…';
+}
+$('cut').onclick=cut;
+
+/* ── Gemini로 녹음 다시 받아쓰기 (앞 문장 2개는 글자로 참고) ── */
+async function send(it){
+  const key=($('key').value||ls.get('ai_key')).trim();
+  if(!key){it.st='nokey';draw();return}
+  const pcm=slice(it.a,Math.min(total,it.b));
+  if(!pcm||pcm.length<RATE*0.3){it.st='noaudio';draw();return}
+  it.sec=(pcm.length/RATE).toFixed(1);
+  it.url=URL.createObjectURL(wav(pcm));
+  const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result.split(',')[1]);fr.readAsDataURL(wav(pcm))});
+  const before=ctx.slice(-2).join(' ');
+  const sys=`당신은 한국어 강의 받아쓰기 전문가입니다. 녹음에서 들리는 한국어를 정확하게 받아 적으세요. 강의 분야는 금형(사출·프레스·순차이송)·기계가공·CAD입니다. 자주 나오는 용어: ${terms()}.
+규칙: 소리를 가장 우선합니다. [크롬 초안]은 다른 프로그램이 받아 적은 것으로 틀린 곳이 많으니 참고만 하세요. [앞 문장]은 문맥 참고용이며 받아 적지 마세요. 녹음 맨 앞이나 맨 뒤에 앞·뒤 문장의 끝·시작 조각이 살짝 들어 있으면 빼고, 이번 문장만 적으세요. 말한 그대로 적되 맞춤법·띄어쓰기는 바르게. 설명·주석 없이 JSON {"t":"받아쓴 문장"}만 답하세요.`;
+  const user=(before?`[앞 문장]\n${before}\n\n`:'')+`[크롬 초안]\n${it.chrome}\n\n녹음을 받아 적으세요.`;
+  const m=$('model').value;const cfg={temperature:0.1,responseMimeType:'application/json',responseSchema:{type:'OBJECT',properties:{t:{type:'STRING'}},required:['t']}};
+  if(/argon/.test(m))cfg.thinkingConfig={thinkingLevel:'low'};
+  const t0=Date.now();it.st='busy';draw();
+  try{
+    const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(key)}`,{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({systemInstruction:{parts:[{text:sys}]},contents:[{role:'user',parts:[{inline_data:{mime_type:'audio/wav',data:b64}},{text:user}]}],generationConfig:cfg}),signal:AbortSignal.timeout(40000)});
+    const j=await res.json().catch(()=>({}));if(!res.ok)throw Error(j.error?.message||('오류 '+res.status));
+    const raw=(j.candidates?.[0]?.content?.parts||[]).filter(x=>!x.thought).map(x=>x.text||'').join('').trim();
+    let t=raw;try{t=JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g,'')).t||raw}catch{}
+    it.gem=t.trim();it.st='done';it.ms=Date.now()-t0;
+    const u=j.usageMetadata;if(u){tok.in+=u.promptTokenCount||0;tok.out+=(u.candidatesTokenCount||0)+(u.thoughtsTokenCount||0)}
+    ctx.push(it.gem);
+  }catch(e){it.st='err';it.err=e.message;ctx.push(it.chrome)}
+  draw();
+}
+const tok={in:0,out:0};
+
+/* ── 화면 ── */
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'})[c]);
+const norm=s=>String(s).replace(/[\s.,!?·]/g,'');
+function draw(){
+  $('list').innerHTML=items.map((it,i)=>{
+    let g={wait:'대기…',busy:'Gemini가 다시 듣는 중…',nokey:'⚠️ Gemini 키를 위에 넣어 주세요',noaudio:'⚠️ 녹음된 소리가 없음 (녹음이 안 되는 중)',err:'⚠️ '+esc(it.err||'')}[it.st]||esc(it.gem);
+    const tag=it.st==='done'?(norm(it.gem)===norm(it.chrome)?'<span class="same">같음</span>':'<span class="diff">고쳐짐</span>'):'';
+    return `<div class="card"><div class="chrome"><div class="lab">크롬 받아쓰기</div><div class="tx">${esc(it.chrome)}</div></div>
+    <div class="gem"><div class="lab">Gemini 다시 듣기 ${tag}</div><div class="tx">${g}</div></div>
+    <div class="meta"><span>${i+1}번 · ${it.sec?it.sec+'초 녹음':''}${it.ms?' · '+(it.ms/1000).toFixed(1)+'초 걸림':''}</span>${it.url?`<button onclick="new Audio('${it.url}').play()">🔊 녹음 듣기</button>`:''}</div></div>`}).join('');
+  $('list').scrollTop=1e9;
+  const n=items.filter(x=>x.st==='done').length,d=items.filter(x=>x.st==='done'&&norm(x.gem)!==norm(x.chrome)).length;
+  $('sum').textContent=n?`${n}문장 중 ${d}개 고쳐짐 · 토큰 ${tok.in+tok.out}`:'';
+}
+$('clr').onclick=()=>{items.length=0;ctx=[];tok.in=tok.out=0;draw()};
+
+/* ── 시작·멈춤 ── */
+$('go').onclick=async()=>{
+  if(running){running=false;cut();try{rec.stop()}catch{}setTimeout(stopMic,800);$('go').textContent='시작';$('go').classList.remove('stop');return}
+  if(!setupRec())return;
+  try{await startMic()}catch(e){$('dMic').className='dot bad';$('live').textContent='⚠️ 녹음 시작 실패: '+e.message;return}
+  running=true;segStartSet=false;recOK=false;
+  try{rec.start()}catch{}
+  $('go').textContent='멈춤';$('go').classList.add('stop');$('live').textContent='듣는 중… 말씀해 보세요';
+  setTimeout(()=>{if(running&&!recOK)$('live').textContent='⚠️ 8초 동안 받아쓰기가 안 나옵니다 — 녹음과 받아쓰기가 동시에 안 되는 것 같습니다 (녹음 막대가 움직이면 녹음은 되는 중)'},8000);
+};
+</script>
+</body>
+</html>
