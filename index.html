@@ -510,7 +510,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='L8 · Claude · 번역 메모 섞임 차단 · 2026.11.07';
+const APP_VERSION='L9 · Claude · 듣기 모드 녹음 받아쓰기 · 2026.11.08';
 const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
@@ -1625,6 +1625,10 @@ async function consume(text,source,opt={}){
   }
   entry.translation='번역 중…';
   render();scrollEnd();
+  if(opt.audio&&engine()==='gemini'&&navigator.onLine){ // L9: 녹음 받아쓰기 문장은 "원문 정리 + 번역" 한 번에
+    const r=await geminiCleanTranslate(entry.original,source,target,opt.ctx).catch(()=>null);
+    if(r){entry.original=r.s;entry.translation=r.t;render();scrollEnd();outReady(slot,entry.translation,opt.tone);return}
+  }
   const progress=(partial,i,n)=>{entry.translation=partial+`\n… 번역 중 (${i}/${n})`;render()};
   try{
     entry.translation=await translate(source==='ko'?protectWords(entry.original):entry.original,source,target,progress,opt.ctx);
@@ -1658,6 +1662,188 @@ async function shareAll(){
   const text=list.filter(ok).map(x=>kind==='all'?`${x.original}\n${x.translation}`:side(x,kind==='ko')).join(kind==='all'?'\n\n':'\n');
   if(navigator.share){try{await navigator.share({title:'여행 통역 기록',text});return}catch(e){if(e.name==='AbortError')return}}
   try{await navigator.clipboard.writeText(text);notify('복사했습니다. 카톡에 붙여넣기 하세요.')}catch{notify('이 브라우저에서는 보내기를 지원하지 않습니다.')}
+}
+
+/* ── L9: 듣기 모드 녹음 받아쓰기 (Gemini) ──
+   크롬 받아쓰기 대신 마이크 소리를 계속 녹음 → 말이 쉬는 곳에서 잘라 Gemini가 받아 적음
+   → 받아 적은 조각을 이어 붙여 마침표에서 문장으로 나눔 → 문장마다 "정리 + 번역" 한 번에 (test.html T4 방식)
+   Gemini 키가 없거나 무료 번역기를 고르면 예전 크롬 받아쓰기를 그대로 씀 */
+const AU={RATE:16000,PAUSE:2,MIN:5,MAX:10,PAD:0.5,SHORT_WAIT:1.2,TAIL:2,STT:'gemini-3.5-flash-lite'};
+const AU_TERMS='게이트,러너,스프루,캐비티,코어,파팅라인,이젝터,이젝터 핀,성형품,사출,사출압,보압,사출금형,프레스금형,순차이송금형,몰드베이스,언더컷,슬라이드,슬라이드 코어,슬라이드 플레이트,경사 핀,변형 코어,냉각수 회로,냉각 유로,핫러너,콜드러너,웰드라인,싱크마크,미성형,버,플래시,후가공,일체,인서트,인서트 코어,코어아웃,에어 벤트,벤트,시제품,습동면,릴리프,도피부,도피 가공,유격,틈새,클리어런스,가이드면,안내면,유구,오일 홈,오일리스 부시,소착,열팽창,열응력,피로도,점도,수지,다이,펀치,스트리퍼,파일럿,블랭킹,피어싱,벤딩,드로잉,MCT,방전,CNC 선반,밀링,엔드밀,공작물,절삭,이송,절삭속도,공차,리드타임,인벤터,오토캐드,한국폴리텍대학 서울정수캠퍼스';
+function useAudioListen(){return state.mode==='listen'&&engine()==='gemini'&&navigator.onLine&&!!navigator.mediaDevices?.getUserMedia}
+function auTerms(){return [...new Set([...allGloss().map(g=>g.word).filter(Boolean),...AU_TERMS.split(',')])].slice(0,220).join(', ')}
+function auWav(f,R){
+  const b=new ArrayBuffer(44+f.length*2),v=new DataView(b);const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
+  w(0,'RIFF');v.setUint32(4,36+f.length*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);
+  v.setUint32(24,R,true);v.setUint32(28,R*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,f.length*2,true);
+  for(let i=0;i<f.length;i++){const s=Math.max(-1,Math.min(1,f[i]));v.setInt16(44+i*2,s<0?s*0x8000:s*0x7fff,true)}
+  return new Blob([b],{type:'audio/wav'});
+}
+// 같은 말이 바로 붙어 두 번 나오면 하나만 ("독단적으로 독단적으로" → "독단적으로")
+function auDedupWords(t){let p;do{p=t;t=t.replace(/(^|\s)(\S{2,}(?:\s+\S+){0,3})\s+\2(?=[\s.,?!。]|$)/g,'$1$2')}while(t!==p);return t}
+async function auTranscribe(blob,src,before){
+  const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result.split(',')[1]);fr.readAsDataURL(blob)});
+  const lang=nameOf(src);
+  const sys=`당신은 ${lang} 강의·대화 받아쓰기 전문가입니다. 녹음에서 들리는 ${lang}를 정확하게 받아 적으세요. 분야는 금형(사출·프레스·순차이송)·기계가공·CAD일 수 있습니다. 자주 나오는 용어: ${auTerms()}.
+규칙: 이번 녹음에서 실제로 들린 말만 적고, [앞 문장]을 다시 쓰거나 없는 말을 지어내지 마세요. 맞춤법·띄어쓰기는 바르게. 발음이 뭉개진 단어는 분야 용어와 [앞 문장] 문맥으로 가장 알맞은 말을 고르세요. 숫자 범위는 "0.5~1.0mm"처럼 물결표로 적으세요. 말하다 잘못 읽고 바로 고쳐 다시 말한 부분은 뒤에 고쳐 말한 것을 기준으로 하나만 남기세요. 문장이 실제로 끝난 곳에만 마침표·물음표를 찍고, 녹음이 문장 중간에서 끊기면 끝에 마침표를 찍지 마세요. 말소리가 없거나 잡음뿐이면 빈 문자열. 설명 없이 JSON {"t":"받아쓴 글"}만 답하세요.`;
+  const user=(before?`[앞 문장]\n${before}\n\n`:'')+'이 녹음을 받아 적으세요.';
+  let last=null;
+  for(const m of [AU.STT,AU.STT,'gemini-3.8-flash']){ // 빈 답·오류면 한 번 더, 그래도 안 되면 균형 모델로
+    try{
+      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(load('ai_key').trim())}`,{method:'POST',headers:{'content-type':'application/json'},
+        body:JSON.stringify({systemInstruction:{parts:[{text:sys}]},contents:[{role:'user',parts:[{inline_data:{mime_type:'audio/wav',data:b64}},{text:user}]}],generationConfig:{temperature:0.1,responseMimeType:'application/json',responseSchema:{type:'OBJECT',properties:{t:{type:'STRING'}},required:['t']}}}),signal:AbortSignal.timeout(30000)});
+      const j=await res.json().catch(()=>({}));if(!res.ok)throw Error(j.error?.message||('Gemini 오류 '+res.status));
+      const raw=(j.candidates?.[0]?.content?.parts||[]).filter(x=>!x.thought).map(x=>x.text||'').join('').trim();
+      let t=raw;try{t=JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g,'')).t??raw}catch{}
+      t=String(t||'').trim();
+      if(t)return t;last='';
+    }catch(e){last=e}
+  }
+  if(last)throw last;return '';
+}
+// 완성된 문장을 "정리한 원문 + 번역" 한 번에 받음 (실패하면 null → 예전 번역으로)
+async function geminiCleanTranslate(text,src,target,ctx){
+  const g=glossary.filter(x=>x.word&&x.out).map(x=>`${x.word} → ${x.out}`).join(', ');
+  const sys=`당신은 통역사입니다. [번역할 글]은 ${nameOf(src)} 음성을 받아 적은 것이라 다시 읽은 반복, 잘못 들린 단어가 있을 수 있습니다.
+1) s: 먼저 원문을 정리하세요 — 말하다 잘못 읽고 다시 말한 부분은 뒤에 고쳐 말한 것을 기준으로 하나로 합치고(앞에만 있던 말은 살림), 같은 말 반복은 하나만, 문맥에 맞지 않는 단어는 분야 용어로 바로잡으세요(예: 고주→구조, 고압→보압). 뜻을 빼거나 보태지 말고, 문제가 없으면 그대로 두세요. 숫자 범위는 물결표(~).
+2) t: 정리한 원문을 ${nameOf(target)}로 번역하세요. 현지 사람이 바로 알아듣는 자연스러운 말투로, 설명·주석·괄호 메모 없이 번역문 하나만.
+분야는 금형·기계가공·CAD일 수 있습니다. [앞 문장]은 문맥 참고용이며 정리·번역하지 마세요. JSON {"s":"정리한 원문","t":"번역문"}으로만 답하세요.`+(g?`\n용어는 이렇게 쓰세요: ${g}`:'');
+  const user=(ctx?`[앞 문장 · 참고만]\n${ctx}\n\n`:'')+`[번역할 글]\n${text}`;
+  const models=[...new Set([gemModel(),'gemini-3.8-flash'])];
+  for(const m of models){
+    try{
+      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(load('ai_key').trim())}`,{method:'POST',headers:{'content-type':'application/json'},
+        body:JSON.stringify({systemInstruction:{parts:[{text:sys}]},contents:[{role:'user',parts:[{text:user}]}],generationConfig:{...gemCfg(m),responseMimeType:'application/json',responseSchema:{type:'OBJECT',properties:{s:{type:'STRING'},t:{type:'STRING'}},required:['s','t']}}}),signal:AbortSignal.timeout(/argon/.test(m)?40000:25000)});
+      const j=await res.json().catch(()=>({}));if(!res.ok)throw Error(j.error?.message||('Gemini 오류 '+res.status));
+      const raw=(j.candidates?.[0]?.content?.parts||[]).filter(x=>!x.thought).map(x=>x.text||'').join('').trim();
+      let o;try{o=JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g,''))}catch{continue}
+      const s=String(o.s||'').trim();const {out,noisy}=gemClean(JSON.stringify({t:String(o.t||'')}),target);
+      if(!out||noisy)continue;
+      const hz=t=>{const L=t.replace(/[\s\d.,!?。、，！？…·:;"'()\[\]~-]/g,'');return L?(t.match(/[가-힣]/g)||[]).length/L.length:0};
+      if(target!=='ko'&&hz(out)>0.3)continue;
+      // 정리한 원문이 너무 짧아지거나 길어지면(뜻이 바뀐 것) 원래 글 그대로
+      const okS=s&&s.length>=text.length*0.6&&s.length<=text.length*1.3+10;
+      return {s:okS?s:text,t:out};
+    }catch(e){}
+  }
+  return null;
+}
+function startAudioListen(){
+  const src=state.listenFrom!=='ko'?active().code:'ko';
+  state.listenLang=src;updateMic();
+  const R=AU.RATE;
+  let ac=null,node0=null,proc=null,stream=null,buf=[],bufStart=0,total=0,alive=true,stopping=false;
+  let floor=0.004,segStart=-1,lastVoice=0,voiced=0,lastEnd=0,frames=[],quietSince=0;
+  const chunks=[];let nextIdx=0,carry='',carryAt=0,prevSent='',timer=null,ready=false;
+  const me={_audio:true,abort(){finish()},_flush(){}};
+  state.recognizer=me;
+  const live=t=>{if(state.recognizer&&state.recognizer!==me)return;if(!state.recognizer&&!stopping)return;state.interim=t;updateLive()};
+  const slice=(a,b)=>{a=Math.max(a,bufStart);b=Math.min(b,total);if(b<=a)return null;const out=new Float32Array(b-a);let pos=bufStart,o=0;for(const c of buf){const ce=pos+c.length;if(ce>a&&pos<b){const s=Math.max(a,pos)-pos,e=Math.min(b,ce)-pos;out.set(c.subarray(s,e),o);o+=e-s}pos=ce}return out};
+  const down=(f,from)=>{if(from===R)return new Float32Array(f);const r=from/R,n=Math.floor(f.length/r),o=new Float32Array(n);for(let i=0;i<n;i++){const s=Math.floor(i*r),e=Math.min(f.length,Math.floor((i+1)*r));let v=0;for(let j=s;j<e;j++)v+=f[j];o[i]=v/Math.max(1,e-s)}return o};
+  const nzk=t=>String(t).replace(/[\s.,?!。·]/g,'');
+  const grams=t=>{const g=new Set();for(let i=0;i<t.length-1;i++)g.add(t.slice(i,i+2));return g};
+  const isDup=t=>{const a=nzk(t);if(a.length<4)return false;const prev=nzk(prevSent+carry).slice(-a.length*2-10);if(prev.includes(a))return true;const A=grams(a),B=grams(prev);let n=0;A.forEach(x=>{if(B.has(x))n++});return n/A.size>=0.7&&a.length<=40};
+  const ctxOf=i=>chunks.slice(0,i).filter(x=>x.t).slice(-2).map(x=>x.t).join(' ').slice(-300);
+  function sendSentence(t,full){
+    t=auDedupWords(t.replace(/\s+/g,' ').trim());if(isEmptyText(t))return;
+    // "1."처럼 아주 짧은 건 다음 문장 앞에 붙임
+    if(nzk(t).length<4&&!full){carry=(t+' '+carry).trim();return}
+    consume(t,src,{ctx:prevSent,audio:true});prevSent=t;
+  }
+  function assemble(){
+    while(nextIdx<chunks.length&&chunks[nextIdx].st!=='busy'){
+      const c=chunks[nextIdx++];
+      if(c.t&&!isDup(c.t)){carry=(carry+' '+c.t).replace(/\s+/g,' ').trim();carryAt=Date.now()}
+    }
+    let used=0;
+    for(let i=0;i<carry.length;i++){
+      if('.?!。？！'.includes(carry[i])&&(i+1===carry.length||/\s/.test(carry[i+1]))){
+        const t=carry.slice(used,i+1).trim();
+        if(nzk(t).length<4){continue}            // "1." 같은 번호는 자르지 않고 다음 말과 이어 감
+        sendSentence(t,true);used=i+1;
+      }
+    }
+    if(used)carry=carry.slice(used).trim();
+    showLive();
+    if(stopping&&nextIdx>=chunks.length&&segStart<0){if(carry){sendSentence(carry,true);carry=''}closeAll()}
+  }
+  function showLive(){
+    const busy=chunks.length-nextIdx;
+    if(!ready)return live('마이크 준비 중…');
+    if(carry)return live(carry+(busy?' …':''));
+    if(segStart>=0)return live('🎙️ 듣는 중…');
+    if(busy)return live('받아 적는 중…');
+    live(stopping?'':'말씀하세요');
+  }
+  async function send(c){
+    const pcm=slice(c.a,c.b);if(!pcm){c.st='done';assemble();return}
+    try{c.t=await auTranscribe(auWav(pcm,R),src,ctxOf(chunks.indexOf(c)))}catch(e){c.t='';if(Date.now()-(window._auErr||0)>30000){window._auErr=Date.now();notify('녹음 받아쓰기 실패: '+e.message)}}
+    c.st='done';assemble();
+  }
+  function cut(end,force){
+    if(segStart<0)return;
+    end=Math.min(end??total,total);
+    const len=(end-segStart)/R;
+    if(!force&&len<AU.MIN)return false;             // 5초가 안 되면 아직 안 보냄 (다음 말과 붙임)
+    const a=segStart,v=voiced;segStart=-1;voiced=0;lastEnd=end;quietSince=0;
+    if(v<R*0.25){showLive();return true}             // 기침·잡음
+    const c={a,b:end,st:'busy'};chunks.push(c);send(c);showLive();
+    if(end<total&&lastVoice>end){segStart=end;voiced=lastVoice-end}
+    return true;
+  }
+  function onFrame(f){
+    buf.push(f);total+=f.length;
+    while(buf.length&&total-bufStart-buf[0].length>R*120){bufStart+=buf[0].length;buf.shift()}
+    let e=0;for(let i=0;i<f.length;i++)e+=f[i]*f[i];const rms=Math.sqrt(e/f.length);
+    const thr=Math.max(floor*3,0.008),isV=rms>thr;
+    if(!isV)floor=floor*0.97+rms*0.03;
+    frames.push([total,rms]);if(frames.length>400)frames.shift();
+    if(isV){
+      if(segStart<0)segStart=Math.max(bufStart,lastEnd,total-f.length-Math.round(R*AU.PAD));
+      if(Date.now()-(onFrame.act||0)>5000){onFrame.act=Date.now();activity()}
+      lastVoice=total;voiced+=f.length;
+    }
+    if(segStart<0)return;
+    if(isV&&(onFrame.sh||0)<Date.now()-500){onFrame.sh=Date.now();showLive()}
+    const len=(total-segStart)/R,quiet=(total-lastVoice)/R,endAt=lastVoice+Math.round(R*AU.PAD);
+    if(stopping){return}
+    if(quiet>=AU.PAUSE){
+      if(!cut(endAt,false)&&quiet>=AU.PAUSE+AU.SHORT_WAIT)cut(endAt,true);   // 짧은 조각은 조금 더 기다렸다가 그래도 조용하면 보냄
+    }else if(len>=AU.MAX){
+      let best=null;for(const [p,r] of frames)if(p>total-R*5&&p<total-R*0.2&&(!best||r<best[1]))best=[p,r];
+      if(best&&(best[1]<thr||len>=AU.MAX+4))cut(best[0],true);
+    }
+  }
+  // 말이 2초 넘게 멈췄는데 남은 말(종결어미 없음)이 있으면 문장으로 내보냄
+  timer=setInterval(()=>{
+    if(!carry||segStart>=0||nextIdx<chunks.length)return;
+    if((total-lastVoice)/R<AU.PAUSE+AU.SHORT_WAIT||Date.now()-carryAt<500)return;
+    sendSentence(carry,true);carry='';showLive();
+  },300);
+  function finish(){
+    if(stopping)return;stopping=true;
+    if(state.recognizer===me)state.recognizer=null;
+    // 멈춤을 눌러도 2초 더 녹음한 뒤 마지막 조각까지 보내고 끔
+    setTimeout(()=>{if(segStart>=0)cut(total,true);alive=false;try{proc?.disconnect();node0?.disconnect()}catch{}try{stream?.getTracks().forEach(t=>t.stop())}catch{}try{ac?.close()}catch{}assemble()},AU.TAIL*1000);
+  }
+  function closeAll(){clearInterval(timer);if(state.recognizer!==me&&state.interim&&!state.recognizer){state.interim='';updateLive()}}
+  (async()=>{
+    try{
+      stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
+      if(!alive||stopping){stream.getTracks().forEach(t=>t.stop());return}
+      try{ac=new AudioContext({sampleRate:R})}catch{ac=new AudioContext()}
+      const inRate=ac.sampleRate;
+      node0=ac.createMediaStreamSource(stream);proc=ac.createScriptProcessor(2048,1,1);
+      proc.onaudioprocess=ev=>{if(alive)onFrame(down(ev.inputBuffer.getChannelData(0),inRate))};
+      node0.connect(proc);proc.connect(ac.destination);
+      ready=true;showLive();micDiagnostic('녹음 받아쓰기 · '+nameOf(src));
+      stream.getAudioTracks()[0].onended=()=>{if(!stopping){notify('마이크가 끊겼습니다. 다시 눌러 주세요.');finish();state.mic=false;render()}};
+    }catch(e){
+      alive=false;clearInterval(timer);if(state.recognizer===me)state.recognizer=null;
+      notify('녹음을 시작할 수 없습니다 ('+e.message+') · 크롬 받아쓰기로 듣습니다.');
+      state._noAudio=true;if(state.mic)startRecognition();
+    }
+  })();
 }
 
 /* ── 실시간 음성 인식 ── */
@@ -1717,15 +1903,17 @@ function scheduleMicRetry(message){
 }
 function toggleMic(){
   if(state.mic){stopMic();clearPending();clearTimeout(micRetryTimer);clearTimeout(micWatchdog);document.getElementById('micDiagnostic')?.remove();render();return}
-  if(!SR){micDiagnostic('이 브라우저에서는 음성 인식이 지원되지 않습니다. Chrome을 이용해 주세요.');return}
-  clearTimeout(micRetryTimer);clearTimeout(micWatchdog);micRetry=0;micLastError='';
+  if(!SR&&!useAudioListen()){micDiagnostic('이 브라우저에서는 음성 인식이 지원되지 않습니다. Chrome을 이용해 주세요.');return}
+  clearTimeout(micRetryTimer);clearTimeout(micWatchdog);micRetry=0;micLastError='';state._noAudio=false;
   state.mic=true;state.sourceTurn=0;activity();startTone();render();warmGemini();
   // Explicit start preserves user-gesture context and avoids a silent 'on' state.
   if(!state.recognizer)startRecognition();
   if(!state.recognizer&&state.mic)scheduleMicRetry('음성 인식 시작을 다시 시도합니다.');
 }
 function startRecognition(){
-  if(!SR||!state.mic||state.modal||state.page!=='main')return;
+  if(!state.mic||state.modal||state.page!=='main')return;
+  if(useAudioListen()&&!state._noAudio){startAudioListen();return} // L9: 듣기 모드는 녹음 받아쓰기
+  if(!SR)return;
   const r=new SR();state.recognizer=r;
   // V38: 마이크를 문장마다 껐다 켜지 않고 계속 열어 둠 (자동은 언어를 번갈아 바꿔야 해서 문장마다 다시 시작)
   r.continuous=state.mode==='listen'||state.recog!=='auto';r.interimResults=true;r.maxAlternatives=1;
