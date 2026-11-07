@@ -42,7 +42,7 @@ footer button{flex:1;border:none;border-radius:18px;padding:16px 8px;font-size:1
 </style>
 </head>
 <body>
-<header><h1>🎙️ 녹음 교정 테스트</h1><span class="ver">T2 · Claude</span></header>
+<header><h1>🎙️ 녹음 교정 테스트</h1><span class="ver">T3 · Claude</span></header>
 <div id="setup">
   <input id="key" type="password" placeholder="Gemini API 키 (앱에 넣은 키가 있으면 자동)">
   <select id="model">
@@ -103,8 +103,8 @@ function wav(f){
 }
 
 /* ── 말소리 감지: 소리 크기로 말하는 중/쉬는 중 판단 ── */
-let floor=0.004,speaking=false,segStart=-1,lastVoice=0,voiced=0,frames=[]; // frames: [끝 위치, 크기] (긴 문장 자를 곳 찾기용)
-const MAXSEC=10; // T2: 조각은 짧게 (문장은 받아 적은 뒤 이어 붙여 만듦)
+let lastEnd=0,floor=0.004,speaking=false,segStart=-1,lastVoice=0,voiced=0,frames=[]; // frames: [끝 위치, 크기] (긴 문장 자를 곳 찾기용)
+const MAXSEC=9; // T2: 조각은 짧게 (문장은 받아 적은 뒤 이어 붙여 만듦)
 function onFrame(f){
   buf.push(f);total+=f.length;
   while(buf.length&&total-bufStart-buf[0].length>RATE*120){bufStart+=buf[0].length;buf.shift()}
@@ -115,22 +115,22 @@ function onFrame(f){
   frames.push([total,rms]);if(frames.length>400)frames.shift();
   if(isV){
     lastVoice=total;voiced+=f.length;
-    if(segStart<0)segStart=Math.max(bufStart,total-f.length-Math.round(RATE*0.35)); // 말 시작 0.35초 앞부터
+    if(segStart<0)segStart=Math.max(bufStart,lastEnd,total-f.length-Math.round(RATE*0.35)); // T3: 앞 조각과 겹치지 않게 // 말 시작 0.35초 앞부터
   }
   $('dVoice').className='dot'+(isV?' on':'');
   if(segStart<0){liveIdle();return}
   const len=(total-segStart)/RATE,quiet=(total-lastVoice)/RATE;
   $('live').textContent=`🎙️ 녹음 중 ${len.toFixed(1)}초`+(quiet>0.25?' · 쉬는 중':'');
   if(quiet>=Number($('pause').value))cut(lastVoice+Math.round(RATE*0.25));
-  else if(len>=MAXSEC){                             // 너무 길면 최근 3초 중 가장 조용한 곳에서 자름
-    let best=null;for(const [p,r] of frames)if(p>total-RATE*3&&p<total-RATE*0.3&&(!best||r<best[1]))best=[p,r];
-    cut(best?best[0]:total);
+  else if(len>=MAXSEC){                             // T3: 너무 길면 최근 5초 중 낱말 사이 조용한 틈에서 자름 (낱말 중간 X)
+    let best=null;for(const [p,r] of frames)if(p>total-RATE*5&&p<total-RATE*0.2&&(!best||r<best[1]))best=[p,r];
+    if(best&&(best[1]<thr||len>=MAXSEC+4))cut(best[0]);
   }
 }
 function cut(end){
   if(segStart<0)return;
   end=Math.min(end??total,total);
-  const a=segStart,v=voiced;segStart=-1;voiced=0;
+  const a=segStart,v=voiced;segStart=-1;voiced=0;lastEnd=end;
   if(v<RATE*0.3)return;                            // 0.3초도 안 되는 소리(기침·잡음)는 버림
   const it={a,b:end,st:'busy',ms:0};items.push(it);draw();send(it);
   if(end<total&&lastVoice>end){segStart=end;voiced=lastVoice-end}  // 자른 뒤에 이어진 말은 다음 조각으로
@@ -161,7 +161,7 @@ async function send(it){
   const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result.split(',')[1]);fr.readAsDataURL(blob)});
   const before=ctxBefore(it);
   const sys=`당신은 한국어 강의 받아쓰기 전문가입니다. 녹음에서 들리는 한국어를 정확하게 받아 적으세요. 강의 분야는 금형(사출·프레스·순차이송)·기계가공·CAD입니다. 자주 나오는 용어: ${terms()}.
-규칙: 들린 그대로 적되 맞춤법·띄어쓰기는 바르게. 문장이 실제로 끝난 곳(~합니다·~요·~다 등)에만 마침표나 물음표를 찍고, 녹음이 문장 중간에서 끊기면 끝에 마침표를 찍지 마세요. 발음이 뭉개진 단어는 분야 용어와 [앞 문장] 문맥으로 가장 알맞은 말을 고르세요. 녹음은 말이 쉬는 곳에서 잘라 보내므로 문장 중간에서 시작하거나 끝날 수 있습니다 — 그대로 적고 없는 말을 보태지 마세요. [앞 문장]은 바로 앞 녹음을 받아 적은 것으로 참고용이며 다시 적지 마세요. 이번 녹음이 앞 문장에 이어지는 말이면 이어지는 부분만 적으세요. 말소리가 없거나 잡음뿐이면 빈 문자열. 설명 없이 JSON {"t":"받아쓴 글"}만 답하세요.`;
+규칙: 이번 녹음에서 실제로 들린 말만 적으세요. [앞 문장]의 내용을 다시 쓰거나 지어내지 마세요. 들린 그대로 적되 맞춤법·띄어쓰기는 바르게. 문장이 실제로 끝난 곳(~합니다·~요·~다 등)에만 마침표나 물음표를 찍고, 녹음이 문장 중간에서 끊기면 끝에 마침표를 찍지 마세요. 발음이 뭉개진 단어는 분야 용어와 [앞 문장] 문맥으로 가장 알맞은 말을 고르세요. 녹음은 말이 쉬는 곳에서 잘라 보내므로 문장 중간에서 시작하거나 끝날 수 있습니다 — 그대로 적고 없는 말을 보태지 마세요. [앞 문장]은 바로 앞 녹음을 받아 적은 것으로 참고용이며 다시 적지 마세요. 이번 녹음이 앞 문장에 이어지는 말이면 이어지는 부분만 적으세요. 말소리가 없거나 잡음뿐이면 빈 문자열. 설명 없이 JSON {"t":"받아쓴 글"}만 답하세요.`;
   const user=(before?`[앞 문장]\n${before}\n\n`:'')+'이 녹음을 받아 적으세요.';
   const m=$('model').value;const cfg={temperature:0.1,responseMimeType:'application/json',responseSchema:{type:'OBJECT',properties:{t:{type:'STRING'}},required:['t']}};
   if(/argon/.test(m))cfg.thinkingConfig={thinkingLevel:'low'};
@@ -181,9 +181,20 @@ async function send(it){
 /* ── T2: 받아 적은 조각을 순서대로 이어 붙여 종결어미(마침표)에서 문장으로 나눔 ── */
 const sents=[];let carry='',carryParts=[],nextIdx=0,carryAt=0;
 const KO_END=/(습니다|습니까|입니다|입니까|합니다|합니까|됩니다|됩니까|었다|았다|였다|했다|한다|된다|있다|없다|이다|하다|겠다|는다|같다|않다|세요|에요|예요|어요|아요|해요|네요|군요|지요|까요|데요|거든요|죠)$/;
+// T3: 조각 글이 바로 앞에 적은 글과 거의 같으면(문맥을 베껴 낸 경우) 버림
+const nz=t=>String(t).replace(/[\s.,?!。·]/g,'');
+function grams(t){const g=new Set();for(let i=0;i<t.length-1;i++)g.add(t.slice(i,i+2));return g}
+function isDup(t){
+  const a=nz(t);if(a.length<4)return false;
+  const prev=nz(sents.slice(-2).map(x=>x.t).join('')+carry).slice(-a.length*2-10);
+  if(prev.includes(a))return true;
+  const A=grams(a),B=grams(prev);let n=0;A.forEach(x=>{if(B.has(x))n++});
+  return n/A.size>=0.7&&a.length<=40;
+}
 function assemble(){
   while(nextIdx<items.length&&items[nextIdx].st!=='busy'){
     const it=items[nextIdx++];
+    if(it.st==='done'&&it.t&&isDup(it.t)){it.dup=true;continue}
     if(it.st==='done'&&it.t){carry=(carry+' '+it.t).replace(/\s+/g,' ').trim();carryParts.push(nextIdx);carryAt=Date.now()}
   }
   // 마침표·물음표·느낌표 + 띄어쓰기(또는 끝)에서 자름 (3.5 같은 소수점은 안 자름)
@@ -197,7 +208,8 @@ function assemble(){
 // 남은 말이 있는데 말이 멈춘 채 2초 지나면(종결어미가 없어도) 문장으로 내보냄
 setInterval(()=>{
   if(!carry||segStart>=0||nextIdx<items.length)return;
-  if(Date.now()-carryAt<2000)return;
+  if(running&&(total-lastVoice)/RATE<2)return;      // T3: 실제로 2초 말이 없을 때만 (Gemini 답 온 시각 기준 X)
+  if(Date.now()-carryAt<500)return;
   sents.push({t:carry,parts:[...carryParts],full:KO_END.test(carry.replace(/[.?!]$/,''))});carry='';carryParts=[];draw();
 },300);
 function liveIdle(){const busy=items.length-nextIdx;$('live').textContent=busy?`받아 적는 중… (${busy}조각)`:running?'듣는 중… (말씀하시면 자동으로 잡습니다)':'멈췄습니다.'}
@@ -214,8 +226,8 @@ function draw(){
   if(carry||busy)h+=`<div class="card carry"><div class="tx">${esc(carry)}${busy?` <span class="tx empty">… 받아 적는 중 (${busy}조각)</span>`:''}</div><div class="meta"><span>이어지는 중 · 문장이 끝나면 위로 올라감</span><span class="parts">${pbtn(carryParts)}</span></div></div>`;
   if(errs.length){const e=errs[errs.length-1];h+=`<div class="card"><div class="tx empty">⚠️ ${e.st==='nokey'?'Gemini 키를 위에 넣어 주세요':esc(e.err||'')}</div></div>`}
   $('list').innerHTML=h;$('list').scrollTop=1e9;
-  const done=items.filter(x=>x.ms);const avg=done.length?(done.reduce((a,x)=>a+x.ms,0)/done.length/1000).toFixed(1):'';
-  $('sum').textContent=items.length?`${sents.length}문장 · ${items.length}조각${avg?' · 평균 '+avg+'초':''} · 토큰 ${tok.in+tok.out}`:'';
+  const dups=items.filter(x=>x.dup).length;const done=items.filter(x=>x.ms);const avg=done.length?(done.reduce((a,x)=>a+x.ms,0)/done.length/1000).toFixed(1):'';
+  $('sum').textContent=items.length?`${sents.length}문장 · ${items.length}조각${dups?' · 중복 '+dups+'개 버림':''}${avg?' · 평균 '+avg+'초':''} · 토큰 ${tok.in+tok.out}`:'';
 }
 $('clr').onclick=()=>{items.length=0;sents.length=0;carry='';carryParts=[];nextIdx=0;tok.in=tok.out=0;draw()};
 
