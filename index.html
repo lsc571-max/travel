@@ -289,6 +289,7 @@ svg{display:block}
 .help-text{margin:0;font-size:15px;line-height:1.7;white-space:pre-line}
 @media(min-width:750px){body{position:static;overflow:auto}#app{--app-h:min(100dvh,920px);min-height:650px;margin:2vh auto;border-radius:22px;box-shadow:0 0 22px #0001}.home,.screen{min-height:650px}}
 /* v33: 첫 화면 버전·언어 표시 */
+.pull-ind{position:absolute;top:calc(max(8px, env(safe-area-inset-top)) + 28px);left:50%;transform:translateX(-50%);background:#000a;color:#fff;font-size:14px;padding:6px 14px;border-radius:16px;opacity:0;z-index:25;pointer-events:none;transition:opacity .1s}
 .home-corner{position:absolute;top:max(8px, env(safe-area-inset-top));font-size:13px;font-weight:500;color:#fff;opacity:.7;z-index:20;pointer-events:none;text-shadow:0 1px 3px #000a}
 .top-right .snd.off{color:#c0392b}
 .top-right{gap:0}
@@ -493,7 +494,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='L3 · Claude · 발음·단어 그룹·저장·가로 보기 · 2026.11.07';
+const APP_VERSION='L4 · Claude · 첫 화면 당겨서 업데이트 · 2026.11.07';
 const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
@@ -704,9 +705,23 @@ function updateMic(){
 }
 function scrollEnd(){const t=$('#transcript');if(t)t.scrollTo({top:t.scrollHeight,behavior:'smooth'})}
 
+/* L4: 새 버전 받기 — 저장해 둔 옛 화면을 지우고 서버에서 새로 받아 다시 열기 */
+async function forceUpdate(){
+  notify('🔄 새 버전 확인 중…');
+  try{const regs=await navigator.serviceWorker?.getRegistrations?.()||[];await Promise.all(regs.map(r=>r.update().catch(()=>{})))}catch{}
+  try{const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}catch{}
+  try{await fetch('./index.html',{cache:'reload'});await fetch('./',{cache:'reload'})}catch{}
+  location.reload();
+}
 function drawHome(root){
   const h=node('main','home','',root);const L=active();
   const versionTag=node('span','home-corner', APP_VERSION.split(' · ').slice(0,2).join(' · '),h);versionTag.title=APP_VERSION;versionTag.style.right='12px';
+  // L4: 버전 글씨를 누르거나 첫 화면을 아래로 당기면 새 버전 받기
+  versionTag.style.pointerEvents='auto';versionTag.style.cursor='pointer';versionTag.onclick=e=>{e.stopPropagation();forceUpdate()};
+  {let y0=null,pulled=false;const pi=node('div','pull-ind','↓ 놓으면 새 버전 확인',h);
+   h.addEventListener('touchstart',e=>{y0=e.touches[0].clientY;pulled=false},{passive:true});
+   h.addEventListener('touchmove',e=>{if(y0==null)return;const dy=e.touches[0].clientY-y0;pulled=dy>110;pi.style.opacity=Math.min(1,Math.max(0,dy/110));pi.textContent=pulled?'↻ 놓으면 새 버전 확인':'↓ 더 당기세요'},{passive:true});
+   h.addEventListener('touchend',()=>{pi.style.opacity=0;if(pulled){h._pulled=true;forceUpdate()}y0=null},{passive:true});}
   const langTag=node('span','home-corner',L.name,h);langTag.style.left='12px';
   /* 사진을 먼저 보여 주고, 사진을 못 받으면(오프라인 등) 직접 그린 그림을 대신 보여 줌 */
   const showPhoto=()=>{h.style.backgroundImage=`url("${L.image}")`;const sv=h.querySelector('.home-scene');if(sv)sv.remove()};
@@ -715,7 +730,7 @@ function drawHome(root){
     if(!L.bg)showPhoto();
     else{const im=new Image();im.onload=()=>{if(h.isConnected)showPhoto()};im.src=L.image;if(im.complete&&im.naturalWidth)showPhoto()}
   }
-  h.onclick=goMain;
+  h.onclick=()=>{if(h._pulled){h._pulled=false;return}goMain()};
   const b=button(`${active().flag} ${active().name} ⌄`,'lang',null,h);
   let timer,long=false;
   b.onclick=e=>{e.stopPropagation();if(long){long=false;return}const k=MAIN_LANGS.indexOf(active().code);setLang(LANGS.findIndex(l=>l.code===MAIN_LANGS[(k+1)%MAIN_LANGS.length]))};
