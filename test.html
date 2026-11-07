@@ -39,10 +39,13 @@ footer button{flex:1;border:none;border-radius:18px;padding:16px 8px;font-size:1
 .parts button{margin-left:4px}
 #clr{flex:.45;background:#e9eef4;color:#33404d;font-size:15px}
 #sum{font-size:12px;color:#5b6773}
+#moon{border:none;background:none;font-size:20px;padding:2px 6px;vertical-align:middle}
+#dim{position:fixed;inset:0;background:#000;opacity:.93;z-index:99;display:none;align-items:flex-end;justify-content:center;padding-bottom:40px;color:#555;font-size:13px}
+#dim.on{display:flex}
 </style>
 </head>
 <body>
-<header><h1>🎙️ 녹음 교정 테스트</h1><span class="ver">T3 · Claude</span></header>
+<header><h1>🎙️ 녹음 교정 테스트</h1><span><button id="moon" title="화면 어둡게">🌙</button> <span class="ver">T4 · Claude</span></span></header>
 <div id="setup">
   <input id="key" type="password" placeholder="Gemini API 키 (앱에 넣은 키가 있으면 자동)">
   <select id="model">
@@ -65,6 +68,7 @@ footer button{flex:1;border:none;border-radius:18px;padding:16px 8px;font-size:1
 </div>
 <div id="live">시작을 누르고 강의하듯 말씀해 보세요. 크롬 받아쓰기 없이 녹음만 Gemini가 받아 적습니다.</div>
 <div id="list"></div>
+<div id="dim">화면을 누르면 밝아집니다 · 녹음은 계속됩니다</div>
 <footer>
   <button id="clr">지우기</button>
   <button id="cut">문장 끝</button>
@@ -118,7 +122,7 @@ function onFrame(f){
     if(segStart<0)segStart=Math.max(bufStart,lastEnd,total-f.length-Math.round(RATE*0.35)); // T3: 앞 조각과 겹치지 않게 // 말 시작 0.35초 앞부터
   }
   $('dVoice').className='dot'+(isV?' on':'');
-  if(segStart<0){liveIdle();return}
+  if(segStart<0){liveIdle();letSleep();return}
   const len=(total-segStart)/RATE,quiet=(total-lastVoice)/RATE;
   $('live').textContent=`🎙️ 녹음 중 ${len.toFixed(1)}초`+(quiet>0.25?' · 쉬는 중':'');
   if(quiet>=Number($('pause').value))cut(lastVoice+Math.round(RATE*0.25));
@@ -161,7 +165,7 @@ async function send(it){
   const b64=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result.split(',')[1]);fr.readAsDataURL(blob)});
   const before=ctxBefore(it);
   const sys=`당신은 한국어 강의 받아쓰기 전문가입니다. 녹음에서 들리는 한국어를 정확하게 받아 적으세요. 강의 분야는 금형(사출·프레스·순차이송)·기계가공·CAD입니다. 자주 나오는 용어: ${terms()}.
-규칙: 이번 녹음에서 실제로 들린 말만 적으세요. [앞 문장]의 내용을 다시 쓰거나 지어내지 마세요. 들린 그대로 적되 맞춤법·띄어쓰기는 바르게. 문장이 실제로 끝난 곳(~합니다·~요·~다 등)에만 마침표나 물음표를 찍고, 녹음이 문장 중간에서 끊기면 끝에 마침표를 찍지 마세요. 발음이 뭉개진 단어는 분야 용어와 [앞 문장] 문맥으로 가장 알맞은 말을 고르세요. 녹음은 말이 쉬는 곳에서 잘라 보내므로 문장 중간에서 시작하거나 끝날 수 있습니다 — 그대로 적고 없는 말을 보태지 마세요. [앞 문장]은 바로 앞 녹음을 받아 적은 것으로 참고용이며 다시 적지 마세요. 이번 녹음이 앞 문장에 이어지는 말이면 이어지는 부분만 적으세요. 말소리가 없거나 잡음뿐이면 빈 문자열. 설명 없이 JSON {"t":"받아쓴 글"}만 답하세요.`;
+규칙: 말하다 잘못 읽고 바로 고쳐 다시 말한 부분은 뒤에 고쳐 말한 것을 기준으로 하나만 남기고, 앞에서만 나온 말이 빠지면 살려 합치세요. 이번 녹음에서 실제로 들린 말만 적으세요. [앞 문장]의 내용을 다시 쓰거나 지어내지 마세요. 들린 그대로 적되 맞춤법·띄어쓰기는 바르게. 문장이 실제로 끝난 곳(~합니다·~요·~다 등)에만 마침표나 물음표를 찍고, 녹음이 문장 중간에서 끊기면 끝에 마침표를 찍지 마세요. 발음이 뭉개진 단어는 분야 용어와 [앞 문장] 문맥으로 가장 알맞은 말을 고르세요. 녹음은 말이 쉬는 곳에서 잘라 보내므로 문장 중간에서 시작하거나 끝날 수 있습니다 — 그대로 적고 없는 말을 보태지 마세요. [앞 문장]은 바로 앞 녹음을 받아 적은 것으로 참고용이며 다시 적지 마세요. 이번 녹음이 앞 문장에 이어지는 말이면 이어지는 부분만 적으세요. 말소리가 없거나 잡음뿐이면 빈 문자열. 설명 없이 JSON {"t":"받아쓴 글"}만 답하세요.`;
   const user=(before?`[앞 문장]\n${before}\n\n`:'')+'이 녹음을 받아 적으세요.';
   const m=$('model').value;const cfg={temperature:0.1,responseMimeType:'application/json',responseSchema:{type:'OBJECT',properties:{t:{type:'STRING'}},required:['t']}};
   if(/argon/.test(m))cfg.thinkingConfig={thinkingLevel:'low'};
@@ -225,18 +229,26 @@ function draw(){
   const errs=items.filter(x=>x.st==='err'||x.st==='nokey');
   if(carry||busy)h+=`<div class="card carry"><div class="tx">${esc(carry)}${busy?` <span class="tx empty">… 받아 적는 중 (${busy}조각)</span>`:''}</div><div class="meta"><span>이어지는 중 · 문장이 끝나면 위로 올라감</span><span class="parts">${pbtn(carryParts)}</span></div></div>`;
   if(errs.length){const e=errs[errs.length-1];h+=`<div class="card"><div class="tx empty">⚠️ ${e.st==='nokey'?'Gemini 키를 위에 넣어 주세요':esc(e.err||'')}</div></div>`}
-  $('list').innerHTML=h;$('list').scrollTop=1e9;
+  $('list').innerHTML=h;$('list').scrollTop=1e9;if(segStart<0)liveIdle();
   const dups=items.filter(x=>x.dup).length;const done=items.filter(x=>x.ms);const avg=done.length?(done.reduce((a,x)=>a+x.ms,0)/done.length/1000).toFixed(1):'';
   $('sum').textContent=items.length?`${sents.length}문장 · ${items.length}조각${dups?' · 중복 '+dups+'개 버림':''}${avg?' · 평균 '+avg+'초':''} · 토큰 ${tok.in+tok.out}`:'';
 }
 $('clr').onclick=()=>{items.length=0;sents.length=0;carry='';carryParts=[];nextIdx=0;tok.in=tok.out=0;draw()};
 
+/* ── T4: 듣는 동안 화면 안 꺼지게 + 어둡게 ── */
+let wake=null;
+async function keepAwake(){try{if('wakeLock' in navigator&&!wake){wake=await navigator.wakeLock.request('screen');wake.addEventListener('release',()=>{wake=null})}}catch{}}
+function letSleep(){try{wake?.release()}catch{}wake=null}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&running)keepAwake()});
+$('moon').onclick=()=>$('dim').classList.add('on');
+$('dim').onclick=()=>$('dim').classList.remove('on');
+
 /* ── 시작·멈춤 ── */
 $('go').onclick=async()=>{
-  if(running){cut(total);running=false;setTimeout(stopMic,300);$('go').textContent='시작';$('go').classList.remove('stop');liveIdle();return}
+  if(running){cut(total);running=false;setTimeout(stopMic,300);$('go').textContent='시작';$('go').classList.remove('stop');liveIdle();letSleep();return}
   try{await startMic()}catch(e){$('dMic').className='dot bad';$('live').textContent='⚠️ 녹음 시작 실패: '+e.message;return}
   buf=[];bufStart=0;total=0;segStart=-1;voiced=0;frames=[];floor=0.004;
-  running=true;$('go').textContent='멈춤';$('go').classList.add('stop');
+  running=true;keepAwake();$('go').textContent='멈춤';$('go').classList.add('stop');
 };
 </script>
 </body>
