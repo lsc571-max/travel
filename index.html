@@ -604,7 +604,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='L16 · Claude · 생각 소리 빼기·모드 하나로·설정 정리·한도 자동 재확인 · 2026.11.08';
+const APP_VERSION='L17 · Claude · 대화 모드 빠르게(크롬 받아쓰기 기본·한 번에 정리+번역)·언어 자동 구분 · 2026.11.08';
 /* L14: 크레딧 지키기 — 사용 한도 초과·키 오류가 한 번 나면 그 뒤로는 Gemini에 요청을 아예 보내지 않고 마이크도 끔
    (예전에는 실패할 때마다 모델 3개 × 재시도 4번으로 계속 다시 보냈음) */
 let gemStop='',gemStopAt=0,gemHalts=0;
@@ -1838,8 +1838,8 @@ function drawSettings(body){
 
   sec=node('div','sec','',body);node('h4','','대화 모드 받아쓰기',sec);
   node('p','tiny','Gemini 녹음: 삑 소리 없이 듣고, 말끝을 1초 더 듣고, 덜 끝난 짧은 말은 다음 말과 이어 붙입니다 (Gemini 키 필요). 크롬: 예전 방식 (켤 때마다 삑 소리).',sec);
-  {const cs=node('div','chips','',sec);const cur=load('conv_stt')==='chrome'?'chrome':'gemini';
-   [['gemini','Gemini 녹음 (추천)'],['chrome','크롬 받아쓰기']].forEach(([v,t])=>button(t,'chip'+(cur===v?' on':''),()=>{store('conv_stt',v);if(state.mic)stopMic();render()},cs))}
+  {const cs=node('div','chips','',sec);const cur=load('conv_stt')==='gemini'?'gemini':'chrome'; // L17: 대화 모드 기본은 크롬 받아쓰기 (빠름)
+   [['chrome','크롬 받아쓰기 (빠름·추천)'],['gemini','Gemini 녹음 (느림)']].forEach(([v,t])=>button(t,'chip'+(cur===v?' on':''),()=>{store('conv_stt',v);if(state.mic)stopMic();render()},cs))}
 
   sec=node('div','sec','',body);node('h4','','소리',sec);
   node('p','tiny','번역된 말을 상대 언어로 자동으로 읽어 줍니다. (한국어로 말하면 외국어 소리, 외국어로 말하면 한국어 소리) 소리는 휴대폰 목소리를 쓰고, 대화·듣기 화면 위쪽 🔊 버튼으로 바로 끄고 켤 수 있어요.',sec);
@@ -2146,16 +2146,14 @@ async function consume(text,source,opt={}){
   if(opt.au)entry.au=opt.au; // L10: 원래 녹음 번호
   (toListen?state.listening:state.items).push(entry);
   const slot=outReserve(target,entry);
-  // 대화 모드에서 말로 한 문장은 번역 전에 AI가 다듬음 (5초 넘으면 원래 문장 사용)
-  if(!toListen&&opt.fromMic&&!opt.skipAI&&aiReady()&&navigator.onLine&&!cached(text,source,target)){
-    entry.correcting=true;render();scrollEnd();
-    try{const fixed=await withTimeout(aiCorrect(text,source),2000);if(fixed&&fixed.length<text.length*3+20)entry.original=fixed}catch{}
-    entry.correcting=false;
-  }
   entry.translation='번역 중…';
   render();scrollEnd();
-  if(opt.audio&&engine()==='gemini'&&navigator.onLine){ // L9: 녹음 받아쓰기 문장은 "원문 정리 + 번역" 한 번에
-    const r=await geminiCleanTranslate(entry.original,source,target,opt.ctx).catch(()=>null);
+  // L17: 대화 모드 크롬 받아쓰기도 "원문 정리 + 번역"을 Gemini 한 번에 (예전: 다듬기 최대 2초 기다린 뒤 번역을 또 따로 → 두 번 왕복)
+  //      앞 문장은 정리된 글을 문맥으로 넘김
+  const micClean=!toListen&&opt.fromMic&&!opt.skipAI&&!cached(text,source,target);
+  if((opt.audio||micClean)&&engine()==='gemini'&&navigator.onLine){ // L9: 녹음 받아쓰기 문장은 "원문 정리 + 번역" 한 번에
+    let ctx=opt.ctx;if(!ctx&&micClean){const L=state.items,prev=L[L.length-2];if(prev&&!prev.failed&&prev.original)ctx=prev.original}
+    const r=await geminiCleanTranslate(entry.original,source,target,ctx).catch(()=>null);
     if(r){entry.original=r.s;entry.translation=r.t;render();scrollEnd();outReady(slot,entry.translation,opt.tone);return}
   }
   const progress=(partial,i,n)=>{entry.translation=partial+`\n… 번역 중 (${i}/${n})`;render()};
@@ -2199,7 +2197,7 @@ async function shareAll(){
    Gemini 키가 없거나 무료 번역기를 고르면 예전 크롬 받아쓰기를 그대로 씀 */
 const AU={RATE:16000,PAUSE:2,MIN:5,MAX:10,PAD:0.5,SHORT_WAIT:1.2,TAIL:2,STT:'gemini-3.5-flash-lite'};
 const AU_TERMS='게이트,러너,스프루,캐비티,코어,파팅라인,이젝터,이젝터 핀,성형품,사출,사출압,보압,사출금형,프레스금형,순차이송금형,몰드베이스,언더컷,슬라이드,슬라이드 코어,슬라이드 플레이트,경사 핀,변형 코어,냉각수 회로,냉각 유로,핫러너,콜드러너,웰드라인,싱크마크,미성형,버,플래시,후가공,일체,인서트,인서트 코어,코어아웃,에어 벤트,벤트,시제품,습동면,릴리프,도피부,도피 가공,유격,틈새,클리어런스,가이드면,안내면,유구,오일 홈,오일리스 부시,소착,열팽창,열응력,피로도,점도,수지,다이,펀치,스트리퍼,파일럿,블랭킹,피어싱,벤딩,드로잉,MCT,방전,CNC 선반,밀링,엔드밀,공작물,절삭,이송,절삭속도,공차,리드타임,인벤터,오토캐드,한국폴리텍대학 서울정수캠퍼스';
-function useAudioListen(){return (state.mode==='listen'||load('conv_stt')!=='chrome')&&engine()==='gemini'&&!gemStop&&navigator.onLine&&!!navigator.mediaDevices?.getUserMedia} // L12: 대화 모드도 녹음 받아쓰기 (삑 소리 없음)
+function useAudioListen(){return (state.mode==='listen'||load('conv_stt')==='gemini')&&engine()==='gemini'&&!gemStop&&navigator.onLine&&!!navigator.mediaDevices?.getUserMedia} // L12: 대화 모드도 녹음 받아쓰기 (삑 소리 없음)
 function auTerms(){return [...new Set([...refTerms(),...allGloss().map(g=>g.word).filter(Boolean),...AU_TERMS.split(',')])].slice(0,300).join(', ')}
 function auWav(f,R){
   const b=new ArrayBuffer(44+f.length*2),v=new DataView(b);const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
@@ -2248,10 +2246,12 @@ async function auTranscribe(blob,src,before){
 // 완성된 문장을 "정리한 원문 + 번역" 한 번에 받음 (실패하면 null → 예전 번역으로)
 async function geminiCleanTranslate(text,src,target,ctx){
   const g=glossOut();
-  const sys=`당신은 통역사입니다. [번역할 글]은 ${nameOf(src)} 음성을 받아 적은 것이라 다시 읽은 반복, 잘못 들린 단어가 있을 수 있습니다.
+  // L17: 매번 같은 부분(용어·배경 자료)을 지시문 맨 앞에 둠 → Gemini가 앞부분을 기억해 두는 캐시가 잘 걸려 빨라지고 크레딧↓
+  const fixed=((g?`[용어 · 번역할 때 이렇게 쓰세요]\n${g}`:'')+refHint(4000,state.mode==='listen')).trim();
+  const sys=(fixed?fixed+'\n\n':'')+`당신은 통역사입니다. [번역할 글]은 ${nameOf(src)} 음성을 받아 적은 것이라 다시 읽은 반복, 잘못 들린 단어가 있을 수 있습니다.
 1) s: 먼저 원문을 정리하세요 — 말하다 잘못 읽고 다시 말한 부분은 뒤에 고쳐 말한 것을 기준으로 하나로 합치고(앞에만 있던 말은 살림), 같은 말 반복은 하나만, 문맥에 맞지 않는 단어는 분야 용어로 바로잡으세요(예: 고주→구조, 고압→보압). ${FILLER_RULE} 뜻을 빼거나 보태지 말고, 문제가 없으면 그대로 두세요. 숫자 범위는 물결표(~).
 2) t: 정리한 원문을 ${nameOf(target)}로 번역하세요. 현지 사람이 바로 알아듣는 자연스러운 말투로, 설명·주석·괄호 메모 없이 번역문 하나만.
-분야는 금형·기계가공·CAD일 수 있습니다. [앞 문장]은 문맥 참고용이며 정리·번역하지 마세요. JSON {"s":"정리한 원문","t":"번역문"}으로만 답하세요.`+(g?`\n용어는 이렇게 쓰세요: ${g}`:'')+refHint(4000,state.mode==='listen');
+분야는 금형·기계가공·CAD일 수 있습니다. [앞 문장]은 문맥 참고용이며 정리·번역하지 마세요. 위 [용어]·[배경 자료]는 참고만 하고 그대로 옮기지 마세요. JSON {"s":"정리한 원문","t":"번역문"}으로만 답하세요.`;
   const user=(ctx?`[앞 문장 · 참고만]\n${ctx}\n\n`:'')+`[번역할 글]\n${text}`;
   const models=[...new Set([gemModel(),'gemini-3.8-flash'])];
   for(const m of models){
@@ -2279,8 +2279,17 @@ function blobB64(blob){return new Promise(r=>{const fr=new FileReader();fr.onloa
 /* L12: 녹음 조각을 한 번에 "받아 적기 + 정리 + 번역" (듣기·대화 모드 공통)
    밀리지 않으면 조각 하나씩 바로, AI가 앞 일을 하는 동안 들어온 조각은 모았다가 길게 묶어 한 번에 (부르는 횟수·크레딧 줄임) */
 function auCfg(conv){return conv
-  ?{PAUSE:0.9,MIN:0,MAX:15,PAD:0.4,SHORT_WAIT:0,TAIL:1,VOICED:0.35,HOLD:1300,BATCH:30}
+  ?{PAUSE:0.7,MIN:0,MAX:15,PAD:0.4,SHORT_WAIT:0,TAIL:1,VOICED:0.35,HOLD:800,BATCH:30} // L17: 대화 0.9→0.7초, 덜 끝난 말 1.3→0.8초
   :{PAUSE:1.5,MIN:8,MAX:25,PAD:0.5,SHORT_WAIT:2,TAIL:2,VOICED:0.6,HOLD:4000,BATCH:60}} // L14: 듣기 모드는 문장을 더 길게 묶어 한 번에 (요청 수↓, 문맥↑)
+// L17: 자동 언어 구분 — AI가 lang을 안 주거나 틀리면 글자로 판단 (예전: 모르면 무조건 한국어 → 일본어가 한국어로 처리되던 버그)
+function auLang(l,s,fg){
+  const ko=(s.match(/[가-힣]/g)||[]).length,kana=(s.match(/[\u3040-\u30ff]/g)||[]).length,han=(s.match(/[\u4e00-\u9fff]/g)||[]).length,lat=(s.match(/[a-zA-Z]/g)||[]).length;
+  const f=fg.slice(0,2);
+  const fgN=f==='ja'?kana+han:f==='zh'?han+kana:/^(ko)$/.test(f)?0:lat+(s.match(/[\u0400-\u04ff\u0e00-\u0e7f\u0600-\u06ff\u0100-\u024f]/g)||[]).length;
+  if(ko>fgN)return 'ko';
+  if(fgN>ko)return 'fg';
+  return l==='fg'||l===fg||l===f?'fg':'ko';
+}
 async function auBatchAsk(pcm,o){
   const b64=await blobB64(auWav(pcm,AU.RATE));
   const fg=active().code,auto=o.src==='auto';
@@ -2309,7 +2318,7 @@ JSON {"items":[...]}로만 답하세요.`;
       if(!res.ok){const e=Error(j.error?.message||('Gemini 오류 '+res.status));e.status=res.status;throw e}
       const raw=(j.candidates?.[0]?.content?.parts||[]).filter(x=>!x.thought).map(x=>x.text||'').join('').trim();
       const v=JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g,''));
-      return (v.items||[]).map(x=>({s:String(x.s||'').trim(),t:String(x.t||'').trim(),st:x.st,done:x.done!==false,lang:x.lang==='fg'?'fg':'ko'})).filter(x=>!isEmptyText(x.s));
+      return (v.items||[]).map(x=>({s:String(x.s||'').trim(),t:String(x.t||'').trim(),st:x.st,done:x.done!==false,lang:auLang(x.lang,String(x.s||''),fg)})).filter(x=>!isEmptyText(x.s));
     }catch(e){err=e;if(e.stop||gemStop)break}
   }
   throw err||Error('받아쓰기 실패');
@@ -2587,7 +2596,7 @@ function startRecognition(){
      영어·중국어: 마침표·물음표가 찍히면 바로 자름, 아니면 1.2초 쉬면 자름
      대화 모드: 지금처럼 0.9초 쉬면 자름 */
   const lg=source.slice(0,2),byEnding=lg==='ko'||lg==='ja';
-  const PAUSE=!live?900:byEnding?2000:1200;
+  const PAUSE=!live?700:byEnding?2000:1200; // L17: 대화 0.9→0.7초
   // L7: "~며·~고·~는데·~서" 또는 조사(~와·~의·~에…)로 끝나면 말이 이어지는 중이라 더 기다림 (3.5초)
   const CONT=lg==='ko'?/(며|고|는데|은데|인데|서|면|지만|니까|면서|거나|든지|도록|려고|하여|되어|와|과|및|의|을|를|에서|에|으로|로|은|는|이|가)$/:lg==='ja'?/(て|で|が|けど|けれど|し|と|の|に|を|は|から|ので|ながら)$/:null;
   const contWait=t=>live&&CONT&&CONT.test(t.replace(/[\s.,!?。、，！？…]+$/,''));
