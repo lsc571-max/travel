@@ -196,9 +196,9 @@ svg{display:block}
 .ref-sum{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.45;white-space:pre-wrap}
 .ref-terms{font-size:12px;margin-top:6px;line-height:1.5;color:#3f9d6e}
 .side-tabs{position:absolute;right:0;top:45%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:3}
-.side-tab2{width:26px;height:72px;border:0;border-radius:9px 0 0 9px;color:#fff;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;box-shadow:-2px 2px 8px #0002}
+.side-tab2{width:26px;height:108px;border:0;border-radius:9px 0 0 9px;color:#fff;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;box-shadow:-2px 2px 8px #0002}
 .side-tab2 i{font-style:normal;font-size:11px;opacity:.85}.side-tab2 span{font-size:11px;font-weight:700;writing-mode:vertical-rl;letter-spacing:2px}
-.st-notes{background:#2f6fd6}.st-refs{background:#2e9b62}
+.st-notes{background:#dce8f6;color:#4c719f}.st-refs{background:#e0efe6;color:#517b64}
 .top-left{display:flex;gap:4px;align-items:center;min-width:0}.top-left .home-btn{padding:6px 7px;font-size:13px}.home-btn.play-all{color:#2e9b62;border-color:#2e9b6266}.home-btn.play-all.on{background:#2e9b62;color:#fff}
 .pa-rec{display:flex;align-items:center;gap:8px;font-size:14px;margin:4px 0 10px}
 .refs-drawer .drawer-tip{margin-bottom:10px}
@@ -287,6 +287,14 @@ svg{display:block}
 .saved-x{border:0;background:transparent;color:var(--muted);padding:0 6px;margin-bottom:8px}
 .by-tag{display:block;font-size:11px;opacity:.65;margin-top:4px}
 .ctrl.retr{font-size:12px;padding:2px 8px;width:auto}
+/* L22: 듣기 조작줄의 글씨와 간격만 통일. */
+.listen-row{--ctrl-gap:clamp(4px,1.1vw,8px)}
+.listen-row .ctrls{justify-content:flex-start;column-gap:var(--ctrl-gap);row-gap:4px}
+.listen-row .ctrl-left,.listen-row .ctrl-left .rate-m{gap:var(--ctrl-gap);margin-right:0}
+.listen-row .rate-norm,.listen-row .entry-engine{border:0;border-radius:0;background:transparent;color:#2e9b62;font-size:12px;font-weight:700;line-height:1.2;text-decoration:none;padding:2px 4px;margin-left:0;min-height:30px;white-space:nowrap;opacity:.8}
+.listen-row .ctrls .ctrl{min-width:24px;padding:2px 4px}
+.listen-row .ctrls .sel-dot{min-width:24px;padding:2px 4px}
+
 .head-nav{display:flex;gap:4px}
 .ai-result{margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--surface);font-size:14px;line-height:1.5;white-space:pre-wrap}
 .ai-result.bad{background:#fff0e0;color:#8a4b12}
@@ -618,7 +626,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='L21 · ChatGPT · 문장별 번역 전환·대기 문장 합치기·읽기 표시 · 2026.11.08';
+const APP_VERSION='L22 · ChatGPT · 조작줄·종료 표시·대화 안내·서랍 탭 정리 · 2026.11.08';
 /* L18: 개발자 도구 window.L18_TIMINGS / console 표: 마지막 인식 갱신부터 TTS 시작까지(ms).
    브라우저 speechend가 있으면 실제 발화 종료 신호도 별도로 기록. 키·문장 내용은 기록하지 않음. */
 window.L21_TIMINGS=[];window.L20_TIMINGS=window.L18_TIMINGS=window.L21_TIMINGS;
@@ -866,7 +874,7 @@ function render(){
   if(!isInstalled()&&document.documentElement.requestFullscreen)iconButton(document.fullscreenElement?ICON.exitFull(21):ICON.full(21),'icon-btn','전체 화면',toggleFullscreen,tr);
   iconButton(ICON.gear(22),'icon-btn','설정',openSettings,tr);
 
-  if(listen){const live=node('div','listen-preview','',s);live.id='listenPreview';node('small','','받아쓰기',live);node('span','','',live);updateListenPreview()}
+  if(listen&&state.mic){const live=node('div','listen-preview','',s);live.id='listenPreview';node('small','','받아쓰기',live);node('span','','',live);updateListenPreview()}
 
   const content=node('section','transcript','',s);content.id='transcript';
   listen?drawListen(content):drawPairs(content);
@@ -1394,8 +1402,11 @@ function updateDrainStatus(parent=$('#transcript')){
   if(!text){n?.remove();return}if(!n){n=node('div','tiny','',parent);n.id='drainStatus';n.setAttribute('role','status')}n.textContent=text;
 }
 function updateListenPreview(){
-  const el=$('#listenPreview span');if(!el)return;
-  el.textContent=state.interim||state.listenPreview||(state.mic?'말씀하세요':'최근 받아쓰기가 여기에 표시됩니다');
+  const strip=$('#listenPreview');if(!strip)return;
+  strip.style.display=state.mic?'':'none';
+  const el=strip.querySelector('span');if(!el)return;
+  if(!state.mic){el.textContent='';return}
+  el.textContent=state.interim||state.listenPreview||'말씀하세요';
   el.scrollLeft=el.scrollWidth;
 }
 function drawLiveAndPending(parent){
@@ -2678,6 +2689,7 @@ function stopMic(){
   }
   // L19: 녹음 큐 처리 중 표시는 마이크를 꺼도 유지. closeAll에서 완료 후 지움.
   if(!r?._audio)state.interim='';
+  state.listenPreview='';updateListenPreview();
   clearTimeout(idle1);clearTimeout(idle2);releaseWake();
 }
 
@@ -2698,7 +2710,7 @@ function scheduleMicRetry(message){
 function toggleMic(){
   if(state.mic){
     stopMic();clearPending();clearTimeout(micRetryTimer);clearTimeout(micWatchdog);document.getElementById('micDiagnostic')?.remove();render();return}
-  micSession++;recentSent=[];lastFinal={text:'',at:0}; // L12: 새로 켜면 예전 문장 기억은 지우고 시작
+  micSession++;state.listenPreview='';state.interim='';recentSent=[];lastFinal={text:'',at:0}; // L12: 새로 켜면 예전 문장 기억은 지우고 시작
   if(!SR&&!useAudioListen()){micDiagnostic('이 브라우저에서는 음성 인식이 지원되지 않습니다. Chrome을 이용해 주세요.');return}
   clearTimeout(micRetryTimer);clearTimeout(micWatchdog);micRetry=0;micLastError='';state._noAudio=false;
   state.mic=true;state.sourceTurn=0;activity();startTone();render();warmGemini();
@@ -2723,7 +2735,7 @@ function startRecognition(){
   r.onspeechstart=()=>{speechEndedAt=0};
   r.onspeechend=()=>{speechEndedAt=performance.now()};
   const live=state.mode==='listen';
-  r.onstart=()=>{if(epoch!==transcriptEpoch)return;clearTimeout(micWatchdog);if(!state.interim){state.interim='말씀하세요';updateLive();setTimeout(()=>{if(state.interim==='말씀하세요'){state.interim='';updateLive()}},1500)}micDiagnostic('마이크 연결됨 · 인식 언어 '+r.lang+' · 이 언어로 말씀해 주세요.');};
+  r.onstart=()=>{if(epoch!==transcriptEpoch)return;clearTimeout(micWatchdog);micDiagnostic('마이크 연결됨 · 인식 언어 '+r.lang+' · 이 언어로 말씀해 주세요.');};
   r.onaudiostart=()=>{if(epoch!==transcriptEpoch)return;gotAudio=true;clearTimeout(micWatchdog);micDiagnostic('소리 입력 확인됨 · '+r.lang+' 음성을 기다리는 중입니다.');};
   // 문장 하나가 정해지면 바로 번역으로 보냄 (마이크는 계속 켜 둔 채)
   const gotFinal=txt=>{
