@@ -39,7 +39,7 @@ svg{display:block}
 /* ── 본 화면 ── */
 .screen{display:flex;flex-direction:column;height:var(--app-h);overflow:hidden;--acc:var(--accent)}
 .screen.listen{--acc:var(--accent2)}
-.top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:4px;padding:calc(12px + env(safe-area-inset-top)) 10px 10px;border-bottom:1px solid var(--line)}
+.top{position:relative;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:4px;padding:calc(22px + env(safe-area-inset-top)) 10px 10px;border-bottom:1px solid var(--line)}
 .top-left{justify-self:start}.top-right{justify-self:end;display:flex}
 .home-btn{display:flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:7px 9px;font-size:14px;font-weight:650;white-space:nowrap}
 .mode-wrap{display:flex;align-items:center;justify-content:center;gap:0;min-width:0}
@@ -185,7 +185,7 @@ svg{display:block}
 .ai-state.on{color:#7b4ed6;opacity:.85}
 .ai-state{display:block;font-size:14px!important;font-weight:600;text-align:center;padding:7px 6px;border:1px solid currentColor;border-radius:10px;overflow:hidden;text-overflow:ellipsis}
 .ai-state.tier{cursor:pointer;opacity:.95}
-.listen-row.now{background:#fff3f7;box-shadow:0 0 0 2px #e9b9cb inset;font-weight:400}
+.listen-row.now{background:#fff3f7;box-shadow:none;font-weight:400}
 .listen-row .l-orig{color:#3f9d6e;opacity:.9;line-height:1.4;margin-bottom:4px}
 .ref{background:var(--surface);border:2px solid transparent;border-radius:12px;padding:10px 12px;margin-bottom:8px;cursor:pointer;user-select:none}
 .ref.prio{border-color:#3f9d6e;background:#3f9d6e26}.ref.off{opacity:.45}
@@ -207,13 +207,15 @@ svg{display:block}
 .rg:not(.on) .rg-name b{opacity:.55}
 .rg-head{display:flex;align-items:center;gap:4px}
 .rg-arrow,.rg-edit,.ri-edit{border:0;background:transparent;font-size:16px;min-width:30px;min-height:34px;color:#1d2a35}
-.rg-name{flex:1;min-width:0;border:0;background:transparent;text-align:left;padding:4px 2px;color:#1d2a35}
-.rg-name b{display:block;font-size:15px}.rg-name small{display:block;font-size:11px;opacity:.7;margin-top:1px}
+.rg-name{display:flex;align-items:center;gap:8px;flex:1;min-width:0;border:0;background:transparent;text-align:left;padding:4px 2px;color:#1d2a35}
+.rg-name b{display:flex;align-items:center;gap:5px;font-size:16px;min-width:0;overflow-wrap:anywhere}.rg-name small{display:block;flex-shrink:0;white-space:nowrap;font-size:11px;opacity:.7;margin-top:0}
+.rg-name .rg-toggle-dot{font-size:18px;line-height:1;flex-shrink:0}
+.rg-arrow{font-size:20px;min-width:34px}
 .ri{display:flex;align-items:center;gap:6px;background:#ffffffb0;border-radius:9px;padding:7px 4px 7px 8px;margin-top:6px;border:2px solid transparent;user-select:none;cursor:pointer}
 .ri:not(.on){opacity:.5}.ri.dim{opacity:.5}.ri.prio{border-color:#2e9b62;background:#dff3e7;opacity:1}
 .ri-k{font-size:10px;padding:2px 5px;border-radius:5px;background:#0000000f;white-space:nowrap}.ri.prio .ri-k{background:#2e9b62;color:#fff}
 .ri-t{flex:1;min-width:0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.rg-add{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:8px}
+.rg-add{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:8px}
 .rg-addb{border:1px dashed #0003;background:#ffffff80;border-radius:9px;padding:5px 0;font-size:16px;color:#1d2a35}.rg-addb small{display:block;font-size:9px;margin-top:1px}
 .rg-colors{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 12px}.rg-color{width:36px;height:36px;border-radius:50%;border:2px solid #0001}.rg-color.on{border:3px solid #2e9b62}
 .rec-big{font-size:22px;font-weight:700;text-align:center;margin:26px 0 6px;color:#c0392b}.rec-time{font-size:28px;text-align:center;font-variant-numeric:tabular-nums;margin:0 0 16px}
@@ -222,8 +224,8 @@ svg{display:block}
 .bubble .ctrls .sel-dot{margin-right:auto}
 .sel-dot{border:0;background:transparent;color:#2e9b62;font-size:18px;min-width:30px;min-height:30px;opacity:.55;line-height:1}.sel-dot.on{opacity:1}
 .listen-row.picked,.pair.picked .bubble:first-child{box-shadow:0 0 0 2px #2e9b6266 inset}
-.pair.now .bubble{box-shadow:0 0 0 3px #2e9b62 inset!important}
-.listen-row.now{box-shadow:0 0 0 2px #e9b9cb inset!important;background:#fff3f7;font-weight:400}
+.bubble.reading-now{box-shadow:none!important;border:0;background:#fff3f7;font-weight:400}
+.listen-row.now{box-shadow:none!important;background:#fff3f7;font-weight:400}
 .listen-row.now .l-orig,.listen-row.now .l-tr{font-weight:400}
 .rate-m.has-engine{display:inline-flex}
 .entry-engine{border:0;background:none;color:var(--muted);font-size:10px;font-weight:400;opacity:.75;padding:3px 2px;min-height:26px;white-space:nowrap;text-decoration:underline dotted;text-underline-offset:3px;cursor:pointer}
@@ -288,12 +290,12 @@ svg{display:block}
 .by-tag{display:block;font-size:11px;opacity:.65;margin-top:4px}
 .ctrl.retr{font-size:12px;padding:2px 8px;width:auto}
 /* L22: 듣기 조작줄의 글씨와 간격만 통일. */
-.listen-row{--ctrl-gap:clamp(4px,1.1vw,8px)}
-.listen-row .ctrls{justify-content:flex-start;column-gap:var(--ctrl-gap);row-gap:4px}
-.listen-row .ctrl-left,.listen-row .ctrl-left .rate-m{gap:var(--ctrl-gap);margin-right:0}
-.listen-row .rate-norm,.listen-row .entry-engine{border:0;border-radius:0;background:transparent;color:#2e9b62;font-size:12px;font-weight:700;line-height:1.2;text-decoration:none;padding:2px 4px;margin-left:0;min-height:30px;white-space:nowrap;opacity:.8}
-.listen-row .ctrls .ctrl{min-width:24px;padding:2px 4px}
-.listen-row .ctrls .sel-dot{min-width:24px;padding:2px 4px}
+.listen-row,.pair{--ctrl-gap:clamp(4px,1.1vw,8px)}
+.listen-row .ctrls,.bubble .ctrls{justify-content:flex-start;column-gap:var(--ctrl-gap);row-gap:4px}
+.listen-row .ctrl-left,.listen-row .ctrl-left .rate-m,.bubble .rate-m{gap:var(--ctrl-gap);margin-right:0}
+.listen-row .rate-norm,.listen-row .entry-engine,.bubble .rate-norm,.bubble .entry-engine{border:0;border-radius:0;background:transparent;color:#2e9b62;font-size:12px;font-weight:700;line-height:1.2;text-decoration:none;padding:2px 4px;margin-left:0;min-height:30px;white-space:nowrap;opacity:.8}
+.listen-row .ctrls .ctrl,.bubble .ctrls .ctrl{min-width:24px;padding:2px 4px}
+.listen-row .ctrls .sel-dot,.bubble .ctrls .sel-dot{margin-right:0;min-width:24px;padding:2px 4px}
 
 .head-nav{display:flex;gap:4px}
 .ai-result{margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--surface);font-size:14px;line-height:1.5;white-space:pre-wrap}
@@ -377,6 +379,13 @@ svg{display:block}
 .top-right{gap:0}
 @media(max-width:400px){.top{padding-left:8px;padding-right:6px;gap:2px}.top-right .icon-btn{padding:4px 3px}.top-right .icon-btn svg{width:20px;height:20px}.mode{font-size:18px;padding:4px 2px}.home-btn{padding:7px 7px;font-size:13px}.bar{gap:4px;padding-left:6px;padding-right:6px}.sbtn{min-width:44px;padding:3px 3px}}
 .sbtn.wipe{color:var(--muted)}
+.personal-bucket{display:flex;align-items:center;gap:7px;padding:9px 5px;border-bottom:1px solid var(--line)}
+.personal-bucket .ctrl{border:0;background:transparent;color:var(--accent);font-size:18px;min-width:30px;min-height:32px}
+.personal-open{flex:1;min-width:0;text-align:left;border:0;background:transparent;color:var(--text);font-size:15px;padding:8px 4px;overflow-wrap:anywhere}
+.business-card-image{width:100%;max-height:55vh;object-fit:contain;border-radius:10px;background:var(--surface)}
+.card-content{white-space:pre-wrap;line-height:1.6;overflow-wrap:anywhere}
+.keep-terms-choice{display:flex;align-items:center;gap:8px;margin:12px 0}
+.personal-hub{display:block;width:100%;text-align:left;padding:12px;margin:7px 0;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font-size:15px}
 </style>
 </head>
 <body><div id="app"></div>
@@ -501,17 +510,22 @@ function store(k,v){try{localStorage.setItem(k,v)}catch{}}
 function load(k,d=''){try{return localStorage.getItem(k)??d}catch{return d}}
 function loadJSON(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}}
 
-const state={listenFrom:'foreign',geminiVoice:'',toneFollow:false,autoVoice:false,dim:false,earListen:false,adminOpen:false,page:'home',mode:'conversation',lang:2,items:[],listening:[],speech:0,koSize:2,foreignSize:2,listenKoSize:0,listenForeignSize:2,mic:false,recognizer:null,side:false,modal:null,interim:'',sourceTurn:0,speaking:false,recog:'ko',theme:'basic',rate:1.3,voices:{},confirmWait:0,pending:null,listenLang:'ko',flash:null};
+const state={listenFrom:'foreign',geminiVoice:'',toneFollow:false,autoVoice:false,dim:false,earListen:false,adminOpen:false,page:'home',mode:'conversation',lang:2,items:[],listening:[],speech:0,koSize:0,foreignSize:0,listenKoSize:0,listenForeignSize:0,mic:false,recognizer:null,side:false,modal:null,interim:'',sourceTurn:0,speaking:false,recog:'ko',theme:'basic',rate:1.3,voices:{},confirmWait:0,pending:null,listenLang:'ko',flash:null};
 (()=>{const s=loadJSON('travel_settings',{});const old=!(s.v>=7);
   let sp=old?({0:0,1:0,2:1,3:2})[s.speech??0]??0:(s.speech??0);
   const pre10=!(s.v>=10);if(pre10&&sp===2)sp=3;
-  Object.assign(state,{lang:s.lang>=0&&s.lang<LANGS.length?s.lang:2,koSize:s.koSize??2,origSize:s.origSize??0,foreignSize:Math.min(s.foreignSize??2,4),speech:0,recog:recogModes.includes(s.recog)?s.recog:'ko',theme:s.theme||'basic',rate:pre10?1.3:(s.rate||1.3),voices:s.voices||{},geminiVoice:'',toneFollow:false,autoVoice:false,listenFrom:s.listenFrom==='ko'?'ko':'foreign',earListen:!!s.earListen,confirmWait:0});
+  Object.assign(state,{lang:s.lang>=0&&s.lang<LANGS.length?s.lang:2,koSize:s.koSize??0,origSize:s.origSize??0,foreignSize:Math.min(s.foreignSize??0,4),speech:0,recog:recogModes.includes(s.recog)?s.recog:'ko',theme:s.theme||'basic',rate:pre10?1.3:(s.rate||1.3),voices:s.voices||{},geminiVoice:'',toneFollow:false,autoVoice:false,listenFrom:s.listenFrom==='ko'?'ko':'foreign',earListen:!!s.earListen,confirmWait:0});
   // V33 첫 실행: 기본값(속도 1.3배 · 테마 기본 · 바로 번역 · 휴대폰 기본 목소리)으로 한 번 맞춤
   if(!(s.v>=33)){state.rate=1.3;state.theme='basic';state.confirmWait=0;state.voices={}}
   if(!(s.v>=34))state.rate=1.3; // L13: 기본 말하는 속도 1.3배
   state.normalRate=!!s.normalRate;state.confirmWait=0;
   state.listenKoSize=Number.isInteger(s.listenKoSize)?Math.max(0,Math.min(4,s.listenKoSize)):0;
-  state.listenForeignSize=Number.isInteger(s.listenForeignSize)?Math.max(0,Math.min(4,s.listenForeignSize)):2;
+  state.listenForeignSize=Number.isInteger(s.listenForeignSize)?Math.max(0,Math.min(4,s.listenForeignSize)):0;
+  if(!s.defaults23){
+    state.koSize=state.foreignSize=state.origSize=state.listenKoSize=state.listenForeignSize=0;
+    state.rate=1.3;state.normalRate=false;store('gem_tier','fast');
+    store('tr_engine',load('ai_key').trim()?'gemini':'free');
+  }
 })();
 
 /* 자주 쓰는 문장 (제목+문장 목록, 추가·삭제 가능) */
@@ -603,7 +617,7 @@ const termFor=(g,code)=>!!g.out&&(!g.ol||g.ol===code);
 const refGroup=id=>refGroups.find(g=>g.id===id)||refGroups[0];
 function refActive(r){const g=refGroup(r.gid);return !!r.on&&(g.base||g.on)}
 function activeRefs(){return refs.filter(refActive)}
-function allGloss(){return activeRefs().flatMap(r=>(r.terms||[]).map(parseTerm)).filter(g=>g.word)}
+function allGloss(){return [...new Set(activeRefs().flatMap(r=>r.terms||[]))].map(parseTerm).filter(g=>g.word)}
 const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 function fixHeard(text){let t=text;for(const g of allGloss()){for(const w of (g.heard||'').split(',').map(x=>x.trim()).filter(Boolean)){t=t.replace(new RegExp(esc(w),'g'),g.word)}}return t}
 function protectWords(text,target){target=target||active().code;let t=text;for(const g of allGloss()){if(g.word&&termFor(g,target))t=t.replace(new RegExp(esc(g.word),'g'),g.out)}return t}
@@ -612,9 +626,9 @@ function protectRev(text,src,force=false){if(!force&&engine()!=='free')return te
 function glossOut(){const c=active().code;return allGloss().filter(x=>termFor(x,c)).map(x=>`${x.word} → ${x.out}`).join(', ')}
 // L12: 대화 모드 문장 다듬기에는 용어만 (원고 글은 넣지 않음 — 말하지 않은 원고 문장이 섞이지 않게)
 function glossaryHint(){const w=allGloss().slice(0,160).map(g=>g.out?`${g.word}(${g.out})`:g.word);return w.length?`\n다음 단어는 반드시 이렇게 쓰세요: ${w.join(', ')}`:''}
-(()=>{const h=loadJSON('travel_history',{});const fix=e=>{if(e.translation==='번역 중…'||e.correcting){e.correcting=false;if(!e.translation||e.translation==='번역 중…'){e.translation='번역 중단됨';e.failed=true}}return e};state.items=(h.items||[]).map(fix);state.listening=(h.listening||[]).map(fix)})();
+(()=>{const h=loadJSON('travel_history',{});const fix=e=>{e.speakingNow=false;e.queued=false;delete e.readingField;if(e.translation==='번역 중…'||e.correcting){e.correcting=false;if(!e.translation||e.translation==='번역 중…'){e.translation='번역 중단됨';e.failed=true}}return e};state.items=(h.items||[]).map(fix);state.listening=(h.listening||[]).map(fix)})();
 
-function persist(){store('travel_settings',JSON.stringify({v:34,listenKoSize:state.listenKoSize,listenForeignSize:state.listenForeignSize,normalRate:!!state.normalRate,origSize:state.origSize,listenFrom:state.listenFrom,geminiVoice:state.geminiVoice,toneFollow:state.toneFollow,autoVoice:state.autoVoice,earListen:state.earListen,lang:state.lang,koSize:state.koSize,foreignSize:state.foreignSize,speech:state.speech,recog:state.recog,theme:state.theme,rate:state.rate,voices:state.voices,confirmWait:state.confirmWait}))}
+function persist(){store('travel_settings',JSON.stringify({v:34,defaults23:true,listenKoSize:state.listenKoSize,listenForeignSize:state.listenForeignSize,normalRate:!!state.normalRate,origSize:state.origSize,listenFrom:state.listenFrom,geminiVoice:state.geminiVoice,toneFollow:state.toneFollow,autoVoice:state.autoVoice,earListen:state.earListen,lang:state.lang,koSize:state.koSize,foreignSize:state.foreignSize,speech:state.speech,recog:state.recog,theme:state.theme,rate:state.rate,voices:state.voices,confirmWait:state.confirmWait}))}
 function saveHistory(){store('travel_history',JSON.stringify({items:state.items.slice(-300),listening:state.listening.slice(-300)}))}
 const active=()=>LANGS[state.lang];
 const langOf=code=>LANGS.find(l=>l.code===code);
@@ -626,7 +640,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='L22 · ChatGPT · 조작줄·종료 표시·대화 안내·서랍 탭 정리 · 2026.11.08';
+const APP_VERSION='L24 · ChatGPT · 내 용어 그룹 보관·명함 모아보기·그룹 삭제 선택 · 2026.11.08';
 /* L18: 개발자 도구 window.L18_TIMINGS / console 표: 마지막 인식 갱신부터 TTS 시작까지(ms).
    브라우저 speechend가 있으면 실제 발화 종료 신호도 별도로 기록. 키·문장 내용은 기록하지 않음. */
 window.L21_TIMINGS=[];window.L20_TIMINGS=window.L18_TIMINGS=window.L21_TIMINGS;
@@ -705,9 +719,9 @@ function paintMeter(m,on){m.classList.toggle('on',!!on);const r=on&&reading?read
   const nb=m.querySelector('.rate-norm');if(nb){nb.style.display='';nb.textContent=state.normalRate?'자동 속도':'보통 속도';nb.title=state.normalRate?'밀리면 최대 1.5배로 자동 조절':'설정창에서 고른 속도로 읽기';nb.setAttribute('aria-pressed',String(!!state.normalRate))}}
 function meter(parent,text,entry){const m=node('span','rate-m','',parent);m.innerHTML='<i></i><b></b>';m.dataset.for=text;button('','rate-norm',ev=>{ev.stopPropagation();toggleNormalRate()},m);paintMeter(m,reading&&reading.text===text);if(entry){m.classList.add('has-engine');entryBadge(m,entry)}return m}
 function updateMeters(){document.querySelectorAll('.rate-m').forEach(m=>paintMeter(m,reading&&reading.text===m.dataset.for))}
-function speak(text,code,tone){
+function speak(text,code,tone,entry=null,field='translation'){
   // V38: 직접 누른 듣기 — 지금 소리를 멈추고 바로 읽음. 마이크는 끄지 않음
-  stopSpeech();const q=outReserve(code,null);q.force=true;outReady(q,text,tone);
+  stopSpeech();const q=outReserve(code,entry);q.field=field;q.force=true;outReady(q,text,tone);
 }
 /* V38: 말한 순서대로 소리 내기 + 뒤에 밀리면 자동으로 빠르게
    밀린 문장 한두 개 1.5배 · 세 개 1.7배 · 네 개 이상 2배 (밀린 게 없으면 설정 속도) */
@@ -737,15 +751,15 @@ function pumpOut(){
   const q=outQ.shift(),gen=outGen,parts=splitSentences(q.text),v=voiceFor(q.code,q.tone);
   try{if(!curAudio&&(speechSynthesis.speaking||speechSynthesis.pending))speechSynthesis.cancel();if(speechSynthesis.paused)speechSynthesis.resume()}catch{} // 멈춰 버린 휴대폰 목소리 깨우기
   micYield();
-  outBusy=true;state.speaking=true;outCur=q.entry;if(q.entry){q.entry.queued=false;q.entry.speakingNow=true}
-  const show=()=>{if((state.mode==='listen'||state.playAll)&&q.entry){render();if(state.playAll)requestAnimationFrame(()=>document.querySelector('.listen-row.now,.pair.now')?.scrollIntoView({block:'center',behavior:'smooth'}))}else updateMic()};
+  outBusy=true;state.speaking=true;outCur=q.entry;if(q.entry){q.entry.queued=false;q.entry.speakingNow=true;q.entry.readingField=q.field||'translation'}
+  const show=()=>{if(q.entry){render();if(state.playAll)requestAnimationFrame(()=>document.querySelector('.listen-row.now,.pair.now')?.scrollIntoView({block:'center',behavior:'smooth'}))}else updateMic()};
   show();
   let i=0,restart=null,finished=false;
   const next=()=>{
     if(gen!==outGen||finished)return;
     if(q.cancelled){i=parts.length;restart=null}
     if(restart){const t=restart;restart=null;return say(t)}
-    if(i>=parts.length){finished=true;outInterrupt=null;outSlow=null;outBusy=false;state.speaking=false;speakEnd=Date.now();if(outCur){outCur.speakingNow=false;outCur=null}setReading(null);if((state.mode==='listen'||state.playAll)&&q.entry)render();else updateMic();pumpOut();return}
+    if(i>=parts.length){finished=true;outInterrupt=null;outSlow=null;outBusy=false;state.speaking=false;speakEnd=Date.now();if(outCur){outCur.speakingNow=false;outCur=null}setReading(null);if(q.entry)render();else updateMic();pumpOut();return}
     say(parts[i++]);
   };
   outInterrupt=()=>{if(finished)return;q.cancelled=true;try{speechSynthesis.cancel();curAudio?.pause()}catch{}next()};
@@ -800,7 +814,7 @@ async function playAllPick(){
   list.forEach(x=>{
     const koSide=x.source==='ko'?'o':'t';
     const steps=pick.k==='all'?['o','t']:pick.k==='ko'?[koSide]:[koSide==='o'?'t':'o'];
-    steps.forEach(w=>{const q=outReserve(w==='o'?x.source:x.target,x);q.force=true;q.fixed=true;if(w==='o'&&pick.rec&&x.au)q.au=x.au;q.text=w==='o'?x.original:x.translation;q.ready=true});
+    steps.forEach(w=>{const q=outReserve(w==='o'?x.source:x.target,x);q.force=true;q.fixed=true;q.field=w==='o'?'original':'translation';if(w==='o'&&pick.rec&&x.au)q.au=x.au;q.text=w==='o'?x.original:x.translation;q.ready=true});
   });
   state.playAll=true;render();pumpOut();
 }
@@ -816,7 +830,7 @@ function warmGemini(){if(!aiReady()||!navigator.onLine||Date.now()-warmAt<60000)
   const k=encodeURIComponent(load('ai_key').trim());[gemModel(),'gemini-flash-lite-latest'].forEach(m=>fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}?key=${k}`).catch(()=>{}))}
 function goMain(){setTimeout(warmGemini,0);state.page='main';try{history.pushState({app:'main'},'')}catch{}render()}
 function goHome(){state.modal=null;stopDictation();if(history.state?.app==='main')history.back();else home()}
-function home(){state.dim=false;stopMic();stopDictation();stopSpeech();clearPending();state.page='home';state.modal=null;state.side=false;render()}
+function home(){state.dim=false;resetTranscripts(false);stopDictation();state.page='home';state.modal=null;state.side=false;render()}
 function closeLayer(){if(refRec)stopRefRec();state.modal=null;state.side=false;stopDictation();render()}
 window.addEventListener('popstate',()=>{
   if(state.page!=='main')return;
@@ -858,14 +872,14 @@ function render(){
   const top=node('header','top','',s);
   const versionTag=node('span','', APP_VERSION.split(' · ').slice(0,2).join(' · '),top);
   versionTag.title=APP_VERSION;
-  versionTag.style.cssText='position:absolute;top:2px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:400;opacity:.65;pointer-events:none;z-index:2;line-height:1;white-space:nowrap';
+  versionTag.style.cssText='position:absolute;top:calc(8px + env(safe-area-inset-top));right:12px;font-size:9px;font-weight:400;opacity:.65;pointer-events:none;z-index:2;line-height:1;white-space:nowrap';
   const tl=node('div','top-left','',top);
   const hb=button('','home-btn',goHome,tl);hb.innerHTML=ICON.home(15)+'<span>처음</span>';
   {const nSel=(listen?state.listening:state.items).filter(x=>x.sel).length;
    const pb=button('','home-btn play-all'+(state.playAll?' on':'')+(nSel?' sel':''),()=>state.playAll?stopPlayAll():playAllPick(),tl);
    pb.innerHTML=state.playAll?'■ <span>멈춤</span>':ICON.speaker(15)+`<span>${nSel?'선택 '+nSel:'전체'}</span>`;pb.title='차례로 듣기 (동그라미로 고른 문장만 듣기도 됨)'} // L13
   const mwrap=node('div','mode-wrap','',top);
-  button(listen?'듣기 모드 ⇄':'대화 모드 ⇄','mode',()=>{resetTranscripts();state.dim=false;state.mode=listen?'conversation':'listen';render()},mwrap);
+  button(listen?'듣기 모드 ⇄':'대화 모드 ⇄','mode',()=>{resetTranscripts(false);state.dim=false;state.mode=listen?'conversation':'listen';render()},mwrap);
   // L7: 화면 어둡게는 제목 옆 작은 달로 (아래 글을 가리지 않게)
   if(listen&&!state.dim){const mb=button('🌙','moon-btn',()=>{if(!state.mic)notify('마이크를 켠 상태에서 쓰면 이어폰으로 계속 들을 수 있어요.');setDim(true)},mwrap);mb.title='화면 어둡게';mb.setAttribute('aria-label','화면 어둡게')}
   const tr=node('div','top-right','',top);
@@ -962,7 +976,7 @@ function updateMic(){
 function followReading(){
   if(!outCur||(state.mode!=='listen'&&!entryReplayFocus.has(outCur))||state.modal||state.side)return false;
   const t=$('#transcript'),row=t?.querySelector(state.mode==='listen'?'.listen-row.now':'.pair.now');if(!t||!row)return false;
-  const target=row.querySelector(state.mode==='listen'?'.l-tr':'.bubble:last-child')||row,box=t.getBoundingClientRect(),r=target.getBoundingClientRect();
+  const target=row.querySelector(state.mode==='listen'?'.l-tr':'.bubble.reading-now')||row,box=t.getBoundingClientRect(),r=target.getBoundingClientRect();
   if(r.top<box.top+16||r.bottom>box.bottom-16)t.scrollTop+=r.top-box.top-(r.height>t.clientHeight-32?16:Math.max(16,(t.clientHeight-r.height)/2));
   return true;
 }
@@ -1036,7 +1050,7 @@ function bubble(parent,item,index,field){
   const other=isOrig?item.target:item.source;
   const failed=!isOrig&&item.failed;
   const busy=!text||text==='번역 중…'||/… 번역 중 \(/.test(text)||(isOrig&&item.correcting);
-  const b=node('div','bubble '+(code==='ko'?'ko':'foreign')+(failed?' fail':''),'',parent);
+  const b=node('div','bubble '+(code==='ko'?'ko':'foreign')+(failed?' fail':'')+(item.speakingNow&&(item.readingField||'translation')===field?' reading-now':''),'',parent);
   b.style.fontSize=sizes[code==='ko'?state.koSize:state.foreignSize]+'px';
   node('span','',text,b).dir='auto';
   if(!isOrig&&item.by)node('span','by-tag',item.by,b);
@@ -1063,7 +1077,7 @@ function bubble(parent,item,index,field){
   if(isOrig)button('다시 번역','ctrl retr',ev=>{ev.stopPropagation();retranslateEntry(item,currentEntryMode())},c).title='이 자리에서 다시 번역';
   iconButton('✎','ctrl edit-ctrl',isOrig?'고치기 (고치면 다시 번역)':'번역 문장 고치기',ev=>{ev.stopPropagation();openEdit(index,field)},c);
   if(isOrig&&item.au)button('▶','ctrl',ev=>{ev.stopPropagation();auPlay(item.au)},c).title='원래 녹음 다시 듣기'; // L12
-  if(!failed)iconButton(ICON.speaker(17),'ctrl','다시 듣기',ev=>{ev.stopPropagation();speak(text,code)},c);
+  if(!failed)iconButton(ICON.speaker(17),'ctrl','다시 듣기',ev=>{ev.stopPropagation();speak(text,code,null,item,field)},c);
 }
 function drawListen(parent){
   if(!state.listening.length&&!state.interim)hint(parent,'가이드의 외국어 설명을 듣고\n한국어로 누적 표시합니다.\n\n아래 외국어 버튼을 누르면 외국어→한국어,\n한국어 버튼을 누르면 한국어→외국어로 통역합니다.');
@@ -1086,7 +1100,7 @@ function drawListen(parent){
       if(x.failed)entryBadge(cl,x);
       button('다시 번역','ctrl retr',ev=>{ev.stopPropagation();retranslateEntry(x,currentEntryMode())},c);
       iconButton('✎','ctrl edit-ctrl','원문 고치기 (고치면 다시 번역)',ev=>{ev.stopPropagation();openEdit(state.listening.indexOf(x),'original','listening')},c);
-      if(!x.failed)iconButton(ICON.speaker(17),'ctrl','다시 듣기',ev=>{ev.stopPropagation();speak(x.translation,tg)},c);
+      if(!x.failed)iconButton(ICON.speaker(17),'ctrl','다시 듣기',ev=>{ev.stopPropagation();speak(x.translation,tg,null,x,'translation')},c);
       row.onclick=e=>{if(!e.target.closest('button'))openEnlarge(x.translation,tg,x.original,sc)};
     }else{
       node('span','l-wait','대기',row);
@@ -1151,13 +1165,99 @@ function refPick(gid,accept,capture,card){
       if(mime.startsWith('image/')){b64=(await shrinkImage(file,2000)).split(',')[1];mime='image/jpeg'}
       else{b64=await fileB64(file);if(!mime)mime=/\.pdf$/i.test(file.name)?'application/pdf':'audio/mpeg'}
       const kind=card?'명함':mime==='application/pdf'?'PDF':mime.startsWith('audio/')?'음성':'사진';
-      const r=refAdd(gid,kind,await refExtract(b64,mime,card,file.name));
+      const r=refAdd(card?baseRefGroup().id:gid,kind,await refExtract(b64,mime,card,file.name));
+      if(card){
+        try{await cardStore(r.id,'data:'+mime+';base64,'+b64);r.hasCardImage=true;saveRefs()}
+        catch{notify('명함 내용은 저장했지만 사진을 저장하지 못했습니다. 사진 추가로 다시 시도해 주세요.')}
+        state.side=false;state.modal={type:'cardView',id:r.id};
+      }
       notify('📚 「'+r.title+'」 저장했습니다. 용어 '+r.terms.length+'개 · ✎로 고칠 수 있어요');
     }catch(e){refErr=e.message}
     refBusy='';render();
   };
   f.click();
 }
+/* L24: 내 용어 보관함은 자료 그룹과 별도로 유지. */
+function baseRefGroup(){return refGroups.find(g=>g.base)||refGroups[0]}
+function personalBuckets(){return refs.filter(r=>r.personalTerms)}
+function mergeSavedTerms(oldLines,newLines){
+  const out=[...(oldLines||[])],index=new Map(out.map((line,i)=>{const t=parseTerm(line);return [t.word.toLowerCase()+'|'+t.ol,i]}));
+  for(const line of newLines||[]){const t=parseTerm(line);if(!t.word)continue;const k=t.word.toLowerCase()+'|'+t.ol;
+    if(!index.has(k)){index.set(k,out.length);out.push(line)}
+    else{const i=index.get(k),old=parseTerm(out[i]);out[i]=fmtTerm({...old,heard:[...new Set((old.heard+','+t.heard).split(',').map(x=>x.trim()).filter(Boolean))].join(','),out:old.out||t.out,ol:old.ol||t.ol})}
+  }return out;
+}
+function archiveGroupTerms(g){
+  if(g.base){refs.filter(r=>r.gid===g.id&&r.kind==='용어').forEach(r=>{r.personalTerms=true;r.categoryName=r.categoryName||(r.title==='내 용어'?'직접 추가':r.title==='용어 모음'?'기본 자료':r.title)});return null}
+  const lines=refs.filter(r=>r.gid===g.id&&!r.personalTerms).flatMap(r=>r.terms||[]);if(!lines.length)return null;
+  let bucket=personalBuckets().find(r=>r.originGroupId===g.id);
+  if(!bucket){bucket={id:'pt'+Date.now().toString(36)+Math.random().toString(36).slice(2,7),gid:baseRefGroup().id,kind:'용어',title:g.name,categoryName:g.name,originGroupId:g.id,personalTerms:true,terms:[],text:'',sum:'',on:!!g.on,prio:false};refs.push(bucket)}
+  bucket.categoryName=g.name;bucket.title=g.name;bucket.terms=mergeSavedTerms(bucket.terms,lines);return bucket;
+}
+function migratePersonalTerms(){
+  if(load('personal_terms_v24_migrated')==='1')return;
+  const base=baseRefGroup();
+  refs.forEach(r=>{if(r.kind==='명함')r.gid=base.id;if(r.gid===base.id&&r.kind==='용어'){r.personalTerms=true;r.categoryName=r.categoryName||(r.title==='내 용어'?'직접 추가':r.title==='용어 모음'?'기본 자료':r.title)}});
+  refGroups.filter(g=>!g.base).forEach(g=>{if(refs.some(r=>r.gid===g.id&&r.kind==='용어'&&r.title==='용어 모음'))archiveGroupTerms(g)});
+  saveRefs();if(load('travel_refs')===JSON.stringify(refs)&&load('ref_groups')===JSON.stringify(refGroups))store('personal_terms_v24_migrated','1');
+}
+function removeRefGroup(g,keepTerms=true){
+  if(!g||g.base)return;
+  if(keepTerms)archiveGroupTerms(g);
+  refs=refs.filter(r=>r.gid!==g.id&&(keepTerms||r.originGroupId!==g.id));refGroups=refGroups.filter(x=>x!==g);saveRefs();
+}
+function askRemoveRefGroup(g){
+  const back=node('div','confirm-back','',$('#app')),box=node('div','confirm-box','',back);
+  node('p','',`「${g.name}」 그룹과 원본 자료를 지울까요?`,box);
+  const label=node('label','keep-terms-choice','',box),keep=node('input','',null,label);keep.type='checkbox';keep.checked=true;
+  node('span','','내 용어에는 남기기',label);node('p','tiny','체크를 해제하면 이 그룹에서 보관한 내 용어도 함께 삭제합니다.',box);
+  const actions=node('div','actions','',box);button('취소','action',()=>back.remove(),actions);
+  button('그룹 삭제','action',()=>{removeRefGroup(g,keep.checked);back.remove();backToRefs();notify(keep.checked?'그룹을 지웠습니다. 용어는 내 용어에 남겼습니다.':'그룹과 해당 내 용어를 지웠습니다.')},actions);
+}
+function openPersonalTerms(){state.side=false;state.modal={type:'personalTerms'};render()}
+function drawPersonalTerms(body,actions){
+  node('p','tiny','그룹별로 보관한 용어입니다. 자료 그룹을 지워도 남겨 둘 수 있습니다.',body);
+  const q=node('input','text-field','',body);q.placeholder='분류·용어 찾기';
+  const list=node('div','personal-list','',body);
+  personalBuckets().forEach(r=>{
+    const row=node('div','personal-bucket','',list);row.dataset.search=((r.categoryName||r.title)+' '+(r.terms||[]).join(' ')).toLowerCase();
+    const toggle=button(r.on?'●':'○','ctrl',()=>{r.on=!r.on;saveRefs();render()},row);toggle.title='이 용어 분류 사용 켜기·끄기';
+    button((r.categoryName||r.title)+` · ${(r.terms||[]).length}개`,'personal-open',()=>{state.modal={type:'refTerms',id:r.id,back:'personalTerms'};render()},row);
+    button('삭제','plain',()=>askConfirm('내 용어에서 이 분류를 지울까요?\n원본 자료 그룹은 유지됩니다.','삭제',()=>{refs=refs.filter(x=>x!==r);saveRefs();render()}),row);
+  });
+  q.oninput=()=>{const key=q.value.trim().toLowerCase();list.querySelectorAll('.personal-bucket').forEach(row=>row.style.display=!key||row.dataset.search.includes(key)?'':'none')};
+  if(!personalBuckets().length)node('p','tiny','아직 보관한 용어가 없습니다.',list);
+  button('＋ 직접 용어 추가','action primary',()=>{let r=personalBuckets().find(x=>x.categoryName==='직접 추가');if(!r){r=refAdd(baseRefGroup().id,'용어',{title:'내 용어',categoryName:'직접 추가',personalTerms:true,terms:[],text:'',sum:''})}state.modal={type:'refTerms',id:r.id,back:'personalTerms'};render()},actions);
+}
+/* 명함 원본 이미지는 텍스트 저장 공간과 분리해 휴대폰 IndexedDB에 보관. */
+let cardDatabase=null;
+function cardDb(){return cardDatabase||(cardDatabase=new Promise((resolve,reject)=>{const r=indexedDB.open('travel_card_images',1);r.onupgradeneeded=()=>r.result.createObjectStore('images');r.onsuccess=()=>resolve(r.result);r.onerror=()=>{cardDatabase=null;reject(r.error)}}))}
+async function cardStore(id,data){const db=await cardDb();return new Promise((resolve,reject)=>{const tx=db.transaction('images','readwrite');const os=tx.objectStore('images');if(data===null)os.delete(id);else os.put(data,id);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('명함 사진 저장 중단'))})}
+async function cardImage(id){const db=await cardDb();return new Promise((resolve,reject)=>{const q=db.transaction('images').objectStore('images').get(id);q.onsuccess=()=>resolve(q.result||null);q.onerror=()=>reject(q.error)})}
+function openCard(id){state.side=false;state.modal={type:'cardView',id};render()}
+function openCards(){state.side=false;state.modal={type:'cards'};render()}
+async function removeCard(r){try{await cardStore(r.id,null);refs=refs.filter(x=>x!==r);saveRefs();state.modal={type:'cards'};render();notify('선택한 명함을 지웠습니다.')}catch{notify('명함 사진을 지우지 못했습니다. 다시 시도해 주세요.')}}
+function askRemoveCard(r){askConfirm('이 명함만 지울까요?\n'+r.title,'삭제',()=>removeCard(r))}
+function replaceCardPhoto(r){const f=document.createElement('input');f.type='file';f.accept='image/*';f.onchange=async()=>{const file=f.files?.[0];if(!file)return;try{await cardStore(r.id,await shrinkImage(file,2000));r.hasCardImage=true;saveRefs();render();notify('명함 사진을 저장했습니다.')}catch{notify('사진을 저장하지 못했습니다. 다시 시도해 주세요.')}};f.click()}
+function drawCards(body,actions){
+  const cards=refs.filter(r=>r.kind==='명함');
+  if(!cards.length)node('p','tiny','명함을 추가하면 여기에 모입니다.',body);
+  cards.forEach(r=>{const row=node('div','personal-bucket','',body);button(r.title,'personal-open',()=>openCard(r.id),row);button('삭제','plain',()=>askRemoveCard(r),row)});
+  button('📷 명함 촬영','action primary',()=>refPick(baseRefGroup().id,'image/*',true,true),actions);
+  button('사진에서 추가','action',()=>refPick(baseRefGroup().id,'image/*',false,true),actions);
+}
+function drawCardView(body,data,actions){
+  const r=refs.find(x=>x.id===data.id&&x.kind==='명함');if(!r){node('p','tiny','명함을 찾을 수 없습니다.',body);return}
+  const image=node('img','business-card-image','',body);image.alt=r.title;image.style.display='none';
+  const note=node('p','tiny','사진을 불러오는 중…',body);
+  cardImage(r.id).then(src=>{if(!image.isConnected)return;if(src){image.src=src;image.style.display='';note.remove()}else note.textContent='이전 명함은 원본 사진이 저장되지 않았습니다. 아래에서 사진을 추가할 수 있습니다.'}).catch(()=>{if(note.isConnected)note.textContent='사진을 불러오지 못했습니다. 저장된 내용은 아래에서 볼 수 있습니다.'});
+  node('h3','',r.title,body);node('p','card-content',r.text||r.sum||'',body);
+  button('사진 추가·교체','action',()=>replaceCardPhoto(r),body);
+  button('내용 고치기','action',()=>{state.modal={type:'refEdit',id:r.id};render()},body);
+  button('명함 목록','action',openCards,actions);button('이 명함 삭제','action',()=>askRemoveCard(r),actions);
+}
+
+migratePersonalTerms();
 /* L12: 오른쪽 두 번째 서랍 — 배경 자료 */
 function drawRefDrawer(parent){
   node('div','overlay','',parent).onclick=()=>{state.side=false;render()};
@@ -1182,13 +1282,17 @@ function drawRefDrawer(parent){
       g.on=!g.on;if(g.on)items.forEach(r=>r.on=true);saveRefs();render();
       notify(g.on?`「${g.name}」 그룹을 켰습니다 · 자료 ${items.length}개 사용`:`「${g.name}」 그룹을 껐습니다`);
     },head);
-    node('b','',(on?'● ':'○ ')+g.name,nm);
+    const title=node('b','','',nm);node('span','rg-toggle-dot',on?'●':'○',title);node('span','',g.name,title);
     const pr=items.filter(r=>r.prio&&refActive(r)).length;
     node('small','',(g.base?'항상 사용':g.on?'사용 중':'꺼짐')+` · ${items.filter(r=>r.on).length}/${items.length}`+(pr?` · 🟩 ${pr}`:''),nm);
     button('✎','rg-edit',()=>{state.side=false;state.modal={type:'refGroup',id:g.id};render()},head).title='그룹 이름·색 바꾸기';
     if(!open)return;
     if(!items.length)node('p','tiny faint','아직 자료가 없습니다. 아래에서 넣으세요.',box);
-    items.forEach(r=>{
+    if(g.base){
+      button('내 용어 · '+personalBuckets().reduce((n,r)=>n+(r.terms||[]).length,0)+'개','personal-hub',openPersonalTerms,box);
+      button('명함 · '+refs.filter(r=>r.kind==='명함').length+'개','personal-hub',openCards,box);
+    }
+    items.filter(r=>!g.base||(!r.personalTerms&&r.kind!=='명함')).forEach(r=>{
       const act=refActive(r);
       const row=node('div','ri'+(r.on?' on':'')+(act?'':' dim')+(r.prio?' prio':''),'',box);
       node('span','ri-k',r.prio?'🟩 우선':r.kind||'자료',row);node('span','ri-t',(r.on?'✓ ':'')+r.title,row);
@@ -1204,9 +1308,9 @@ function drawRefDrawer(parent){
       };
     });
     const add=node('div','rg-add','',box);
-    [['📷','사진',()=>refPick(g.id,'image/*',true)],['🖼','사진·PDF',()=>refPick(g.id,'image/*,application/pdf')],['🎙','녹음',()=>startRefRec(g.id)],['🎧','음성 파일',()=>refPick(g.id,'audio/*')],['🪪','명함',()=>refPick(g.id,'image/*',true,true)]]
+    [['📷','사진',()=>refPick(g.id,'image/*',true)],['🖼','사진·PDF',()=>refPick(g.id,'image/*,application/pdf')],['🎙','녹음',()=>startRefRec(g.id)],['🎧','음성 파일',()=>refPick(g.id,'audio/*')]]
       .forEach(([i,t,fn])=>{const b=button(i,'rg-addb',fn,add);node('small','',t,b)});
-    if(items.some(r=>r.text||r.sum))button('🔤 이 그룹 자료로 용어 만들기','rg-terms',()=>refGroupTerms(g),box).title='Gemini가 그룹 자료를 훑어 용어 모음에 자동으로 넣음 (무료 번역기도 사용)'; // L15
+    button('🔤 이 그룹 자료로 용어 만들기','rg-terms',()=>refGroupTerms(g),box).title='Gemini가 그룹 자료를 훑어 용어 모음에 자동으로 넣음 (무료 번역기도 사용)'; // L15
   });
   button('＋ 새 그룹 만들기','drawer-item add',()=>{state.side=false;state.modal={type:'refGroup',id:null};render()},d);
 }
@@ -1215,7 +1319,7 @@ function drawRefEdit(body,data,actions){
   const r=refs.find(x=>x.id===data.id);if(!r){node('p','tiny','자료를 찾을 수 없습니다.',body);return}
   const f=(label,val,rows)=>{node('label','field',label,body);const el=node(rows?'textarea':'input',rows?'editor':'text-field','',body);if(rows){el.rows=rows;el.style.minHeight=(rows*22)+'px'}el.value=val||'';return el};
   const ti=f('제목',r.title);
-  node('label','field','그룹',body);const gs=node('select','text-field','',body);refGroups.forEach(g=>{const o=node('option','',g.name,gs);o.value=g.id});gs.value=refGroup(r.gid).id;
+  node('label','field','그룹',body);const gs=node('select','text-field','',body);refGroups.forEach(g=>{const o=node('option','',g.name,gs);o.value=g.id});gs.value=(r.kind==='명함'||r.personalTerms)?baseRefGroup().id:refGroup(r.gid).id;if(r.kind==='명함'||r.personalTerms)gs.disabled=true;
   const keep=()=>{r.title=ti.value.trim()||'자료';r.gid=gs.value;r.text=tx.value.trim();r.sum=su.value.trim();saveRefs()};
   // L15: 용어는 따로 창으로 (여기에는 버튼만)
   node('label','field','용어',body);
@@ -1224,7 +1328,7 @@ function drawRefEdit(body,data,actions){
   const tx=f(r.kind==='명함'?'명함 글':'글 전체 (원고·받아 적은 말)',r.text,r.kind==='용어'?3:8);
   const su=f('요약',r.sum,3);
   button('✔ 저장','action primary',()=>{keep();backToRefs();notify('고쳤습니다.')},actions);
-  button('🗑 지우기','action',()=>askConfirm('이 자료를 지울까요?\n'+r.title,'지우기',()=>{refs=refs.filter(z=>z!==r);saveRefs();backToRefs()}),actions);
+  button('🗑 지우기','action',()=>askConfirm('이 자료를 지울까요?\n'+r.title,'지우기',()=>{if(r.kind==='명함'){removeCard(r);return}refs=refs.filter(z=>z!==r);saveRefs();backToRefs()}),actions);
 }
 function drawRefGroup(body,data,actions){
   const g=data.id?refGroups.find(x=>x.id===data.id):null;
@@ -1235,10 +1339,10 @@ function drawRefGroup(body,data,actions){
     REF_COLORS.forEach(c=>{const b=button('','rg-color'+(data.color===c?' on':''),()=>{data.color=c;render()},cs);b.style.background=c})}
   button(g?'✔ 저장':'＋ 그룹 만들기','action primary',()=>{
     const n=nm.value.trim();if(!n)return notify('그룹 이름을 입력하세요');
-    if(g){g.name=n;g.color=data.color}else{const ng={id:'g'+Date.now().toString(36),name:n,color:data.color,on:true};refGroups.push(ng);state.refOpen={...(state.refOpen||{}),[ng.id]:true}}
+    if(g){g.name=n;g.color=data.color;personalBuckets().filter(r=>r.originGroupId===g.id).forEach(r=>{r.title=n;r.categoryName=n})}else{const ng={id:'g'+Date.now().toString(36),name:n,color:data.color,on:true};refGroups.push(ng);state.refOpen={...(state.refOpen||{}),[ng.id]:true}}
     saveRefs();backToRefs();
   },actions);
-  if(g&&!g.base)button('🗑 그룹 지우기','action',()=>{const n=refs.filter(r=>r.gid===g.id).length;askConfirm(`「${g.name}」 그룹과 안의 자료 ${n}개를 지울까요?`,'지우기',()=>{refs=refs.filter(r=>r.gid!==g.id);refGroups=refGroups.filter(x=>x!==g);saveRefs();backToRefs()})},actions);
+  if(g&&!g.base)button('🗑 그룹 지우기','action',()=>askRemoveRefGroup(g),actions);
 }
 /* L12: 앱 안에서 바로 녹음해 자료 만들기 (최대 5분) → Gemini가 받아 적고 정리 → 바로 고치기 화면 */
 let refRec=null;
@@ -1328,13 +1432,15 @@ function drawRefTerms(body,data,actions){
     button('✕','tm-b',()=>{r.terms.splice(i,1);if(data.edit===i)data.edit=null;saveRefs();render()},row);
   });
   if(!r.terms.length)node('p','tiny faint','아직 용어가 없습니다.',list);
-  button('✔ 완료','action primary',()=>{state.modal={type:'refEdit',id:r.id};render()},actions);
+  button('✔ 완료','action primary',()=>{state.modal=data.back==='personalTerms'?{type:'personalTerms'}:{type:'refEdit',id:r.id};render()},actions);
 }
 /* L15: 그룹의 자료를 모두 훑어 용어를 만들어 "용어 모음"에 자동으로 넣음 (같은 용어는 한 번만) */
 async function refGroupTerms(g){
+  const available=refs.filter(r=>r.gid===g.id&&!r.personalTerms&&r.kind!=='명함');
+  if(!available.some(r=>r.text||r.sum||(r.terms||[]).length))return notify('먼저 이 그룹에 사진·PDF·녹음 등의 자료를 추가하세요.');
   if(provider()!=='gemini')return notify('Gemini 키·모드가 필요합니다');
   if(!navigator.onLine)return notify('인터넷이 필요합니다.');
-  const items=refs.filter(r=>refGroup(r.gid)===g);
+  const items=available;
   let src=items.map(r=>`■ ${r.title}\n${r.sum||''}\n${(r.text||'').slice(0,6000)}\n${(r.terms||[]).map(x=>parseTerm(x).word).join(', ')}`).join('\n\n').slice(0,40000);
   if(!src.replace(/\s|■/g,''))return notify('이 그룹에 글이 있는 자료가 없습니다.');
   const fg=active().code;
@@ -1353,13 +1459,14 @@ async function refGroupTerms(g){
       }catch(e){err=e;if(e.stop||gemStop)break}
     }
     if(!terms)throw err||Error('용어 만들기 실패');
-    let box=items.find(r=>r.kind==='용어'&&r.title==='용어 모음');
+    if(!refGroups.includes(g))throw Error('대상 그룹이 삭제되어 용어 만들기를 중단했습니다.');
+    let box=refs.find(r=>r.gid===g.id&&r.kind==='용어'&&r.title==='용어 모음'&&(!r.personalTerms||g.base));
     if(!box){box={id:Date.now(),gid:g.id,kind:'용어',title:'용어 모음',sum:'',terms:[],text:'',on:true,prio:false,at:Date.now()};refs.push(box)}
     const have=new Map(box.terms.map((x,i)=>[parseTerm(x).word.toLowerCase(),i]));let n=0;
     terms.forEach(x=>{const g2=parseTerm(x);if(!g2.word)return;const k=g2.word.toLowerCase();
       if(have.has(k)){const i=have.get(k),old=parseTerm(box.terms[i]);if(!old.out&&g2.out||!old.heard&&g2.heard)box.terms[i]=fmtTerm({...old,heard:old.heard||g2.heard,out:old.out||g2.out,ol:old.out?old.ol:g2.ol})}
       else{have.set(k,box.terms.length);box.terms.push(fmtTerm(g2));n++}});
-    box.on=true;saveRefs();refBusy='';
+    box.on=true;archiveGroupTerms(g);saveRefs();refBusy='';
     notify(`🔤 「${g.name}」 용어 모음에 새 용어 ${n}개를 넣었습니다 (모두 ${box.terms.length}개).`+(g.base||g.on?'':' 그룹이 꺼져 있어 지금은 안 쓰입니다. 그룹 이름을 눌러 켜세요.'));
     state.side=false;state.modal={type:'refTerms',id:box.id};render();
   }catch(e){refBusy='';refErr=e.message;render()}
@@ -1369,7 +1476,7 @@ function origBtns(o,x,sc){
   if(!x.original||/번역 중/.test(x.original))return;
   const w=node('span','o-btns','',o);
   if(x.au)button('▶','obtn',ev=>{ev.stopPropagation();auPlay(x.au)},w).title='원래 녹음 다시 듣기';
-  iconButton(ICON.speaker(13),'obtn','정리된 문장 읽기',ev=>{ev.stopPropagation();speak(x.original,sc)},w);
+  iconButton(ICON.speaker(13),'obtn','정리된 문장 읽기',ev=>{ev.stopPropagation();speak(x.original,sc,null,x,'original')},w);
   meter(w,x.original); // L13: 원문을 읽을 때도 속도 막대
 }
 function selDot(parent,x){const b=button(x.sel?'●':'○','sel-dot'+(x.sel?' on':''),ev=>{ev.stopPropagation();x.sel=!x.sel;render()},parent);b.title='골라 듣기 (고른 문장만 듣기)';return b}
@@ -1625,7 +1732,7 @@ function starBtn(parent,x){const on=savedIdx(x)>=0;const b=button(on?'★':'☆'
 async function useNote(i){
   const text=(notes[i]?.x||'').trim();
   if(!text)return openNote(i);
-  if(state.mode!=='conversation')resetTranscripts();
+  if(state.mode!=='conversation')resetTranscripts(false);
   state.side=false;state.mode='conversation';render();
   await consume(text,'ko',{note:true});
   if(state.speech===3)notify('소리가 꺼져 있습니다. 위쪽 🔇 버튼을 누르면 켜집니다.');
@@ -1683,10 +1790,14 @@ function drawModal(root){
     button('‹ 뒤로','home-btn',closeLayer,nav);
   }else button('‹ 뒤로','plain',()=>{if(data.type==='refRec'){finishRefRec(false);return}if(data.type==='refTerms'){state.modal={type:'refEdit',id:data.id};render();return}if(data.type==='refEdit'||data.type==='refGroup'){backToRefs();return}if(data.type==='fixPending'){stopDictation();state.modal=null;if(state.pending)state.pending.wait=0;render()}else closeLayer()},header);
   const badge=node('span','ai-badge','',header);badge.id='aiBadge';badge.innerHTML='<i></i><b>AI 교정 중</b>';
-  const titles={help:'사용법',enlarge:'문장 확대',edit:data.field==='translation'?'번역 문장 고치기':'문장 고치기',photo:'사진 통역',note:data.index<0?'문장 추가':'자주 쓰는 문장',text:'글로 통역하기',settings:'설정',phrases:'여행 문구 · '+active().name,addPhrase:'여행 문구 추가',fixPending:'고친 뒤 보내기',refEdit:'자료 고치기',refGroup:data.id?'그룹 고치기':'새 그룹',refRec:'녹음해서 자료 만들기',refTerms:'용어'};
+  const titles={personalTerms:'내 용어',cards:'명함',cardView:'명함 보기',help:'사용법',enlarge:'문장 확대',edit:data.field==='translation'?'번역 문장 고치기':'문장 고치기',photo:'사진 통역',note:data.index<0?'문장 추가':'자주 쓰는 문장',text:'글로 통역하기',settings:'설정',phrases:'여행 문구 · '+active().name,addPhrase:'여행 문구 추가',fixPending:'고친 뒤 보내기',refEdit:'자료 고치기',refGroup:data.id?'그룹 고치기':'새 그룹',refRec:'녹음해서 자료 만들기',refTerms:'용어'};
   node('h2','',titles[data.type],header);
   const body=node('div','modal-content','',modal),actions=node('div','actions','',modal);
 
+
+  if(data.type==='personalTerms')drawPersonalTerms(body,actions);
+  if(data.type==='cards')drawCards(body,actions);
+  if(data.type==='cardView')drawCardView(body,data,actions);
 
   if(data.type==='edit'||data.type==='fixPending'){
     const item=data.type==='edit'?(data.list==='listening'?state.listening:state.items)[data.index]:null;
@@ -2181,6 +2292,7 @@ function isEmptyText(t){return !String(t||'').replace(/[\s.,!?。、！？…·]
 /* L21: 문장별 실제 처리 방식과 작업 버전. 전역 번역 모드는 변경하지 않음. */
 let listenTextChain=Promise.resolve(),entryModeMenu=null;
 const entryWork=new WeakMap(),activeEntryControllers=new Set(),entryReplayFocus=new WeakSet();
+const translationRun=Date.now().toString(36)+Math.random().toString(36).slice(2);
 const ENTRY_MODES=[['fast','빠름'],['balanced','균형'],['accurate','정확'],['free','무료']];
 const currentEntryMode=()=>engine()==='gemini'?gemTier():'free';
 const entryModeName=m=>ENTRY_MODES.find(x=>x[0]===m)?.[1]||(m==='saved'?'저장':m==='manual'?'직접 수정':'방식');
@@ -2199,7 +2311,7 @@ function showEntryModes(anchor,entry){
   entryModeMenu=close;document.addEventListener('pointerdown',outside,true);
 }
 function entryList(entry){return state.listening.includes(entry)?state.listening:state.items.includes(entry)?state.items:null}
-function entryContext(entry){const list=entryList(entry)||[],i=list.indexOf(entry);return list.slice(Math.max(0,i-2),i).map(x=>x.original).join('\n').slice(-600)}
+function entryContext(entry){const list=entryList(entry)||[],i=list.indexOf(entry);return list.slice(Math.max(0,i-2),i).filter(x=>x.contextRun===translationRun&&x.contextEpoch===transcriptEpoch).map(x=>x.original).join('\n').slice(-600)}
 function mergeUnspoken(prev,text,source,micId){
   if(!prev||!entryWork.has(prev)||!prev.fromMic||prev.micId!==micId||prev.source!==source||prev.target!==(source==='ko'?active().code:'ko')||prev.spokenAt||prev.speakingNow||outCur===prev||prev.retranslating||Date.now()-prev.createdAt>20000)return null;
   const a=String(prev.original||'').trim(),b=String(text||'').trim();if(!a||!b||a.length+b.length>800)return null;
@@ -2277,7 +2389,7 @@ async function consume(text,source,opt={}){
     const previous=list[list.length-1],joined=mergeUnspoken(previous,text,source,micId);
     if(joined){previous.original=joined;previous.createdAt=Date.now();return scheduleEntry(previous,currentEntryMode(),{...opt,merged:true})}
   }
-  const entry={original:text,translation:'번역 중…',source,target,failed:false,correcting:true,fromMic:!!opt.fromMic,micId,createdAt:Date.now()};
+  const entry={original:text,translation:'번역 중…',source,target,failed:false,correcting:true,fromMic:!!opt.fromMic,micId,createdAt:Date.now(),contextRun:translationRun,contextEpoch:transcriptEpoch};
   entry.timing=opt.timing||(opt.fromMic?latencyStart():null);latencyMark(entry.timing,'consume');
   if(opt.retr)entry.by='다시 번역';if(opt.au)entry.au=opt.au;
   list.push(entry);const task=scheduleEntry(entry,currentEntryMode(),opt);scrollEnd();return task;
@@ -2667,15 +2779,21 @@ function setDim(on){state.dim=on;render()}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&state.mic)keepAwake()});
 // L12: 다른 앱·화면으로 가면 마이크와 녹음을 확실히 끔 (안 그러면 다른 앱이 마이크를 못 써서 휴대폰을 껐다 켜야 했음)
 document.addEventListener('visibilitychange',()=>{
-  if(document.hidden){if(state.mic){stopMic();clearPending();state._offByHide=true}if(refRec&&state.modal?.type==='refRec'){stopRefRec();state.modal=null}killAllMics()}
+  if(document.hidden){const wasMic=state.mic;resetTranscripts(false);if(wasMic)state._offByHide=true;if(refRec&&state.modal?.type==='refRec'){stopRefRec();state.modal=null}killAllMics()}
   else if(state._offByHide){state._offByHide=false;if(state.page==='main'){render();notify('다른 화면으로 가서 마이크를 껐습니다. 다시 누르면 이어서 듣습니다.')}}
 });
-window.addEventListener('pagehide',killAllMics);
+window.addEventListener('pagehide',()=>{resetTranscripts(false);killAllMics()});
 // L19: 마이크 정지는 현재 작업을 보존. 삭제·모드 전환만 이전 작업을 무효화.
 let transcriptEpoch=0,micSession=0;
-function resetTranscripts(){
+function resetTranscripts(clearHistory=true){
   transcriptEpoch++;activeEntryControllers.forEach(c=>c.abort());activeEntryControllers.clear();listenTextChain=Promise.resolve();stopMic();stopSpeech();clearPending();
-  state.interim='';state.listenPreview='';state.items=[];state.listening=[];
+  state.interim='';state.listenPreview='';
+  if(clearHistory){state.items=[];state.listening=[]}
+  else [...state.items,...state.listening].forEach(entry=>{
+    entry.queued=false;entry.speakingNow=false;delete entry.readingField;
+    if(entry.correcting&&(!entry.translation||entry.translation==='번역 중…')){entry.translation='번역 중단 · 다시 번역을 눌러 주세요';entry.failed=true}
+    entry.correcting=false;entry.retranslating=false;
+  });
   recentSent=[];lastFinal={text:'',at:0};saveHistory();
 }
 function stopMic(){
