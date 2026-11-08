@@ -591,7 +591,29 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='L13 · Claude · 차례 통역·골라 듣기·사진 언어별 · 2026.11.08';
+const APP_VERSION='L14 · Claude · 크레딧 절약(잡음 안 보냄·한도 초과 시 즉시 멈춤) · 2026.11.08';
+/* L14: 크레딧 지키기 — 사용 한도 초과·키 오류가 한 번 나면 그 뒤로는 Gemini에 요청을 아예 보내지 않고 마이크도 끔
+   (예전에는 실패할 때마다 모델 3개 × 재시도 4번으로 계속 다시 보냈음) */
+let gemStop='';
+const _rawFetch=window.fetch.bind(window);
+window.fetch=async(url,opt)=>{
+  const u=String(url?.url||url||'');
+  if(!/generativelanguage\.googleapis\.com.*:generateContent/.test(u))return _rawFetch(url,opt);
+  if(gemStop)throw Object.assign(new Error(gemStop),{status:429,stop:true});
+  const res=await _rawFetch(url,opt);
+  if(!res.ok&&[400,401,403,429].includes(res.status)){
+    let m='';try{m=(await res.clone().json()).error?.message||''}catch{}
+    if(/spending cap|spend cap|ai\.studio\/spend/i.test(m))gemHalt('이번 달 Gemini 사용 한도를 다 썼습니다. 크레딧을 아끼려고 AI 요청과 마이크를 멈췄습니다. 마이크를 다시 누르면 무료 받아쓰기·무료 번역으로 이어서 쓸 수 있어요.');
+    else if(/API key not valid|API_KEY_INVALID|API key expired|API key was reported as leaked/i.test(m))gemHalt('Gemini 키가 맞지 않습니다. 설정에서 키를 확인해 주세요. AI 요청과 마이크를 멈췄습니다.');
+  }
+  return res;
+};
+function gemHalt(msg){
+  if(gemStop)return;gemStop=msg;
+  try{if(state.mic){stopMic();clearPending()}killAllMics()}catch{}
+  try{$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),12000)}catch{}
+  try{render()}catch{}
+}
 const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
@@ -1789,9 +1811,9 @@ function drawSettings(body){
   const kr=node('div','row-btns','',sec);
   const result=node('div','ai-result','',sec);result.hidden=true;
   const show=(t,bad)=>{result.hidden=false;result.textContent=t;result.classList.toggle('bad',!!bad)};
-  button('저장','action primary',()=>{store('ai_key',key.value.trim());store('ai_model',model.value.trim());show(key.value.trim()?`저장했습니다 · ${providerName()} 사용`:'키를 지웠습니다. AI 교정을 쓰지 않습니다.')},kr);
+  button('저장','action primary',()=>{gemStop='';store('ai_key',key.value.trim());store('ai_model',model.value.trim());show(key.value.trim()?`저장했습니다 · ${providerName()} 사용`:'키를 지웠습니다. AI 교정을 쓰지 않습니다.')},kr);
   button('시험해 보기','action',async()=>{
-    store('ai_key',key.value.trim());store('ai_model',model.value.trim());
+    gemStop='';store('ai_key',key.value.trim());store('ai_model',model.value.trim());
     if(!aiReady())return show('키를 먼저 넣어 주세요.',true);
     show('⏳ AI에게 물어보는 중…');const t0=Date.now();
     try{const r=await withTimeout(aiCorrect('안녕 하세요 저는 한국 에서 왔 습니다','ko'),20000);show(`✅ 성공 (${((Date.now()-t0)/1000).toFixed(1)}초)\n보낸 문장: 안녕 하세요 저는 한국 에서 왔 습니다\nAI 답: ${r}`)}
@@ -2067,7 +2089,7 @@ async function shareAll(){
    Gemini 키가 없거나 무료 번역기를 고르면 예전 크롬 받아쓰기를 그대로 씀 */
 const AU={RATE:16000,PAUSE:2,MIN:5,MAX:10,PAD:0.5,SHORT_WAIT:1.2,TAIL:2,STT:'gemini-3.5-flash-lite'};
 const AU_TERMS='게이트,러너,스프루,캐비티,코어,파팅라인,이젝터,이젝터 핀,성형품,사출,사출압,보압,사출금형,프레스금형,순차이송금형,몰드베이스,언더컷,슬라이드,슬라이드 코어,슬라이드 플레이트,경사 핀,변형 코어,냉각수 회로,냉각 유로,핫러너,콜드러너,웰드라인,싱크마크,미성형,버,플래시,후가공,일체,인서트,인서트 코어,코어아웃,에어 벤트,벤트,시제품,습동면,릴리프,도피부,도피 가공,유격,틈새,클리어런스,가이드면,안내면,유구,오일 홈,오일리스 부시,소착,열팽창,열응력,피로도,점도,수지,다이,펀치,스트리퍼,파일럿,블랭킹,피어싱,벤딩,드로잉,MCT,방전,CNC 선반,밀링,엔드밀,공작물,절삭,이송,절삭속도,공차,리드타임,인벤터,오토캐드,한국폴리텍대학 서울정수캠퍼스';
-function useAudioListen(){return (state.mode==='listen'||load('conv_stt')!=='chrome')&&engine()==='gemini'&&navigator.onLine&&!!navigator.mediaDevices?.getUserMedia} // L12: 대화 모드도 녹음 받아쓰기 (삑 소리 없음)
+function useAudioListen(){return (state.mode==='listen'||load('conv_stt')!=='chrome')&&engine()==='gemini'&&!gemStop&&navigator.onLine&&!!navigator.mediaDevices?.getUserMedia} // L12: 대화 모드도 녹음 받아쓰기 (삑 소리 없음)
 function auTerms(){return [...new Set([...refTerms(),...allGloss().map(g=>g.word).filter(Boolean),...AU_TERMS.split(',')])].slice(0,300).join(', ')}
 function auWav(f,R){
   const b=new ArrayBuffer(44+f.length*2),v=new DataView(b);const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
@@ -2132,8 +2154,8 @@ function blobB64(blob){return new Promise(r=>{const fr=new FileReader();fr.onloa
 /* L12: 녹음 조각을 한 번에 "받아 적기 + 정리 + 번역" (듣기·대화 모드 공통)
    밀리지 않으면 조각 하나씩 바로, AI가 앞 일을 하는 동안 들어온 조각은 모았다가 길게 묶어 한 번에 (부르는 횟수·크레딧 줄임) */
 function auCfg(conv){return conv
-  ?{PAUSE:0.9,MIN:0,MAX:15,PAD:0.4,SHORT_WAIT:0,TAIL:1,VOICED:0.2,HOLD:1300,BATCH:30}
-  :{PAUSE:2,MIN:5,MAX:12,PAD:0.5,SHORT_WAIT:1.2,TAIL:2,VOICED:0.35,HOLD:4000,BATCH:60}}
+  ?{PAUSE:0.9,MIN:0,MAX:15,PAD:0.4,SHORT_WAIT:0,TAIL:1,VOICED:0.35,HOLD:1300,BATCH:30}
+  :{PAUSE:1.5,MIN:8,MAX:25,PAD:0.5,SHORT_WAIT:2,TAIL:2,VOICED:0.6,HOLD:4000,BATCH:60}} // L14: 듣기 모드는 문장을 더 길게 묶어 한 번에 (요청 수↓, 문맥↑)
 async function auBatchAsk(pcm,o){
   const b64=await blobB64(auWav(pcm,AU.RATE));
   const fg=active().code,auto=o.src==='auto';
@@ -2147,7 +2169,7 @@ async function auBatchAsk(pcm,o){
    다른 언어가 섞이면(예: 중국어 방송 속 영어 단어·일본어 문장) ${srcName} 발음으로 옮겨 적지 말고 그 언어의 원래 글자 그대로 적으세요(영어는 영어로, 일본어는 일본어로). 번역할 때는 섞인 부분도 그 언어의 뜻으로 정확히 옮기세요.
 3) t: s를 ${tgtRule} 번역. 현지 사람이 바로 알아듣는 자연스러운 말투, 설명·주석·괄호 메모 없이 번역문만.
 4) st: 그 문장이 이 녹음에서 시작하는 시각(초).
-5) done: 문장이 끝났으면 true. 녹음 끝에서 말이 끊겨 덜 끝난 마지막 문장만 false.${auto?`\n6) lang: 그 문장의 언어. 한국어면 "ko", ${nameOf(fg)}면 "fg".`:''}${o.carry?'\n[이어지는 말]은 바로 앞 녹음 끝에서 덜 끝난 말입니다. 이번 녹음의 첫 말이 그 뒤를 잇는다면 첫 문장의 s·t를 [이어지는 말]부터 합친 전체 문장으로 쓰세요(st 0). 이어지지 않으면 [이어지는 말]을 첫 항목으로 따로 정리·번역하세요(st 0).':''}
+5) done: 문장이 끝났으면 true. 녹음 끝에서 말이 끊겨 덜 끝난 마지막 문장만 false.${auto?`\n6) lang: 그 문장의 언어. 한국어면 "ko", ${nameOf(fg)}면 "fg".`:''}\n[이어지는 말]이 있으면 바로 앞 녹음 끝에서 덜 끝난 말입니다. 이번 녹음의 첫 말이 그 뒤를 잇는다면 첫 문장의 s·t를 [이어지는 말]부터 합친 전체 문장으로 쓰세요(st 0). 이어지지 않으면 [이어지는 말]을 첫 항목으로 따로 정리·번역하세요(st 0).
 분야는 금형(사출·프레스·순차이송)·기계가공·CAD·공장 견학·여행일 수 있습니다. 자주 나오는 용어: ${auTerms()}.${g?`\n번역할 때 용어는 이렇게: ${g}`:''}${o.noRef?'':refHint(4000,!o.conv)}
 JSON {"items":[...]}로만 답하세요.`;
   const user=(o.ctx?`[앞 문장 · 참고만, 다시 쓰지 마세요]\n${o.ctx}\n\n`:'')+(o.carry?`[이어지는 말]\n${o.carry}\n\n`:'')+'이 녹음을 받아 적고 정리·번역하세요.';
@@ -2163,7 +2185,7 @@ JSON {"items":[...]}로만 답하세요.`;
       const raw=(j.candidates?.[0]?.content?.parts||[]).filter(x=>!x.thought).map(x=>x.text||'').join('').trim();
       const v=JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g,''));
       return (v.items||[]).map(x=>({s:String(x.s||'').trim(),t:String(x.t||'').trim(),st:x.st,done:x.done!==false,lang:x.lang==='fg'?'fg':'ko'})).filter(x=>!isEmptyText(x.s));
-    }catch(e){err=e}
+    }catch(e){err=e;if(e.stop||gemStop)break}
   }
   throw err||Error('받아쓰기 실패');
 }
@@ -2226,6 +2248,7 @@ function startAudioListen(){
         const again=await auBatchAsk(pcm,{src,conv,carry,ctx:'',noRef:true}).catch(()=>null);if(again)items=again}
     }catch(e){err=e}
     busy=false;
+    if(!items&&(err?.stop||gemStop)){queue.length=0;hold=ph;flushHold();showLive();return} // L14: 한도 초과면 다시 보내지 않음
     if(!items){
       fails++;
       if(fails>=2&&pcm.length>R*8){ // L13: 길게 묶은 조각이 두 번 실패하면 조용한 곳에서 반으로 나눠 따로 다시 (버리지 않음)
@@ -2282,7 +2305,7 @@ function startAudioListen(){
     while(buf.length&&total-bufStart-buf[0].length>R*120){bufStart+=buf[0].length;buf.shift()}
     let e=0;for(let i=0;i<f.length;i++)e+=f[i]*f[i];const rms=Math.sqrt(e/f.length);
     const thr=Math.max(floor*3,0.005),isV=rms>thr;
-    if(!isV)floor=floor*0.97+rms*0.03;
+    if(!isV)floor=floor*0.97+rms*0.03;else floor=floor*0.999+rms*0.001; // L14: 버스·공장처럼 계속 나는 소음은 30초쯤 뒤 '말소리'로 안 보고 안 보냄
     frames.push([total,rms]);if(frames.length>400)frames.shift();
     if(isV){
       if(segStart<0)segStart=Math.max(bufStart,lastEnd,total-f.length-Math.round(R*C.PAD));
