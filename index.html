@@ -428,6 +428,10 @@ svg{display:block}
 .stop-recording{background:#fbe5e5;color:#8c2836}
 .recording-card{padding:12px;border-radius:12px;background:var(--surface);margin:10px 0}
 .recording-card p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
+
+/* M27/M28 comparison telemetry: no additional API calls */
+.compare-summary{font-size:11px;text-align:center;color:var(--muted);padding:4px 8px;border-bottom:1px solid var(--line);background:var(--surface)}
+.compare-metric{display:block;font-size:11px;color:var(--muted);font-weight:400;margin:5px 12px 2px;line-height:1.35;white-space:normal}
 </style>
 </head>
 <body><div id="app"></div>
@@ -683,10 +687,32 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='L27 · ChatGPT · 수동 대화·구간 번역·연속 원음 녹음 · 2026.11.09';
+const APP_VERSION='M27 · ChatGPT · 수동 대화·구간 번역·연속 원음 녹음 · 2026.11.09';
 /* L18: 개발자 도구 window.L18_TIMINGS / console 표: 마지막 인식 갱신부터 TTS 시작까지(ms).
    브라우저 speechend가 있으면 실제 발화 종료 신호도 별도로 기록. 키·문장 내용은 기록하지 않음. */
 window.L21_TIMINGS=[];window.L20_TIMINGS=window.L18_TIMINGS=window.L21_TIMINGS;
+
+/* Comparison: count text actually placed in Gemini system/user parts, not billable tokens. */
+const compareStats={count:0,elapsed:0,chars:0};
+function compareMark(t,sys,user){
+  if(!t)return;
+  t.compareChars=Array.from(sys).length+Array.from(user).length;
+  t.compareStarted=performance.now();
+  t.compareComplete=false;
+}
+function compareFinish(t){
+  if(!t||t.compareStarted==null||t.compareComplete)return;
+  t.compareComplete=true;t.compareSeconds=(performance.now()-t.compareStarted)/1000;
+  compareStats.count++;compareStats.elapsed+=t.compareSeconds;compareStats.chars+=t.compareChars||0;
+}
+function compareLabel(t){
+  if(!t)return '전송 — · 응답 —';
+  const chars=t.compareChars;
+  if(chars==null)return '전송 — · 응답 — (Gemini 측정 대상 외)';
+  return '전송 '+chars.toLocaleString('ko-KR')+'자 · 응답 '+(t.compareComplete?t.compareSeconds.toFixed(2)+'초':'처리 중');
+}
+function compareEntry(parent,entry){node('small','compare-metric',compareLabel(entry.timing),parent)}
+
 function latencyStart(at=performance.now()){return {start:at,marks:{},model:engine()==='gemini'?gemModel():'free'}}
 function latencyMark(t,k){if(t)t.marks[k]=Math.round(performance.now()-t.start)}
 function latencyReport(t){if(!t)return;const row={model:t.model,...t.marks};
@@ -1058,6 +1084,7 @@ function render(){
 
   if(listen&&state.mic){const live=node('div','listen-preview','',s);live.id='listenPreview';node('small','','받아쓰기',live);node('span','','',live);updateListenPreview()}
 
+  node('div','compare-summary',`M27 · 평균 응답 ${compareStats.count?(compareStats.elapsed/compareStats.count).toFixed(2)+'초':'—'} · ${compareStats.count}건 · 글자 수≠토큰/요금`,s);
   const content=node('section','transcript','',s);content.oncontextmenu=ev=>{if(ev.target===content){ev.preventDefault();showTextActions(content,'','ko')}};content.id='transcript';
   listen?drawListen(content):drawPairs(content);
   drawLiveAndPending(content);
@@ -1237,6 +1264,7 @@ function drawPairs(parent){
     const pair=node('div','pair '+(item.source==='ko'?'turn-ko':'turn-foreign')+(item.speakingNow?' now':'')+(item.sel?' picked':''),'',parent);
     bubble(pair,item,i,'original');
     if(item.translation||item.correcting)bubble(pair,item,i,'translation');
+    compareEntry(pair,item);
   });
 }
 function entryControls(parent,item,field,listening=false){
@@ -1280,6 +1308,7 @@ function drawListen(parent){
     const original=node('div','l-orig',x.original,row);original.dir='auto';original.style.fontSize=sizes[x.source==='ko'?state.listenKoSize:state.listenForeignSize]+'px';textActions(original,()=>x.original,x.source);
     entryControls(row,x,'original',true);
     if(x.translation){const translated=node('div','l-tr',x.translation,row);translated.dir='auto';translated.style.fontSize=sizes[x.target==='ko'?state.listenKoSize:state.listenForeignSize]+'px';textActions(translated,()=>x.translation,x.target);entryControls(row,x,'translation',true)}
+    compareEntry(row,x);
     if(x.pronT&&!x.failed){if(x.target!=='ko')drawPron(row,x.translation,x.target);else drawKoPron(row,x.translation,x.source)}
   });
 }
@@ -2673,7 +2702,7 @@ async function consume(text,source,opt={}){
     if(joined){previous.original=joined;previous.createdAt=Date.now();return scheduleEntry(previous,currentEntryMode(),{...opt,merged:true})}
   }
   const entry={original:text,translation:'번역 중…',source,target,failed:false,correcting:true,fromMic:!!opt.fromMic,micId,createdAt:Date.now(),contextRun:translationRun,contextEpoch:transcriptEpoch};
-  entry.timing=opt.timing||(opt.fromMic?latencyStart():null);latencyMark(entry.timing,'consume');
+  entry.timing=opt.timing||latencyStart();latencyMark(entry.timing,'consume');
   if(opt.retr)entry.by='다시 번역';if(opt.au)entry.au=opt.au;
   list.push(entry);const task=scheduleEntry(entry,currentEntryMode(),opt);scrollEnd();return task;
 }
@@ -2774,10 +2803,10 @@ async function geminiCleanTranslate(text,src,target,ctx,timing,opt={}){
     if(opt.signal?.aborted)controller.abort();else opt.signal?.addEventListener('abort',cancel,{once:true});
     const timeout=setTimeout(cancel,tier==='accurate'?20000:tier==='balanced'?16000:12000);
     try{
-      if(timing)timing.marks.referenceChars=fixed.length;latencyMark(timing,'request');
+      if(timing)timing.marks.referenceChars=fixed.length;compareMark(timing,sys,user);latencyMark(timing,'request');
       const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(load('ai_key').trim())}`,{method:'POST',_entryGemini:true,headers:{'content-type':'application/json'},
         body:JSON.stringify({systemInstruction:{parts:[{text:sys}]},contents:[{role:'user',parts:[{text:user}]}],generationConfig:{...gemCfg(m),responseMimeType:'application/json',responseSchema:{type:'OBJECT',properties:{s:{type:'STRING'},t:{type:'STRING'}},required:['s','t']}}}),signal:controller.signal});
-      const j=await res.json().catch(()=>({}));latencyMark(timing,'response');if(!res.ok)throw Error(j.error?.message||('Gemini 오류 '+res.status));
+      const j=await res.json().catch(()=>({}));compareFinish(timing);latencyMark(timing,'response');if(!res.ok)throw Error(j.error?.message||('Gemini 오류 '+res.status));
       const raw=(j.candidates?.[0]?.content?.parts||[]).filter(x=>!x.thought).map(x=>x.text||'').join('').trim();
       let o;try{o=JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g,''))}catch{continue}
       const s=String(o.s||'').trim();const {out,noisy}=gemClean(JSON.stringify({t:String(o.t||'')}),target);
@@ -2787,7 +2816,7 @@ async function geminiCleanTranslate(text,src,target,ctx,timing,opt={}){
       // 정리한 원문이 너무 짧아지거나 길어지면(뜻이 바뀐 것) 원래 글 그대로
       const okS=s&&s.length>=text.length*(opt.merged?0.25:0.6)&&s.length<=text.length*1.3+10;
       return {s:okS?s:text,t:out,mode:tier};
-    }catch(e){latencyMark(timing,'response');if(timing)timing.marks.requestFailed=1}
+    }catch(e){if(timing&&timing.compareStarted!=null&&!timing.compareComplete){compareFinish(timing)}latencyMark(timing,'response');if(timing)timing.marks.requestFailed=1}
     finally{clearTimeout(timeout);opt.signal?.removeEventListener('abort',cancel)}
   }
   return null;
