@@ -687,7 +687,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='M28 · ChatGPT · 수동 대화·구간 번역·연속 원음 녹음 · 2026.11.09';
+const APP_VERSION='M29 · ChatGPT · 수동 대화·구간 번역·연속 원음 녹음 · 2026.11.09';
 /* L18: 개발자 도구 window.L18_TIMINGS / console 표: 마지막 인식 갱신부터 TTS 시작까지(ms).
    브라우저 speechend가 있으면 실제 발화 종료 신호도 별도로 기록. 키·문장 내용은 기록하지 않음. */
 window.L21_TIMINGS=[];window.L20_TIMINGS=window.L18_TIMINGS=window.L21_TIMINGS;
@@ -1084,7 +1084,7 @@ function render(){
 
   if(listen&&state.mic){const live=node('div','listen-preview','',s);live.id='listenPreview';node('small','','받아쓰기',live);node('span','','',live);updateListenPreview()}
 
-  node('div','compare-summary',`M28 · 평균 응답 ${compareStats.count?(compareStats.elapsed/compareStats.count).toFixed(2)+'초':'—'} · ${compareStats.count}건 · 글자 수≠토큰/요금`,s);
+  node('div','compare-summary',`M29 · 평균 응답 ${compareStats.count?(compareStats.elapsed/compareStats.count).toFixed(2)+'초':'—'} · ${compareStats.count}건 · 글자 수≠토큰/요금`,s);
   const content=node('section','transcript','',s);content.oncontextmenu=ev=>{if(ev.target===content){ev.preventDefault();showTextActions(content,'','ko')}};content.id='transcript';
   listen?drawListen(content):drawPairs(content);
   drawLiveAndPending(content);
@@ -1318,13 +1318,34 @@ function drawListen(parent){
    켜 둔 자료의 용어는 대화·듣기 모드 모두에 참고. 🟩 우선 자료(원고) 글 전체는 듣기 모드에서만 참고 */
 function openRefs(){stopDictation();state.modal=null;state.side='refs';render()}
 function refTerms(){const on=activeRefs();return on.filter(r=>r.prio).concat(on.filter(r=>!r.prio)).flatMap(r=>(r.terms||[]).map(x=>parseTerm(x).word)).filter(Boolean)}
-function compactRefHint(){
+/* M29: 번역할 문장(과 앞 문장)에 실제로 나온 용어만 보냄 — 바른 말·잘못 들리는 말·외국어 표기 중 하나라도 나오면 관련 용어.
+   최대 12개·머리글 포함 360자, 관련 용어가 없으면 '' (머리글도 안 보냄). 켜 둔 자료(activeRefs)만 보며 🟩 우선 자료 용어가 먼저.
+   우선 자료는 문장에 안 나와도 맨 뒤에 REF_PRIO_FILL개까지만 채움(0이면 끔). 용어집 저장·편집은 건드리지 않음. */
+const REF_MAX_TERMS=12,REF_MAX_CHARS=360,REF_PRIO_FILL=4;
+function compactRefHint(text,ctx){
   const on=activeRefs();if(!on.length)return '';
-  // Limit repeated reference background to relevant, already-stored terminology only.
-  // Never attach the original reference text or full summaries on ordinary translation.
-  const words=[...new Set(on.flatMap(r=>(r.terms||[]).map(x=>parseTerm(x).word).filter(Boolean)))];
-  const chosen=words.slice(0,14).map(w=>String(w).slice(0,55));
-  return chosen.length?'\n[참고 전문 용어 · 원문으로 번역하지 마세요] '+chosen.join(', ').slice(0,400):'';
+  const norm=s=>String(s||'').toLowerCase().replace(/\s+/g,'');
+  const cur=norm(text),prev=norm(ctx),code=active().code;
+  const hit=(h,k)=>!!h&&!!k&&(h===k||(k.length>=2&&h.includes(k)));
+  const seen=new Set(),found=[],fill=[];
+  for(const r of on.filter(r=>r.prio).concat(on.filter(r=>!r.prio))){
+    for(const raw of r.terms||[]){
+      const g=parseTerm(raw);if(!g.word||seen.has(g.word))continue;seen.add(g.word);
+      const mapped=termFor(g,code);
+      const keys=[g.word,...g.heard.split(','),...(mapped?[g.out]:[])].map(norm).filter(Boolean);
+      const rank=keys.some(k=>hit(cur,k))?0:keys.some(k=>hit(prev,k))?1:-1;
+      const s=(mapped?g.word+'→'+g.out:g.word).slice(0,60);
+      if(rank>=0)found.push({rank,s});else if(r.prio&&fill.length<REF_PRIO_FILL)fill.push({rank:2,s});
+    }
+  }
+  const list=found.sort((a,b)=>a.rank-b.rank).concat(fill);
+  const head='\n[용어 · A→B는 B로, 나머지는 표기 참고] ';let out=head,n=0;
+  for(const {s} of list){
+    if(n>=REF_MAX_TERMS)break;
+    const add=(n?', ':'')+s;if((out+add).length>REF_MAX_CHARS)break;
+    out+=add;n++;
+  }
+  return n?out:'';
 }
 function refHint(max,full){
   const on=activeRefs();if(!on.length)return '';
@@ -2797,13 +2818,12 @@ async function auTranscribe(blob,src,before){
 // 완성된 문장을 "정리한 원문 + 번역" 한 번에 받음 (실패하면 null → 무료 번역 한 번)
 async function geminiCleanTranslate(text,src,target,ctx,timing,opt={}){
   const tier=opt.tier||gemTier();
-  const g=glossOut();
-  // L17: 매번 같은 부분(용어·배경 자료)을 지시문 맨 앞에 둠 → Gemini가 앞부분을 기억해 두는 캐시가 잘 걸려 빨라지고 크레딧↓
-  const fixed=((g?`[용어 · 번역할 때 이렇게 쓰세요]\n${g}`:'')+compactRefHint()).trim();
-  const sys=(fixed?fixed+'\n\n':'')+`당신은 통역사입니다. [번역할 글]은 ${nameOf(src)} 음성을 받아 적은 것이라 다시 읽은 반복, 잘못 들린 단어가 있을 수 있습니다.
-1) s: 먼저 원문을 정리하세요 — 말하다 잘못 읽고 다시 말한 부분은 뒤에 고쳐 말한 것을 기준으로 하나로 합치고(앞에만 있던 말은 살림), 같은 말 반복은 하나만, 문맥에 맞지 않는 단어는 분야 용어로 바로잡으세요(예: 고주→구조, 고압→보압). ${FILLER_RULE} 뜻을 빼거나 보태지 말고, 문제가 없으면 그대로 두세요. 숫자 범위는 물결표(~).
-2) t: 정리한 원문을 ${nameOf(target)}로 번역하세요. 현지 사람이 바로 알아듣는 자연스러운 말투로, 설명·주석·괄호 메모 없이 번역문 하나만.
-분야는 금형·기계가공·CAD일 수 있습니다. [앞 문장]은 문맥 참고용이며 정리·번역하지 마세요. 위 [용어]·[배경 자료]는 참고만 하고 그대로 옮기지 마세요. JSON {"s":"정리한 원문","t":"번역문"}으로만 답하세요.`;
+  // M29: 고정 지시문은 앞에 두고(매번 같음), 이번 문장과 관련된 용어만 뒤에 붙임 (compactRefHint)
+  const fixed=compactRefHint(text,ctx).trim();
+  const sys=`${nameOf(src)} 음성 받아쓰기 글을 정리해 ${nameOf(target)}로 통역하세요. 분야는 금형·기계가공·CAD일 수 있습니다.
+s: 원문 정리 — 오인식·맞춤법 교정(예: 고주→구조, 고압→보압), 아·음·えーと·um 같은 추임새와 같은 말 반복 삭제("그·저기·あの"는 되풀이하며 머뭇거릴 때만), 고쳐 말한 곳은 최종 표현만 남김. 의미·숫자·고유명사는 그대로, 숫자 범위는 ~, 문제 없으면 그대로 둠.
+t: s를 현지인이 바로 알아듣게 자연스럽게 번역. 설명·주석·후보 없이 번역문 하나만.
+[앞 문장]과 용어는 참고용이니 번역·출력 금지. JSON {"s":"정리한 원문","t":"번역문"}만 출력.`+(fixed?'\n'+fixed:'');
   const user=(ctx?`[앞 문장 · 참고만]\n${ctx}\n\n`:'')+`[번역할 글]\n${text}`;
   const models=[GEM_TIERS.find(x=>x[0]===tier)?.[2]||gemModel()]; // L18: 선택 모델 한 번만, 실패 뒤 Gemini 재번역 금지
   for(const m of models){
