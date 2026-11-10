@@ -16,7 +16,6 @@
 <style>
 /* ── 테마 (설정에서 바꿈) ── */
 #app{--accent:#29865c;--accent2:#2378c9;--bg:#fff;--surface:#f4f8f6;--text:#16221c;--muted:#6e7c76;--line:#e6ece9;--ko:#e4f4e9;--fg:#f0f2f3;--blue:#2479b9;--radius:16px;--font:system-ui,-apple-system,'Noto Sans KR','Malgun Gothic',sans-serif}
-
 *{box-sizing:border-box;scrollbar-width:none}
 *::-webkit-scrollbar{display:none;width:0;height:0}
 .modal-content,.drawer,.transcript,.select-pop{overflow-x:hidden!important}
@@ -27,7 +26,6 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 button:focus-visible{outline:3px solid #177bc0;outline-offset:3px}
 svg{display:block}
 #app{--app-h:100dvh;width:100%;height:var(--app-h);max-width:750px;margin:auto;background:var(--bg);color:var(--text);font-family:var(--font);position:relative;overflow:hidden}
-
 /* ── 첫 화면 ── */
 .home{height:var(--app-h);overflow:hidden;touch-action:manipulation;position:relative;background:#456 center/cover no-repeat;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:calc(46px + env(safe-area-inset-bottom))}
 .home:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#0003,transparent 40%,#0006)}
@@ -35,7 +33,6 @@ svg{display:block}
 .home-tip{position:relative;color:#fff;font-size:15px;margin-top:16px;text-shadow:0 1px 4px #000c}
 .select-pop{position:absolute;bottom:calc(150px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:#fff;color:#1e3038;border-radius:18px;padding:8px;width:min(92vw,340px);max-height:58vh;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:2px;z-index:15;box-shadow:0 8px 40px #0005}
 .select-pop button{display:block;width:100%;border:0;background:white;padding:12px 10px;text-align:left;border-radius:10px;font-size:15px}.select-pop button.on{background:#e3f4e9;font-weight:700}
-
 /* ── 본 화면 ── */
 .screen{display:flex;flex-direction:column;height:var(--app-h);overflow:hidden;--acc:var(--accent)}
 .screen.listen{--acc:var(--accent2)}
@@ -54,34 +51,22 @@ svg{display:block}
 .hint svg{margin:0 auto 10px}
 .pair{margin:0 0 15px;display:flex;flex-direction:column;gap:6px}
 .bubble{position:relative;line-height:1.55;max-width:94%;border-radius:var(--radius);padding:12px 15px 13px;overflow-wrap:anywhere;white-space:pre-wrap;cursor:pointer}
-.bubble.has-edit{padding-right:36px;padding-bottom:17px}
 .bubble.ko{background:var(--ko);align-self:flex-start}
 .bubble.foreign{background:var(--fg);align-self:flex-end}
 .bubble.fail{background:#fff0e0;color:#8a4b12}
 .bubble .edit{position:absolute;right:4px;bottom:2px;min-width:30px;min-height:30px;font-size:15px;color:var(--muted);border:0;background:transparent}
 .listen-row{padding:12px 14px;background:var(--surface);border-radius:var(--radius);margin-bottom:9px;line-height:1.6;overflow-wrap:anywhere;white-space:pre-wrap;cursor:pointer}
 .listen-row .orig{display:block;font-size:13px;color:var(--muted);margin-top:5px;line-height:1.45}
-
 /* 아래 한 줄 */
 .bar{border-top:1px solid var(--line);padding:8px 10px calc(10px + env(safe-area-inset-bottom));display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:6px}
 .bar-left{justify-self:start;display:flex;gap:5px}.bar-right{justify-self:end;display:flex;gap:4px}
 .sbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:48px;height:50px;padding:3px 5px;border:1px solid var(--line);background:var(--surface);border-radius:12px;color:var(--text)}
 .sbtn span{font-size:10px;line-height:1.1;white-space:nowrap;color:var(--muted)}
-.sbtn.off{opacity:.55}
-.sbtn.wide span{font-size:11px}
-.mic-wrap{display:flex;flex-direction:column;align-items:center;gap:3px}
-.mic{position:relative;border:0;border-radius:50%;width:62px;height:62px;display:grid;place-items:center;color:#fff;background:linear-gradient(145deg,#a9b6b2,#8d9a96);box-shadow:0 4px 12px #0002}
-.mic.on{background:var(--acc)}
-.mic.on::before,.mic.on::after{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid var(--acc);opacity:.5;animation:ring 1.8s ease-out infinite}
-.mic.on::after{animation-delay:.9s}
-.mic.talk{background:#d9962f}
 @keyframes ring{from{transform:scale(1);opacity:.6}to{transform:scale(1.55);opacity:0}}
 .mic-state{font-size:10px;color:var(--muted);white-space:nowrap}
 .font-btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;width:34px;height:50px;font-weight:800;font-size:16px;line-height:1;padding:0}
 .font-btn small{display:block;font-size:8px;font-weight:500;margin-top:3px;color:var(--muted)}
-
 /* 서랍 */
-.side-tab{position:absolute;top:45%;right:0;transform:translateY(-50%);width:24px;height:84px;border-radius:9px 0 0 9px;border:0;background:var(--accent);color:#fff;font-size:14px;z-index:3}
 .drawer{position:absolute;top:0;bottom:0;right:0;width:min(84vw,320px);z-index:6;box-shadow:-7px 0 25px #0003;background:var(--bg);padding:calc(22px + env(safe-area-inset-top)) 16px 18px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .overlay{position:absolute;inset:0;background:#0005;z-index:5}
 .drawer-close{float:right;background:none;border:0;font-size:24px}
@@ -90,7 +75,6 @@ svg{display:block}
 .drawer-item{width:100%;padding:13px 12px;text-align:left;background:var(--surface);border:0;border-radius:12px;margin-bottom:8px;font-weight:700}
 .drawer-item small{display:block;font-weight:400;font-size:12px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .drawer-item.strong{background:var(--accent);color:#fff}.drawer-item.strong small{color:#ffffffd0}
-
 /* 창 */
 .modal{position:absolute;inset:0;z-index:10;background:var(--bg);display:flex;flex-direction:column;padding:calc(18px + env(safe-area-inset-top)) 18px calc(16px + env(safe-area-inset-bottom))}
 .modal-head{display:flex;align-items:center;gap:8px}
@@ -101,11 +85,6 @@ svg{display:block}
 .ai-badge i{width:8px;height:8px;border-radius:50%;background:#fff;animation:blink 1s infinite}
 @keyframes blink{50%{opacity:.2}}
 .modal-content{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding-top:16px}
-.enlarge-body{display:flex;flex-direction:column;justify-content:center;min-height:100%}
-.sub-text{font-size:17px;color:var(--muted);margin-bottom:14px}
-.big-text{font-size:clamp(27px,8vw,52px);font-weight:700;line-height:1.5;overflow-wrap:anywhere;transition:transform .2s;align-self:flex-start}
-.big-text.rotated{transform:rotate(180deg)}
-.tap-tip{font-size:12px;color:var(--muted);text-align:center;margin-top:18px}
 .actions{display:flex;gap:8px;flex-wrap:wrap;padding-top:12px}
 .action{padding:11px 14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font-weight:600}
 .primary{background:var(--blue);color:#fff;border:0}
@@ -129,9 +108,6 @@ svg{display:block}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{border:1px solid var(--line);background:var(--surface);border-radius:16px;padding:7px 12px;font-size:14px;white-space:nowrap}
 .chip.on{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:650}
-.dl-row{display:flex;align-items:center;gap:8px;padding:7px 0}
-.dl-row b{min-width:70px}.dl-row span{flex:1;font-size:12px;color:var(--muted)}
-.dl-row .action{padding:8px 12px;font-size:14px}
 .phrase{width:100%;text-align:left;border:0;background:var(--surface);border-radius:12px;padding:11px 13px;margin-bottom:7px}
 .phrase small{display:block;color:var(--muted);font-size:14px;margin-top:3px}
 .confirm-back{position:absolute;inset:0;background:#0006;z-index:40;display:flex;align-items:center;justify-content:center;padding:24px}
@@ -143,52 +119,23 @@ svg{display:block}
 .bubble .ctrls{display:flex;justify-content:flex-end;gap:2px;margin:4px -8px -6px 0}
 .bubble .ctrl,.listen-row .ctrl{border:0;background:transparent;color:var(--muted);opacity:.65;min-width:32px;min-height:30px;border-radius:8px;font-size:14px;font-weight:700;display:grid;place-items:center}
 .bubble .ctrl.on,.listen-row .ctrl.on{opacity:1;color:var(--accent)}
-.listen-row{position:relative}.listen-row.preview{color:var(--muted)}.listen-row.preview:after{content:'미리 보기 · 문장이 끝나면 바뀜';display:block;font-size:11px;opacity:.7;margin-top:4px}
+.listen-row{position:relative}
 .bubble .ctrl.edit-ctrl,.listen-row .ctrl.edit-ctrl{font-size:15px;font-weight:400}
-.pron-note{font-size:.85em;opacity:.7}
 .faint{opacity:.65;font-weight:400;font-size:11px}
 .photo-prev{display:block;max-width:100%;max-height:200px;margin:12px auto 0;border-radius:12px}
-.photo-out{margin-top:12px;padding:14px;border-radius:14px;background:var(--surface)}
-.photo-tr{font-size:20px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
-.photo-orig{margin-top:10px;font-size:13px;color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.5}
 .pron{display:block;font-size:.72em;color:var(--muted);margin-top:4px;line-height:1.45}
 .bubble .fixing{display:block;font-size:12px;color:#7b4ed6;opacity:.75;margin-top:4px}
 .live{align-self:flex-start;max-width:94%;border:1.5px dashed var(--line);border-radius:var(--radius);padding:10px 14px;color:var(--muted);font-size:17px;margin-bottom:12px;white-space:pre-wrap}
 .live b{display:block;font-size:11px;font-weight:600;margin-bottom:3px}
-.pending{border:1.5px solid var(--accent);background:var(--surface);border-radius:var(--radius);padding:12px 14px 10px;margin-bottom:12px;position:relative;overflow:hidden}
-.pending .ptext{font-size:18px;line-height:1.5;white-space:pre-wrap}
-.pending .prow{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
-.pending .prow button{border:0;border-radius:12px;padding:9px 14px;font-weight:700}
-.pending .pfix{background:var(--bg);border:1px solid var(--line)!important}
-.pending .psend{background:var(--blue);color:#fff}
-.pending .pbar{position:absolute;left:0;bottom:0;height:3px;background:var(--accent);animation:shrink linear forwards}
-@keyframes shrink{from{width:100%}to{width:0}}
 .sbtn,.font-btn{transition:transform .1s,background .2s}
 .sbtn:active,.font-btn:active{transform:scale(.92)}
-.sbtn.m-ko{background:#e2f4e8;border-color:#bfe2cb}
-.sbtn.m-foreign{background:#e1edfc;border-color:#c0d6f3}
-.sbtn.m-auto{background:#eee5fb;border-color:#d6c6f2}
-.sbtn.m-both{background:#fff2d9;border-color:#f1d9a6}
 .flash{animation:flash .45s ease-out}
 @keyframes flash{0%{background:#cfe9ff;transform:scale(.92)}100%{transform:scale(1)}}
-.mic.on.l-ko{background:#d9f1e2;color:#1d7a4b}
-.mic.on.l-foreign{background:#dceafc;color:#1f5fa8}
-.mic.on.l-ko::before,.mic.on.l-ko::after{border-color:#2f9e63}
-.mic.on.l-foreign::before,.mic.on.l-foreign::after{border-color:#2f78c9}
-.ai-state{font-size:9px;color:var(--muted);opacity:.7;white-space:nowrap}
 .ai-state.on{color:#7b4ed6;opacity:.85}
-.ai-state{display:block;font-size:14px!important;font-weight:600;text-align:center;padding:7px 6px;border:1px solid currentColor;border-radius:10px;overflow:hidden;text-overflow:ellipsis}
+.ai-state{display:block;font-size:14px;font-weight:600;text-align:center;padding:7px 6px;border:1px solid currentColor;border-radius:10px;overflow:hidden;text-overflow:ellipsis;color:var(--muted);opacity:.7;white-space:nowrap}
 .ai-state.tier{cursor:pointer;opacity:.95}
 .listen-row.now{background:#fff3f7;box-shadow:none;font-weight:400}
 .listen-row .l-orig{color:#3f9d6e;opacity:.9;line-height:1.4;margin-bottom:4px}
-.ref{background:var(--surface);border:2px solid transparent;border-radius:12px;padding:10px 12px;margin-bottom:8px;cursor:pointer;user-select:none}
-.ref.prio{border-color:#3f9d6e;background:#3f9d6e26}.ref.off{opacity:.45}
-.ref-top{display:flex;align-items:center;gap:8px}.ref-top b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ref-k{font-size:11px;padding:2px 6px;border-radius:6px;background:var(--line);white-space:nowrap}.ref.prio .ref-k{background:#3f9d6e;color:#fff}
-.ref-x{border:0;background:transparent;font-size:15px;color:var(--muted);min-width:28px}
-.ref-onoff{border:1px solid var(--line);background:var(--bg);border-radius:8px;font-size:12px;padding:3px 7px}
-.ref-sum{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.45;white-space:pre-wrap}
-.ref-terms{font-size:12px;margin-top:6px;line-height:1.5;color:#3f9d6e}
 .side-tabs{position:absolute;right:0;top:45%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:3}
 .side-tab2{width:26px;height:108px;border:0;border-radius:9px 0 0 9px;color:#fff;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;box-shadow:-2px 2px 8px #0002}
 .side-tab2 i{font-style:normal;font-size:11px;opacity:.85}.side-tab2 span{font-size:11px;font-weight:700;writing-mode:vertical-rl;letter-spacing:2px}
@@ -211,7 +158,7 @@ svg{display:block}
 .rg-add{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:8px}
 .rg-addb{border:1px dashed #0003;background:#ffffff80;border-radius:9px;padding:5px 0;font-size:16px;color:#1d2a35}.rg-addb small{display:block;font-size:9px;margin-top:1px}
 .rg-colors{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 12px}.rg-color{width:36px;height:36px;border-radius:50%;border:2px solid #0001}.rg-color.on{border:3px solid #2e9b62}
-.rec-big{font-size:22px;font-weight:700;text-align:center;margin:26px 0 6px;color:#c0392b}.rec-time{font-size:28px;text-align:center;font-variant-numeric:tabular-nums;margin:0 0 16px}
+.rec-time{font-size:28px;text-align:center;font-variant-numeric:tabular-nums;margin:0 0 16px}
 .bubble .ctrls .sel-dot{margin-right:auto}
 .sel-dot{border:0;background:transparent;color:#2e9b62;font-size:18px;min-width:30px;min-height:30px;opacity:.55;line-height:1}.sel-dot.on{opacity:1}
 .listen-row.picked,.pair.picked .bubble:first-child{box-shadow:0 0 0 2px #2e9b6266 inset}
@@ -224,12 +171,10 @@ svg{display:block}
 .entry-mode-menu button{background:none;border:0;border-radius:7px;font-size:12px;padding:8px 9px;color:var(--text)}
 .entry-mode-menu button.on{background:var(--surface)}
 .home-btn.play-all.sel{background:#e2f4e9}
-.ph-chips{margin:10px 0 6px}.ph-all{margin:6px 0 10px}
+.ph-chips{margin:10px 0 6px}
 .ph-block{background:var(--surface);border-radius:12px;padding:10px 12px;margin-bottom:10px}
 .ph-top{display:flex;align-items:center;gap:6px;margin-bottom:4px}
-.ph-lang,.ph-other{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:4px 6px;font-size:13px}
-.ph-other{margin-top:8px;width:100%}
-.ph-say{border:0;background:transparent;color:var(--accent);min-width:32px;min-height:30px;display:inline-grid;place-items:center}
+.ph-lang{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:4px 6px;font-size:13px}
 .ph-o{font-size:17px;font-weight:600;line-height:1.5;white-space:pre-wrap}
 .ph-tr{display:flex;align-items:flex-start;gap:6px;margin-top:6px;font-size:15px;line-height:1.5;white-space:pre-wrap;color:var(--muted)}.ph-tr span{flex:1}
 .tm-open{width:100%;text-align:left;margin-bottom:6px}
@@ -243,8 +188,6 @@ svg{display:block}
 .tm-b{border:0;background:transparent;min-width:34px;min-height:34px;font-size:15px;color:var(--muted)}
 .listen-row .l-tr{line-height:1.5}
 .listen-row.waiting{border:1px dashed rgba(63,157,110,.45)}
-.listen-row .l-wait{display:inline-block;font-size:11px;font-weight:700;color:#3f9d6e;background:rgba(63,157,110,.12);border-radius:6px;padding:1px 6px;margin-bottom:4px}
-.listen-row.live{color:var(--muted);font-style:italic;background:transparent;border:1px dashed var(--line)}
 .big-ov{position:absolute;inset:0;background:var(--bg);z-index:60;overflow:hidden}
 .big-stage{position:absolute;top:50%;left:50%;display:flex;flex-direction:column;padding:10px 16px 8px;transition:transform .25s}
 .big-bar{display:flex;align-items:flex-start;gap:8px}
@@ -264,29 +207,21 @@ svg{display:block}
 .saved-row .drawer-item.saved{flex:1;min-width:0;font-weight:600}
 .saved-row .drawer-item.saved b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .saved-x{border:0;background:transparent;color:var(--muted);padding:0 6px;margin-bottom:8px}
-.by-tag{display:block;font-size:11px;opacity:.65;margin-top:4px}
-.ctrl.retr{font-size:12px;padding:2px 8px;width:auto}
 /* L22: 듣기 조작줄의 글씨와 간격만 통일. */
 .listen-row,.pair{--ctrl-gap:clamp(4px,1.1vw,8px)}
 .listen-row .ctrls,.bubble .ctrls{justify-content:flex-start;column-gap:var(--ctrl-gap);row-gap:4px}
 .listen-row .entry-engine,.bubble .entry-engine{border:0;border-radius:0;background:transparent;color:#2e9b62;font-size:12px;font-weight:700;line-height:1.2;text-decoration:none;padding:2px 4px;margin-left:0;min-height:30px;white-space:nowrap;opacity:.8}
 .listen-row .ctrls .ctrl,.bubble .ctrls .ctrl{min-width:24px;padding:2px 4px}
 .listen-row .ctrls .sel-dot,.bubble .ctrls .sel-dot{margin-right:0;min-width:24px;padding:2px 4px}
-
 .head-nav{display:flex;gap:4px}
-.ai-result{margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--surface);font-size:14px;line-height:1.5;white-space:pre-wrap}
-.ai-result.bad{background:#fff0e0;color:#8a4b12}
 .drawer-item.add{background:transparent;border:1.5px dashed var(--line);color:var(--accent);text-align:center}
 .phrase.mine{border-left:4px solid var(--accent)}
 .danger-link{border:0;background:none;color:#c0392b;font-weight:600;padding:10px 4px}
 /* v7 */
-.home-flag{position:absolute;top:22%;left:50%;transform:translateX(-50%);font-size:150px;opacity:.9;filter:drop-shadow(0 8px 20px #0005)}
 .recent{position:relative;display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:0 2px;margin-bottom:10px;max-width:min(92vw,380px);font-size:11px;color:#ffffffaa;text-shadow:0 1px 3px #000c}
 .recent span{margin-right:2px}
 .recent button{border:0;background:transparent;color:#ffffffc0;font-size:11px;padding:3px 6px;text-decoration:none}
 .home-tip2{position:relative;color:#ffffffc8;font-size:12px;margin-top:6px;text-shadow:0 1px 3px #000c}
-.long-tip{font-style:normal;font-weight:400;font-size:11px;color:var(--muted);opacity:.8}
-.drawer-item.strong .long-tip{color:#fff}
 /* v31: 말하기 버튼 */
 .talk-row{display:flex;gap:8px;padding:10px 12px 4px;border-top:1px solid var(--line)}
 .talk{--c:#2f9e63;--soft:#e2f4e8;position:relative;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;height:66px;border:2px solid var(--c);background:var(--soft);color:var(--c);border-radius:16px;font-size:18px;font-weight:800;transition:transform .1s}
@@ -299,6 +234,9 @@ svg{display:block}
 .talk small.dim{opacity:.6;font-size:10px}
 .screen.listen .talk-row{justify-content:center}
 .screen.listen .talk{flex:0 1 150px}
+.chunk-btn{flex:0 0 58px;height:66px;border:1px solid var(--line);background:var(--surface);border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0;color:var(--text)}
+.chunk-btn span{font-size:14px;font-weight:700;white-space:nowrap}.chunk-btn small{font-size:10px;color:var(--muted)}
+.chunk-btn:active{transform:scale(.95)}
 .note-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
 .note-grid .drawer-item{margin:0;padding:12px 8px;text-align:center;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .note-grid .drawer-item.empty{opacity:.55}
@@ -310,8 +248,6 @@ svg{display:block}
 .set-tabs{position:sticky;top:-16px;z-index:2;display:flex;gap:4px;background:var(--bg);padding:6px 0 10px;margin-top:-6px}
 .set-tabs button{flex:1;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:12px;padding:9px 2px;font-size:13px;font-weight:600}
 .set-tabs button.on{background:var(--accent);border-color:var(--accent);color:#fff}
-.sw-row{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:15px}
-.sw-row span{flex:1}.sw-row input{width:22px;height:22px}
 /* v10 */
 .home-scene{position:absolute;inset:0;width:100%;height:100%}
 .lang-back{position:absolute;inset:0;z-index:30;background:#0005}
@@ -324,7 +260,6 @@ svg{display:block}
 .dl-card.got{background:var(--ko)}
 .dl-btn{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:5px 8px;font-size:12px;font-weight:600;width:100%}
 /* v8 */
-.dim-btn{position:absolute;right:12px;bottom:calc(166px + env(safe-area-inset-bottom));z-index:4;border:1px solid var(--line);background:var(--bg);color:var(--text);border-radius:20px;padding:8px 13px;font-size:13px;font-weight:650;box-shadow:0 3px 10px #0002}
 .dim-overlay{position:absolute;inset:0;z-index:60;background:#000;touch-action:manipulation}
 .dim-box{position:absolute;color:#6b6b6b;animation:drift 40s ease-in-out infinite alternate}
 .dim-text{font-size:15px}
@@ -339,12 +274,10 @@ svg{display:block}
 .ios-banner span{flex:1}
 .top-right .icon-btn{padding:5px}
 .key-link{display:inline-block;text-decoration:none;margin:2px 0 4px;background:#fff7e6;border-color:#f0d9a8;color:#7a5200}
-.plan-box{font-size:13px;line-height:1.7;background:var(--surface);border-radius:12px;padding:12px 14px}
 .version{text-align:center;font-size:12px;color:var(--muted);padding:22px 0 8px;user-select:none}
 .admin-box{border:1.5px dashed var(--accent);border-radius:14px;padding:12px 14px;margin:6px 0 14px}
 .admin-box h4{margin:0 0 6px}
 .admin-link{display:block;text-align:center;text-decoration:none;margin:8px 0}
-.help-text{margin:0;font-size:15px;line-height:1.7;white-space:pre-line}
 @media(min-width:750px){body{position:static;overflow:auto}#app{--app-h:min(100dvh,920px);min-height:650px;margin:2vh auto;border-radius:22px;box-shadow:0 0 22px #0001}.home,.screen{min-height:650px}}
 /* v33: 첫 화면 버전·언어 표시 */
 .pull-ind{position:absolute;top:calc(max(8px, env(safe-area-inset-top)) + 28px);left:50%;transform:translateX(-50%);background:#000a;color:#fff;font-size:14px;padding:6px 14px;border-radius:16px;opacity:0;z-index:25;pointer-events:none;transition:opacity .1s}
@@ -360,15 +293,13 @@ svg{display:block}
 .card-content{white-space:pre-wrap;line-height:1.6;overflow-wrap:anywhere}
 .keep-terms-choice{display:flex;align-items:center;gap:8px;margin:12px 0}
 .personal-hub{display:block;width:100%;text-align:left;padding:12px;margin:7px 0;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);font-size:15px}
-
 /* L25: 짧은 조작 이름, 균등한 간격. */
 .bubble .ctrls,.listen-row .ctrls{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:2px;margin-right:0}
 .ph-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
 .ph-grid img{width:100%;height:90px;object-fit:cover;border-radius:8px}
 .ph-editor{width:100%;min-height:85px;font:inherit;line-height:1.5;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:inherit}
 .ph-history{display:flex;gap:10px;align-items:center;margin:12px 0}.ph-history img{width:68px;height:68px;object-fit:cover;border-radius:8px}
-.ph-history .action{flex:1}.ph-say.on,.action.on{color:var(--accent);border-color:var(--accent)}
-
+.ph-history .action{flex:1}.action.on{color:var(--accent);border-color:var(--accent)}
 /* L26: 두 모드 원문·번역에 같은 조작줄. 막대·실제 배속 표시 복구. */
 .unified-controls{display:flex!important;align-items:center;justify-content:space-between!important;gap:clamp(3px,.8vw,7px)!important;flex-wrap:nowrap!important;min-width:0}
 .unified-controls button{flex-shrink:0;min-width:20px!important;padding:2px!important;font-size:11px}
@@ -393,6 +324,25 @@ svg{display:block}
 .entry-metric{font-size:10px;color:var(--muted);opacity:.75;white-space:nowrap;font-weight:400}
 .pair .bubble:first-child{padding-bottom:2px}
 .o-say{border:0;background:transparent;color:var(--muted);opacity:.7;padding:0 2px 0 6px;vertical-align:-2px;display:inline-flex;min-height:0}
+.screen.record{--acc:#c0392b}
+.rec-item{background:var(--surface);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px}
+.rec-item.live{box-shadow:0 0 0 2px #c0392b55 inset}
+.rec-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.rec-head b{font-size:15px}.rec-head small{color:var(--muted);font-size:12px}
+.rec-head .rec-live{color:#c0392b;font-weight:700}
+.rec-btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.rec-btns button{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:7px 10px;font-size:13px;font-weight:600}
+.rec-btns button.done{border-color:#2e9b6288;color:#1f6f45}.rec-btns button:disabled{opacity:.5}
+.rec-audio{width:100%;margin-top:9px}
+.rec-busy{font-size:13px;color:#7b4ed6;margin-top:8px}
+.rec-out{margin-top:9px;background:var(--bg);border-radius:10px;padding:8px 12px 10px}
+.rec-out-h{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:4px}.rec-out-h span{flex:1}
+.rec-out-h button{border:0;background:transparent;color:var(--muted);font-size:12px;padding:5px 6px}
+.rec-text{font-size:14px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;max-height:40vh;overflow-y:auto}
+.rec-bar{border-top:1px solid var(--line);padding:10px 14px calc(14px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:6px}
+.rec-clock{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}
+.rec-go{border:0;border-radius:40px;padding:14px 28px;font-size:18px;font-weight:800;background:#c0392b;color:#fff;min-width:220px}
+.rec-go.on{background:#243f37}
+.rec-tip{font-size:11px;color:var(--muted);text-align:center;line-height:1.5}
 </style>
 </head>
 <body><div id="app"></div>
@@ -477,11 +427,9 @@ const ICON={
   speaker:w=>svg(w,'<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18 6.5a7.5 7.5 0 0 1 0 11"/>'),
   mute:w=>svg(w,'<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/>'),
   keyboard:w=>svg(w,'<rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M7 14h10"/>'),
-  globe:w=>svg(w,'<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>'),
   home:w=>svg(w,'<path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/>'),
   share:w=>svg(w,'<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.5M8.2 13.2l7.6 4.5"/>'),
   gear:w=>svg(w,'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
-  help:w=>svg(w,'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6"/><path d="M12 17h.01"/>'),
   full:w=>svg(w,'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>'),
   trash:w=>svg(w,'<path d="M4 7h16"/><path d="M9 7V4.5h6V7"/><path d="M6.5 7l1 13h9l1-13"/><path d="M10 11v5M14 11v5"/>'),
   camera:w=>svg(w,'<path d="M4 8h3l1.5-2.5h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>'),
@@ -509,34 +457,20 @@ const DEFAULT_NOTES=[
   {t:'도움 요청',x:'도와주세요. 한국어 통역이 필요합니다.'}
 ];
 const sizes=[14,17,20,25,31];
-const speechModes=['양쪽',null,'한국어','끔'];
-const speechCls=['m-both','m-foreign','m-ko',''];
 const recogModes=['ko','foreign','auto'];
 
 function store(k,v){try{localStorage.setItem(k,v)}catch{}}
 function load(k,d=''){try{return localStorage.getItem(k)??d}catch{return d}}
 function loadJSON(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}}
 
-const state={listenStopping:false,listenFrom:'foreign',geminiVoice:'',toneFollow:false,autoVoice:false,dim:false,earListen:false,adminOpen:false,page:'home',mode:'conversation',lang:2,items:[],listening:[],speech:0,koSize:0,foreignSize:0,listenKoSize:0,listenForeignSize:0,mic:false,recognizer:null,side:false,modal:null,interim:'',sourceTurn:0,speaking:false,recog:'ko',theme:'basic',rate:1.3,voices:{},confirmWait:0,pending:null,listenLang:'ko',flash:null};
-(()=>{const s=loadJSON('travel_settings',{});const old=!(s.v>=7);
-  let sp=old?({0:0,1:0,2:1,3:2})[s.speech??0]??0:(s.speech??0);
-  const pre10=!(s.v>=10);if(pre10&&sp===2)sp=3;
-  Object.assign(state,{lang:s.lang>=0&&s.lang<LANGS.length?s.lang:2,koSize:s.koSize??0,origSize:s.origSize??0,foreignSize:Math.min(s.foreignSize??0,4),speech:0,recog:recogModes.includes(s.recog)?s.recog:'ko',theme:s.theme||'basic',rate:pre10?1.3:(s.rate||1.3),voices:s.voices||{},geminiVoice:'',toneFollow:false,autoVoice:false,listenFrom:s.listenFrom==='ko'?'ko':'foreign',earListen:!!s.earListen,confirmWait:0});
-  // V33 첫 실행: 기본값(속도 1.3배 · 테마 기본 · 바로 번역 · 휴대폰 기본 목소리)으로 한 번 맞춤
-  if(!(s.v>=33)){state.rate=1.3;state.theme='basic';state.confirmWait=0;state.voices={}}
-  if(!(s.v>=34))state.rate=1.3; // L13: 기본 말하는 속도 1.3배
-  state.confirmWait=0;
-  state.listenKoSize=Number.isInteger(s.listenKoSize)?Math.max(0,Math.min(4,s.listenKoSize)):0;
-  state.listenForeignSize=Number.isInteger(s.listenForeignSize)?Math.max(0,Math.min(4,s.listenForeignSize)):0;
-  if(!s.defaults23){
-    state.koSize=state.foreignSize=state.origSize=state.listenKoSize=state.listenForeignSize=0;
-    state.rate=1.3;store('gem_tier','fast');
-    store('tr_engine',load('ai_key').trim()?'gemini':'free');
-  }
+const state={listenStopping:false,listenFrom:'foreign',dim:false,adminOpen:false,page:'home',mode:'conversation',lang:2,items:[],listening:[],speech:0,koSize:0,foreignSize:0,listenKoSize:0,listenForeignSize:0,mic:false,recognizer:null,side:false,modal:null,interim:'',sourceTurn:0,speaking:false,recog:'ko',rate:1.5,voices:{},listenLang:'ko',flash:null};
+(()=>{const s=loadJSON('travel_settings',{});
+  const size=v=>Number.isInteger(v)?Math.max(0,Math.min(4,v)):0;
+  Object.assign(state,{lang:s.lang>=0&&s.lang<LANGS.length?s.lang:2,koSize:size(s.koSize),foreignSize:size(s.foreignSize),listenKoSize:size(s.listenKoSize),listenForeignSize:size(s.listenForeignSize),recog:recogModes.includes(s.recog)?s.recog:'ko',rate:s.rate||1.5,voices:s.voices||{},listenFrom:s.listenFrom==='ko'?'ko':'foreign'});
   // V0: 기본은 대화·듣기 모두 Gemini 빠름 (키가 없으면 저절로 무료 번역기)
   if(load('defaults_v0')!=='1'){store('tr_engine','gemini');store('gem_tier','fast');store('defaults_v0','1')}
   // V1: 처음 한 번 — 말하는 속도 1.5배, 글씨는 대화·듣기 모두 가장 작게
-  if(load('defaults_v1')!=='1'){state.rate=1.5;state.koSize=state.foreignSize=state.origSize=state.listenKoSize=state.listenForeignSize=0;store('defaults_v1','1')}
+  if(load('defaults_v1')!=='1'){state.rate=1.5;state.koSize=state.foreignSize=state.listenKoSize=state.listenForeignSize=0;store('defaults_v1','1')}
 })();
 
 /* 자주 쓰는 문장 (제목+문장 목록, 추가·삭제 가능) */
@@ -551,15 +485,13 @@ if(!load('notes_add_v12')){
   ['숙소','일정표'].forEach(t=>{if(!notes.some(n=>n.t===t)){const d=DEFAULT_NOTES.find(n=>n.t===t);notes.splice(at,0,{t,x:d.x});at++}else at=notes.findIndex(n=>n.t===t)+1});
   saveNotes();store('notes_add_v12','1');
 }
-const NOTE_TIP=['자기소개','방문 목적','숙소','일정표'];
 let customPhrases=loadJSON('custom_phrases',{});
 const saveCustom=()=>store('custom_phrases',JSON.stringify(customPhrases));
 function allPhrases(){const out={};for(const c of Object.keys(PHRASES))out[c]=[...PHRASES[c]];for(const c of Object.keys(customPhrases)){out[c]=[...(out[c]||[]),...customPhrases[c].filter(p=>!(out[c]||[]).includes(p))]}return out}
 const isCustom=(cat,ko)=>(customPhrases[cat]||[]).includes(ko);
 let pronCache=loadJSON('pron_cache',{});
 let refs=loadJSON('travel_refs',[]); // L11: 배경 자료 [{id,kind,title,sum,terms:[],text,on,prio}]
-let glossary=loadJSON('glossary',[]);   // [{word:'이승철', heard:'이성철,이승처', out:'Lee Seung-chul'}]
-const saveGlossary=()=>store('glossary',JSON.stringify(glossary));
+let glossary=loadJSON('glossary',[]);   // 예전 단어장 — 처음 한 번 배경 자료로 옮길 때만 읽음
 /* L5: 단어 그룹은 모두 휴대폰에 저장 (설정 → 단어 그룹 탭에서 만들기·고치기·지우기).
    아래 SEED_GROUPS는 L4까지 쓰던 그룹을 처음 한 번만 휴대폰으로 옮길 때 씀. 그 뒤엔 휴대폰 저장만 씀.
    단어 형식: '바른 말|잘못 들리는 말,잘못 들리는 말' */
@@ -628,7 +560,7 @@ function glossOut(){const c=active().code;return allGloss().filter(x=>termFor(x,
 function glossaryHint(){const w=allGloss().slice(0,160).map(g=>g.out?`${g.word}(${g.out})`:g.word);return w.length?`\n다음 단어는 반드시 이렇게 쓰세요: ${w.join(', ')}`:''}
 (()=>{const h=loadJSON('travel_history',{});const fix=e=>{e.speakingNow=false;e.queued=false;delete e.readingField;if(e.translation==='번역 중…'||e.correcting){e.correcting=false;if(!e.translation||e.translation==='번역 중…'){e.translation='번역 중단됨';e.failed=true}}return e};state.items=(h.items||[]).map(fix);state.listening=(h.listening||[]).map(fix)})();
 
-function persist(){store('travel_settings',JSON.stringify({v:34,defaults23:true,speedMenu25:true,listenKoSize:state.listenKoSize,listenForeignSize:state.listenForeignSize,origSize:state.origSize,listenFrom:state.listenFrom,geminiVoice:state.geminiVoice,toneFollow:state.toneFollow,autoVoice:state.autoVoice,earListen:state.earListen,lang:state.lang,koSize:state.koSize,foreignSize:state.foreignSize,speech:state.speech,recog:state.recog,theme:state.theme,rate:state.rate,voices:state.voices,confirmWait:state.confirmWait}))}
+function persist(){store('travel_settings',JSON.stringify({v:35,listenKoSize:state.listenKoSize,listenForeignSize:state.listenForeignSize,listenFrom:state.listenFrom,lang:state.lang,koSize:state.koSize,foreignSize:state.foreignSize,recog:state.recog,rate:state.rate,voices:state.voices}))}
 function saveHistory(){store('travel_history',JSON.stringify({items:state.items.slice(-300),listening:state.listening.slice(-300)}))}
 const active=()=>LANGS[state.lang];
 const langOf=code=>LANGS.find(l=>l.code===code);
@@ -640,7 +572,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='V1 · Claude · 화면 정리·미리 다시 켜기 · 2026.11.10';
+const APP_VERSION='V2 · Claude · 묶음 시간·녹음 모드 · 2026.11.10';
 /* L18: 개발자 도구 window.L18_TIMINGS / console 표: 마지막 인식 갱신부터 TTS 시작까지(ms).
    브라우저 speechend가 있으면 실제 발화 종료 신호도 별도로 기록. 키·문장 내용은 기록하지 않음. */
 window.L21_TIMINGS=[];window.L20_TIMINGS=window.L18_TIMINGS=window.L21_TIMINGS;
@@ -692,7 +624,7 @@ window.fetch=async(url,opt)=>{
 function gemHalt(msg){
   if(gemStop)return;gemStop=msg;gemStopAt=Date.now();
   if(gemHalts++){try{render()}catch{}return} // L16: 다시 확인했는데 또 막혔으면 조용히 무료로 계속 (마이크는 그대로)
-  try{if(state.mic){stopMic();clearPending()}killAllMics()}catch{}
+  try{if(state.mic)stopMic();killAllMics()}catch{}
   try{$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),12000)}catch{}
   try{render()}catch{}
 }
@@ -700,46 +632,41 @@ const REPO='https://github.com/lsc571-max/travel';
 const isInstalled=()=>matchMedia('(display-mode: fullscreen)').matches||matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 const withTimeout=(p,ms)=>Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error('시간 초과')),ms))]);
 
-function askConfirm(msg,okLabel,onOk){
+function askYes(msg,okLabel){return new Promise(res=>askConfirm(msg,okLabel,()=>res(true),()=>res(false)))}
+function askConfirm(msg,okLabel,onOk,onCancel){
   const back=node('div','confirm-back','',$('#app'));
   const box=node('div','confirm-box','',back);
   node('p','',msg,box);
   const a=node('div','actions','',box);
-  button('취소','action',()=>back.remove(),a);
+  button('취소','action',()=>{back.remove();onCancel?.()},a);
   button(okLabel,'action danger',()=>{back.remove();onOk()},a);
-  back.onclick=e=>{if(e.target===back)back.remove()};
+  back.onclick=e=>{if(e.target===back){back.remove();onCancel?.()}};
 }
 
 /* ── 소리 ── */
-function voiceFor(code,tone){
+function voiceFor(code){
   const list=speechSynthesis.getVoices?.()||[];const want=state.voices[code];
-  if(want&&!(state.autoVoice&&tone)){const v=list.find(v=>v.name===want);if(v)return v}
+  if(want){const v=list.find(v=>v.name===want);if(v)return v}
   const loc=localeOf(code).toLowerCase(),pre=loc.slice(0,2);
   const norm=v=>v.lang.toLowerCase().replace('_','-');
   const m=list.filter(v=>norm(v).startsWith(pre)&&(code!=='zh-TW'||/tw|hk|hant/.test(norm(v)))) ;
   const pool=m.length?m:list.filter(v=>norm(v).startsWith(pre));
-  if(tone&&state.autoVoice){
-    const high=tone.hz>=175;
-    const pattern=high?/female|woman|여성|여자|soyeon|yuna|heami|zira|siri/i:/male|man|남성|남자|injoon|junwoo|david|daniel/i;
-    const matching=pool.find(v=>pattern.test(v.name));if(matching)return matching;
-  }
   return pool.find(v=>norm(v)===loc&&v.localService)||pool.find(v=>norm(v)===loc)||pool.find(v=>v.localService)||pool[0]||null;
 }
 let curAudio=null;
-function stopSpeech(){mediaToggle=null;mediaToken++;refreshMediaButtons();outInterrupt=null;setTimeout(micBack,0);if(state.playAll){state.playAll=false;setTimeout(()=>{if(state.page==='main')render()},0)}outGen++;outQ.forEach(x=>{if(x.entry)x.entry.queued=false});outQ.length=0;if(outCur){outCur.speakingNow=false;outCur=null}outBusy=false;try{speechSynthesis.cancel()}catch{}try{curAudio?.pause()}catch{}curAudio=null;if(state.speaking)speakEnd=Date.now();state.speaking=false;speakQ=0;setReading(null)}
+function stopSpeech(){mediaToggle=null;mediaToken++;refreshMediaButtons();outInterrupt=null;setTimeout(micBack,0);if(state.playAll){state.playAll=false;setTimeout(()=>{if(state.page==='main')render()},0)}outGen++;outQ.forEach(x=>{if(x.entry)x.entry.queued=false});outQ.length=0;if(outCur){outCur.speakingNow=false;outCur=null}outBusy=false;try{speechSynthesis.cancel()}catch{}try{curAudio?.pause()}catch{}curAudio=null;if(state.speaking)speakEnd=Date.now();state.speaking=false;setReading(null)}
 /* 지금 읽는 문장 옆 작은 막대 (읽는 속도) */
 let reading=null;
 function setReading(text){reading=text?{text}:null}
-function speak(text,code,tone,entry=null,field='translation'){
+function speak(text,code,entry=null,field='translation'){
   if(outBusy&&((entry&&outCur===entry&&(entry.readingField||'translation')===field)||(!entry&&reading?.text===text))){stopSpeech();render();return}
   // V38: 직접 누른 듣기 — 지금 소리를 멈추고 바로 읽음. 마이크는 끄지 않음
-  stopSpeech();const q=outReserve(code,entry);q.field=field;q.force=true;outReady(q,text,tone);
+  stopSpeech();const q=outReserve(code,entry);q.field=field;q.force=true;outReady(q,text);
 }
-/* V38: 말한 순서대로 소리 내기 + 뒤에 밀리면 자동으로 빠르게
-   밀린 문장 한두 개 1.5배 · 세 개 1.7배 · 네 개 이상 2배 (밀린 게 없으면 설정 속도) */
+/* 말한 순서대로 소리 내기 (V1부터 늘 설정의 말하는 속도) */
 const outQ=[];let outBusy=false,outGen=0,outCur=null,speakEnd=0;
 function outReserve(code,entry){const q={code,entry,text:null,ready:false};if(entry)entry.queued=true;outQ.push(q);return q}
-function outReady(q,text,tone){if(!q)return;latencyMark(q.entry?.timing,'ready');q.text=text||'';q.tone=tone;q.ready=true;pumpOut()}
+function outReady(q,text){if(!q)return;latencyMark(q.entry?.timing,'ready');q.text=text||'';q.ready=true;pumpOut()}
 function splitSentences(t){const out=[];String(t).split(/(?<=[.!?。！？])\s*/).forEach(p=>{p=p.trim();if(!p)return;if(p.length>200)out.push(...splitText(p,200));else out.push(p)});return out.length?out:[String(t)]}
 let outInterrupt=null;
 const isConv=()=>state.mode!=='listen';
@@ -752,7 +679,7 @@ function pumpOut(){
   if(!outQ.length&&state.playAll){state.playAll=false;if(state.page==='main')render()}
   if(!outQ.length||!outQ[0].ready){if(!outQ.length){mediaToggle=null;refreshMediaButtons()}micBack();return}
   if(!('speechSynthesis'in window)){outQ.length=0;return}
-  const q=outQ.shift(),gen=outGen,parts=splitSentences(q.text),v=voiceFor(q.code,q.tone);
+  const q=outQ.shift(),gen=outGen,parts=splitSentences(q.text),v=voiceFor(q.code);
   try{if(!curAudio&&(speechSynthesis.speaking||speechSynthesis.pending))speechSynthesis.cancel();if(speechSynthesis.paused)speechSynthesis.resume()}catch{} // 멈춰 버린 휴대폰 목소리 깨우기
   micYield();
   outBusy=true;state.speaking=true;outCur=q.entry;if(q.entry){q.entry.queued=false;q.entry.speakingNow=true;q.entry.readingField=q.field||'translation'}
@@ -804,10 +731,6 @@ async function playAllPick(){
   });
   state.playAll=true;render();pumpOut();
 }
-let speakQ=0;
-/* Gemini 목소리 (PCM 24kHz → WAV) */
-/* L1: 목소리 톤 분석은 뺌 (최종 안드로이드 앱에서 다시) */
-const takeTone=()=>null,startTone=()=>{},stopTone=()=>{};
 
 /* ── 이동 ── */
 /* L6: 첫 번역이 늦지 않게 Gemini 서버와 미리 연결해 둠 (모델 정보만 묻는 요청이라 크레딧 0) */
@@ -816,7 +739,7 @@ function warmGemini(){if(!aiReady()||!navigator.onLine||Date.now()-warmAt<60000)
   const k=encodeURIComponent(load('ai_key').trim());[gemModel(),'gemini-flash-lite-latest'].forEach(m=>fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}?key=${k}`).catch(()=>{}))}
 function goMain(){setTimeout(warmGemini,0);state.page='main';try{history.pushState({app:'main'},'')}catch{}render()}
 function goHome(){stopSpeech();state.modal=null;stopDictation();if(history.state?.app==='main')history.back();else home()}
-function home(){state.dim=false;resetTranscripts(false);stopDictation();state.page='home';state.modal=null;state.side=false;render()}
+function home(){recStop();recOpen=null;state.dim=false;resetTranscripts(false);stopDictation();state.page='home';state.modal=null;state.side=false;render()}
 function closeLayer(){stopRefCamera();if(state.modal?.type==='refPhotos'&&!state.modal.busy)releaseRefPhotos(state.modal);stopSpeech();if(refRec)stopRefRec();state.modal=null;state.side=false;stopDictation();render()}
 window.addEventListener('popstate',()=>{
   if(state.page!=='main')return;
@@ -846,8 +769,8 @@ function render(){
   root.replaceChildren();
   document.querySelector('meta[name=theme-color]').content=getComputedStyle(root).getPropertyValue('--accent').trim()||'#29865c';
   if(state.page==='home'){drawHome(root);return}
-  const listen=state.mode==='listen';
-  const s=node('main','screen'+(listen?' listen':''),'',root);
+  const listen=state.mode==='listen',rec=state.mode==='record';
+  const s=node('main','screen'+(listen?' listen':rec?' record':''),'',root);
   if(!navigator.onLine)node('div','offline-banner','인터넷 연결 없음 · 받아 둔 여행 문구와 자주 쓰는 문장만 쓸 수 있어요',s);
   if(isIOS&&load('ios_hide')!=='1'){
     const ib=node('div','ios-banner','',s);
@@ -861,24 +784,26 @@ function render(){
   versionTag.style.cssText='position:absolute;top:calc(8px + env(safe-area-inset-top));right:12px;font-size:9px;font-weight:400;opacity:.65;pointer-events:none;z-index:2;line-height:1;white-space:nowrap';
   const tl=node('div','top-left','',top);
   const hb=button('','home-btn',goHome,tl);hb.innerHTML=ICON.home(15)+'<span>처음</span>';
-  {const nSel=(listen?state.listening:state.items).filter(x=>x.sel).length;
+  if(!rec){const nSel=(listen?state.listening:state.items).filter(x=>x.sel).length;
    const pb=button('','home-btn play-all'+(state.playAll?' on':'')+(nSel?' sel':''),()=>state.playAll?stopPlayAll():playAllPick(),tl);
    pb.innerHTML=state.playAll?'■ <span>멈춤</span>':ICON.speaker(15)+`<span>${nSel?'선택 '+nSel:'전체'}</span>`;pb.title='차례로 듣기 (동그라미로 고른 문장만 듣기도 됨)'} // L13
   const mwrap=node('div','mode-wrap','',top);
-  button(listen?'듣기 모드 ⇄':'대화 모드 ⇄','mode',()=>{resetTranscripts(false);state.dim=false;state.mode=listen?'conversation':'listen';render()},mwrap);
+  // V2: 누를 때마다 대화 → 듣기 → 녹음 → 대화
+  button({conversation:'대화',listen:'듣기',record:'녹음'}[state.mode]+' 모드 ⇄','mode',()=>{if(recNow)return notify('녹음 중입니다. ■ 멈추고 저장을 누른 뒤 바꿔 주세요.');resetTranscripts(false);state.dim=false;recOpen=null;state.mode={conversation:'listen',listen:'record',record:'conversation'}[state.mode];render()},mwrap);
   // L7: 화면 어둡게는 제목 옆 작은 달로 (아래 글을 가리지 않게)
   if(listen&&!state.dim){const mb=button('🌙','moon-btn',()=>{if(!state.mic)notify('마이크를 켠 상태에서 쓰면 이어폰으로 계속 들을 수 있어요.');setDim(true)},mwrap);mb.title='화면 어둡게';mb.setAttribute('aria-label','화면 어둡게')}
   const tr=node('div','top-right','',top);
-  iconButton(ICON.share(21),'icon-btn','전체 보내기',shareAll,tr);
-  {const off=state.speech===3;const sb=iconButton(off?ICON.mute(21):ICON.speaker(21),'icon-btn snd'+(off?' off':''),off?'소리 켜기':'소리 끄기',()=>{state.speech=state.speech===3?0:3;persist();if(state.speech===3){stopSpeech();notify('🔇 소리를 껐습니다.')}else notify('🔊 소리를 켰습니다.');render()},tr)}
+  if(!rec)iconButton(ICON.share(21),'icon-btn','전체 보내기',shareAll,tr);
+  if(!rec){const off=state.speech===3;const sb=iconButton(off?ICON.mute(21):ICON.speaker(21),'icon-btn snd'+(off?' off':''),off?'소리 켜기':'소리 끄기',()=>{state.speech=state.speech===3?0:3;persist();if(state.speech===3){stopSpeech();notify('🔇 소리를 껐습니다.')}else notify('🔊 소리를 켰습니다.');render()},tr)}
   if(!isInstalled()&&document.documentElement.requestFullscreen)iconButton(document.fullscreenElement?ICON.exitFull(21):ICON.full(21),'icon-btn','전체 화면',toggleFullscreen,tr);
   iconButton(ICON.gear(22),'icon-btn','설정',openSettings,tr);
+  if(rec){drawRecord(s);const t=$('#transcript');if(t&&keep)t.scrollTop=keep.top;if(state.modal)drawModal(root);state.flash=null;return}
 
   if(listen&&state.mic){const live=node('div','listen-preview','',s);live.id='listenPreview';node('small','','받아쓰기',live);node('span','','',live);updateListenPreview()}
 
   const content=node('section','transcript','',s);content.oncontextmenu=ev=>{if(ev.target===content){ev.preventDefault();showTextActions(content,'','ko')}};content.id='transcript';
   listen?drawListen(content):drawPairs(content);
-  drawLiveAndPending(content);
+  drawLive(content);
 
   /* 말하기 버튼: 누르면 그 언어로 듣기 시작, 같은 버튼을 다시 누르면 멈춤 */
   const tr2=node('div','talk-row','',s);
@@ -889,6 +814,8 @@ function render(){
     tb.dataset.k=k;tb.innerHTML=`<span>${label}</span><small></small>`;
     if(k==='foreign')longPress(tb,()=>showLangPop(s));
   });
+  // V2: 듣기 모드 묶음 시간 — 누를 때마다 20초 → 40초 → 1분 → 5분 → 10분
+  if(listen){const cb=button('','chunk-btn',nextListenChunk,tr2);cb.innerHTML=`<span>⏱ ${chunkLabel(listenChunk())}</span><small>묶음</small>`;cb.title='몇 초씩 모아 번역할지 (누를 때마다 바뀜)'}
   const bar=node('footer','bar slim','',s);
   const bl=node('div','bar-left','',bar);
   const br=node('div','bar-right','',bar);
@@ -937,7 +864,7 @@ function render(){
 const talkKey=()=>state.mode==='listen'?(state.listenFrom==='ko'?'ko':'foreign'):state.recog;
 function pressTalk(k){
   const cur=talkKey();
-  /* V0 듣기 모드: 누르면 계속 듣다가 1분쯤 모이면 문장 끝에서 끊어 한 번에 번역.
+  /* 듣기 모드: 누르면 계속 듣다가 고른 묶음 시간(20초~10분)쯤 모이면 문장 끝에서 끊어 한 번에 번역.
      같은 버튼을 다시 누르면 1초 더 듣고 남은 말까지 번역한 뒤 끝. 다른 언어 버튼은 지금까지 들은 말을 번역하고 그 언어로 이어 듣기 */
   if(state.mode==='listen'){
     if(state.mic&&state.listenStopping)return;
@@ -949,11 +876,11 @@ function pressTalk(k){
   // V33: 자동으로 듣는 중에 한국어·외국어 버튼을 누르면 그 언어로 시작하지 않고 자동만 끔
   if(state.mic&&state.mode==='conversation'&&cur==='auto'&&k!=='auto'){toggleMic();return}
   if(state.mic&&cur===k){
-    if(k==='auto'){state.sourceTurn=state.listenLang==='ko'?1:0;stopSpeech();clearPending();pauseRecognizer();render();return}
+    if(k==='auto'){state.sourceTurn=state.listenLang==='ko'?1:0;stopSpeech();pauseRecognizer();render();return}
     toggleMic();return}
   if(state.mode==='listen')state.listenFrom=k==='ko'?'ko':'foreign';else state.recog=k;
   state.sourceTurn=0;persist();
-  if(state.mic){stopSpeech();clearPending();pauseRecognizer();render()}else toggleMic();
+  if(state.mic){stopSpeech();pauseRecognizer();render()}else toggleMic();
 }
 function updateMic(){
   const m=$('#micState');const cur=talkKey();
@@ -964,9 +891,9 @@ function updateMic(){
     const sm=b.querySelector('small'),big=b.querySelector('span'),auto=b.dataset.k==='auto';
     b.classList.toggle('as-ko',on&&auto&&state.listenLang==='ko');b.classList.toggle('as-foreign',on&&auto&&state.listenLang!=='ko');
     if(auto&&big)big.textContent=on?nameOf(state.listenLang):'자동';
-    if(sm){sm.classList.toggle('dim',on&&auto);sm.textContent=!on?(state.mode==='listen'?'눌러서 듣기':'눌러서 말하기'):auto?'옆 버튼 누르면 꺼짐':spk?'말하는 중':state.pending?'확인 중':state.mode==='listen'?(state.listenStopping?'마무리 중…':'듣는 중 · 누르면 끝'):isManualInput()?'말씀하세요 · 다시 눌러 번역':'듣는 중 · 누르면 멈춤'}
+    if(sm){sm.classList.toggle('dim',on&&auto);sm.textContent=!on?(state.mode==='listen'?'눌러서 듣기':'눌러서 말하기'):auto?'옆 버튼 누르면 꺼짐':spk?'말하는 중':state.mode==='listen'?(state.listenStopping?'마무리 중…':'듣는 중 · 누르면 끝'):isManualInput()?'말씀하세요 · 다시 눌러 번역':'듣는 중 · 누르면 멈춤'}
   });
-  if(m)m.textContent=!state.mic?'':state.speaking&&state.mode!=='listen'?'말하는 중':state.pending?'확인 중':nameOf(state.listenLang)+' 듣는 중';
+  if(m)m.textContent=!state.mic?'':state.speaking&&state.mode!=='listen'?'말하는 중':nameOf(state.listenLang)+' 듣는 중';
 }
 function followReading(){
   if(!outCur||(state.mode!=='listen'&&!entryReplayFocus.has(outCur))||state.modal||state.side)return false;
@@ -1031,7 +958,7 @@ function drawHome(root){
 
 function hint(parent,text){const p=node('div','hint','',parent);node('div','',text,p)}
 function drawPairs(parent){
-  if(!state.items.length&&!state.pending&&!state.interim)hint(parent,'아래 한국어·외국어 버튼을 누르고 말씀하세요.\n말하는 동안 글자가 여기에 보이고,\n같은 언어 버튼을 다시 누르면 전체 내용을 번역합니다.\n자동 버튼은 기존처럼 계속 통역합니다.\n\n오른쪽 ◀ 탭에 자주 쓰는 문장이 있습니다.');
+  if(!state.items.length&&!state.interim)hint(parent,'아래 한국어·외국어 버튼을 누르고 말씀하세요.\n말하는 동안 글자가 여기에 보이고,\n같은 언어 버튼을 다시 누르면 전체 내용을 번역합니다.\n자동 버튼은 기존처럼 계속 통역합니다.\n\n오른쪽 ◀ 탭에 자주 쓰는 문장이 있습니다.');
   state.items.forEach((item,i)=>{
     const pair=node('div','pair '+(item.source==='ko'?'turn-ko':'turn-foreign')+(item.speakingNow?' now':'')+(item.sel?' picked':''),'',parent);
     bubble(pair,item,i,'original');
@@ -1046,7 +973,7 @@ function entryControls(parent,item,listening=false){
   selDot(c,item);entryBadge(c,item);
   button(code==='ko'?scriptMark(other):'가','ctrl'+(item.pronT?' on':''),ev=>{ev.stopPropagation();item.pronT=!item.pronT;saveHistory();render()},c).title='발음 보기';
   starBtn(c,item);
-  iconButton('✎','ctrl edit-ctrl','말한 문장·번역 같이 고치기',ev=>{ev.stopPropagation();openEdit((listening?state.listening:state.items).indexOf(item),'both',listening?'listening':'items')},c);
+  iconButton('✎','ctrl edit-ctrl','말한 문장·번역 같이 고치기',ev=>{ev.stopPropagation();openEdit((listening?state.listening:state.items).indexOf(item),listening?'listening':'items')},c);
   sayBtn(c,item,'translation',17,'ctrl');
   if(item.photoId)button('📷','ctrl',()=>openSavedPhoto(item.photoId),c).title='저장된 사진 열기';
   return c;
@@ -1054,7 +981,7 @@ function entryControls(parent,item,listening=false){
 function sayBtn(parent,item,field,size,cls){
   const original=field==='original',text=original?item.original:item.translation,code=original?item.source:item.target;
   const speaking=item.speakingNow&&(item.readingField||'translation')===field;
-  return iconButton(speaking?'■':ICON.speaker(size),cls,speaking?'읽기 정지':(original?'말한 문장 듣기':'듣기'),ev=>{ev.stopPropagation();if(text&&!/번역 중|번역 실패|번역 중단/.test(text))speak(text,code,null,item,field)},parent);
+  return iconButton(speaking?'■':ICON.speaker(size),cls,speaking?'읽기 정지':(original?'말한 문장 듣기':'듣기'),ev=>{ev.stopPropagation();if(text&&!/번역 중|번역 실패|번역 중단/.test(text))speak(text,code,item,field)},parent);
 }
 function textActions(el,getText,code){
   el.classList.add('selectable-text');
@@ -1080,7 +1007,7 @@ function bubble(parent,item,index,field){
     entryControls(b,item)}
 }
 function drawListen(parent){
-  if(!state.listening.length&&!state.interim)hint(parent,'아래 언어 버튼을 누르면 계속 들으면서\n1분쯤 모이면 문장이 끝나는 곳에서 끊어\n한 번에 번역해 읽어 줍니다.\n같은 버튼을 다시 누르면 남은 말까지 번역하고 끝납니다.');
+  if(!state.listening.length&&!state.interim)hint(parent,'아래 언어 버튼을 누르면 계속 들으면서\n'+chunkLabel(listenChunk())+'쯤 모이면 문장이 끝나는 곳에서 끊어\n한 번에 번역해 읽어 줍니다.\n같은 버튼을 다시 누르면 남은 말까지 번역하고 끝납니다.\n⏱ 버튼으로 묶음 시간을 바꿀 수 있어요.');
   state.listening.forEach(x=>{
     const row=node('div','listen-row '+(x.source==='ko'?'turn-ko':'turn-foreign')+(x.speakingNow?' now':'')+(x.sel?' picked':'')+(x.correcting?' waiting':''),'',parent);
     const original=node('div','l-orig','',row);original.style.fontSize=sizes[x.source==='ko'?state.listenKoSize:state.listenForeignSize]+'px';
@@ -1093,7 +1020,6 @@ function drawListen(parent){
 /* ── L11·L12: 배경 자료 ──
    사진·PDF·음성 파일·녹음·명함을 올리면 Gemini가 제목·요약·용어·글 전체를 뽑아 휴대폰에 저장 (파일 자체는 저장 안 함)
    켜 둔 자료의 용어는 대화·듣기 모드 모두에 참고. 🟩 우선 자료(원고) 글 전체는 듣기 모드에서만 참고 */
-function openRefs(){stopDictation();state.modal=null;state.side='refs';render()}
 function refTerms(){const on=activeRefs();return on.filter(r=>r.prio).concat(on.filter(r=>!r.prio)).flatMap(r=>(r.terms||[]).map(x=>parseTerm(x).word)).filter(Boolean)}
 /* M29: 번역할 문장(과 앞 문장)에 실제로 나온 용어만 보냄 — 바른 말·잘못 들리는 말·외국어 표기 중 하나라도 나오면 관련 용어.
    최대 12개·머리글 포함 360자, 관련 용어가 없으면 '' (머리글도 안 보냄). 켜 둔 자료(activeRefs)만 보며 🟩 우선 자료 용어가 먼저.
@@ -1535,49 +1461,26 @@ function updateListenPreview(){
   const el=strip.querySelector('span');if(!el)return;
   if(!state.mic){el.textContent='';return}
   const lab=strip.querySelector('small'),t0=state.mode==='listen'&&manualTurn?.firstAt;
-  if(lab){const sec=t0?Math.floor((performance.now()-t0)/1000):0;lab.textContent=t0?'모으는 중 '+Math.floor(sec/60)+':'+String(sec%60).padStart(2,'0'):'받아쓰기'}
+  if(lab){const sec=t0?(performance.now()-t0)/1000:0;lab.textContent=t0?'모으는 중 '+fmtSec(sec)+' / '+fmtSec(listenChunk()):'받아쓰기'}
   el.textContent=state.interim||state.listenPreview||'말씀하세요';
   el.scrollLeft=el.scrollWidth;
 }
-function drawLiveAndPending(parent){
+setInterval(()=>{if(state.mic&&state.mode==='listen')updateListenPreview()},1000); // 모으는 시간 표시를 1초마다
+function drawLive(parent){
   updateDrainStatus(parent);
-  if(state.mode==='listen')return;
-  if(state.pending){
-    const p=state.pending;
-    const card=node('div','pending','',parent);
-    node('div','tiny',`${nameOf(p.source)} · 이대로 보낼까요?`,card);
-    node('div','ptext',p.text,card);
-    const row=node('div','prow','',card);
-    button('✎ 고치기','pfix',()=>fixPending(),row);
-    button('보내기 ▶','psend',()=>sendPending(),row);
-    if(p.wait>0){const bar=node('div','pbar','',card);const left=Math.max(0,p.until-Date.now());bar.style.animationDuration=left+'ms';bar.style.width=(left/(p.wait*1000)*100)+'%'}
-  }else if(state.interim){
-    const l=node('div',state.mode==='listen'?'listen-row live':'live','',parent);l.id='live';
-    if(state.mode!=='listen')node('b','',nameOf(state.listenLang)+' 듣는 중…',l);node('span','',state.interim,l);
-  }
+  if(state.mode==='listen'||!state.interim)return;
+  const l=node('div','live','',parent);l.id='live';
+  node('b','',nameOf(state.listenLang)+' 듣는 중…',l);node('span','',state.interim,l);
 }
 function updateLive(){
   updateDrainStatus();
   if(state.mode==='listen'){updateListenPreview();return}
   const t=$('#transcript');if(!t)return;let l=$('#live');
   if(!state.interim){l?.remove();return}
-  if(!l){t.querySelector('.hint')?.remove();l=node('div',state.mode==='listen'?'listen-row live':'live','',t);l.id='live';if(state.mode!=='listen')node('b','',nameOf(state.listenLang)+' 듣는 중…',l);node('span','',' ',l)}
+  if(!l){t.querySelector('.hint')?.remove();l=node('div','live','',t);l.id='live';node('b','',nameOf(state.listenLang)+' 듣는 중…',l);node('span','',' ',l)}
   l.lastChild.textContent=state.interim;
   if(!followReading())t.scrollTop=t.scrollHeight;
 }
-let pendingTimer=null;
-function clearPending(){clearTimeout(pendingTimer);state.pending=null}
-function startPending(text,source,timing){
-  if(source==='ko')text=fixHeard(text);
-  const tn=takeTone();
-  const wait=0; // L18: 대화는 확인 타이머 없이 바로 전송
-  if(!wait){consume(text,source,{fromMic:true,tone:tn,timing,toListen:false});return}
-  state.pending={text,source,wait,tone:tn,until:Date.now()+wait*1000};
-  clearTimeout(pendingTimer);pendingTimer=setTimeout(sendPending,wait*1000);
-  render();scrollEnd();
-}
-function sendPending(){const p=state.pending;if(!p)return;clearPending();consume(p.text,p.source,{fromMic:true,tone:p.tone})}
-function fixPending(){const p=state.pending;if(!p)return;clearTimeout(pendingTimer);state.modal={type:'fixPending',text:p.text,source:p.source};render()}
 
 function drawPron(parent,text,code){
   const key=code+'|'+text;
@@ -1683,7 +1586,7 @@ async function useNote(i){
 }
 function openNote(i){state.side=false;state.modal={type:'note',index:i};render()}
 function openEnlarge(text,code,sub,other){state.modal={type:'enlarge',text,code,sub,other:other||(code==='ko'?active().code:'ko'),rotated:false};render()}
-function openEdit(index,field,list){stopSpeech();state.modal={type:'edit',index,field:field||'original',list:list||'items'};render()}
+function openEdit(index,list){stopSpeech();state.modal={type:'edit',index,list:list||'items'};render()}
 function openSettings(){state.modal={type:'settings'};render()}
 function openText(){stopSpeech();state.side=false;state.modal={type:'text'};render()}
 function openPhoto(){stopSpeech();stopDictation();state.side=false;state.modal={type:'photo',dir:'ko',mode:state.mode,fg:active().code};render()}
@@ -1732,9 +1635,9 @@ function drawModal(root){
     const nav=node('div','head-nav','',header);
     const hb=button('','home-btn',goHome,nav);hb.innerHTML=ICON.home(15)+'<span>처음으로</span>';
     button('‹ 뒤로','home-btn',closeLayer,nav);
-  }else button('‹ 뒤로','plain',()=>{if(data.type==='refRec'){finishRefRec(false);return}if(data.type==='refTerms'){state.modal={type:'refEdit',id:data.id};render();return}if(data.type==='refEdit'||data.type==='refGroup'){backToRefs();return}if(data.type==='fixPending'){stopDictation();state.modal=null;if(state.pending)state.pending.wait=0;render()}else closeLayer()},header);
+  }else button('‹ 뒤로','plain',()=>{if(data.type==='refRec'){finishRefRec(false);return}if(data.type==='refTerms'){state.modal={type:'refEdit',id:data.id};render();return}if(data.type==='refEdit'||data.type==='refGroup'){backToRefs();return}closeLayer()},header);
   const badge=node('span','ai-badge','',header);badge.id='aiBadge';badge.innerHTML='<i></i><b>AI 교정 중</b>';
-  const titles={personalTerms:'내 용어',cards:'명함',cardView:'명함 보기',help:'사용법',enlarge:'문장 확대',edit:data.field==='translation'?'번역 문장 고치기':data.field==='both'?'문장·번역 고치기':'문장 고치기',photoHistory:'사진 통역 기록',refPhotos:'사진 모아 올리기',photo:'사진 통역',note:data.index<0?'문장 추가':'자주 쓰는 문장',text:'글로 통역하기',settings:'설정',phrases:'여행 문구 · '+active().name,addPhrase:'여행 문구 추가',fixPending:'고친 뒤 보내기',refEdit:'자료 고치기',refGroup:data.id?'그룹 고치기':'새 그룹',refRec:'녹음해서 자료 만들기',refTerms:'용어'};
+  const titles={personalTerms:'내 용어',cards:'명함',cardView:'명함 보기',edit:'문장·번역 고치기',photoHistory:'사진 통역 기록',refPhotos:'사진 모아 올리기',photo:'사진 통역',note:data.index<0?'문장 추가':'자주 쓰는 문장',text:'글로 통역하기',settings:'설정',phrases:'여행 문구 · '+active().name,addPhrase:'여행 문구 추가',refEdit:'자료 고치기',refGroup:data.id?'그룹 고치기':'새 그룹',refRec:'녹음해서 자료 만들기',refTerms:'용어'};
   node('h2','',titles[data.type],header);
   const body=node('div','modal-content','',modal),actions=node('div','actions','',modal);
 
@@ -1743,7 +1646,7 @@ function drawModal(root){
   if(data.type==='cards')drawCards(body,actions);
   if(data.type==='cardView')drawCardView(body,data,actions);
 
-  if(data.type==='edit'&&data.field==='both'){ // V1: 말한 문장과 번역을 한 화면에서 같이 고침
+  if(data.type==='edit'){ // V1: 말한 문장과 번역을 한 화면에서 같이 고침
     const item=(data.list==='listening'?state.listening:state.items)[data.index];
     if(!item){node('p','tiny','문장을 찾을 수 없습니다.',body)}else{
     node('label','field',nameOf(item.source)+' · 말한 문장',body);
@@ -1761,26 +1664,6 @@ function drawModal(root){
     voiceRow(body,ao,()=>item.source,null,'저장',save);
     node('p','tiny','말한 문장만 고치면 다시 번역하고, 번역을 직접 고치면 고친 그대로 저장합니다. 🎤는 말한 문장 칸에 받아 적습니다.',body);}
   }
-  if((data.type==='edit'&&data.field!=='both')||data.type==='fixPending'){
-    const item=data.type==='edit'?(data.list==='listening'?state.listening:state.items)[data.index]:null;
-    const trField=!!item&&data.field==='translation';
-    const code=item?(trField?item.target:item.source):data.source;
-    if(item)node('p','tiny',trField?`번역된 ${nameOf(code)} 문장을 직접 고칩니다. (원래 문장: ${item.original})`:`${nameOf(code)} 문장을 고치면 ${nameOf(item.target)}로 다시 번역합니다.`,body);
-    const area=node('textarea','editor','',body);area.value=item?(trField?(item.failed?'':item.translation):item.original):data.text;area.placeholder='말로 입력하거나 직접 쓰세요';
-    const save=async()=>{
-      const val=area.value.trim();if(!val)return notify('문장을 입력하세요');
-      stopDictation();
-      if(!item){clearPending();state.modal=null;render();consume(val,code,{fromMic:true,skipAI:true});return}
-      if(trField){item.translation=val;item.trMode='manual';item.failed=false;await syncPhotoEntry(item);state.modal=null;render();return}
-      item.original=val;item.failed=false;state.modal=null;
-      await retranslateEntry(item,currentEntryMode());await syncPhotoEntry(item);
-    };
-    voiceRow(body,area,()=>code,null,item?'저장':'보내기',save);
-    const rb=node('div','row-btns','',body);
-    button('글 모두 지우기','action',()=>{area.value='';area.focus()},rb);
-    node('p','tiny',`${nameOf(code)}로 말하면 글자로 들어갑니다. 말이 끝나고 잠시 조용하면 자동으로 멈춥니다.`+(aiReady()?' 멈추면 AI가 문장을 다듬어 줍니다.':''),body);
-  }
-
   if(data.type==='note'){
     const isNew=data.index<0;const n=isNew?{t:'',x:''}:notes[data.index];
     node('label','field','제목 (서랍에 보이는 이름)',body);
@@ -1869,10 +1752,6 @@ async function photoTranslate(dataUrl,fg=active().code){
 }
 // 덩어리 번역이 없으면 만들어서 돌려줌
 async function phTr(x,code){if(code===x.lang)return x.o;if(!x.tr[code])x.tr[code]=await translate(x.o,x.lang,code);return x.tr[code]}
-function phMain(x){return x.lang==='ko'?(state.modal?.fg||active().code):'ko'} // 기본으로 보여 줄 번역 언어
-function phPlay(seq){ // seq: [{text,code}] 차례로 읽기
-  stopSpeech();seq.filter(s=>s.text).forEach(s=>{const q=outReserve(s.code,null);q.force=true;q.text=s.text;q.ready=true});pumpOut();
-}
 /* L25: local photo records and cancellable manual speech. */
 let mediaToggle=null,mediaToken=0,photoDatabase=null;
 function refreshMediaButtons(){document.querySelectorAll('[data-media-key]').forEach(b=>{const on=b.dataset.mediaKey===mediaToggle;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));b.textContent=(on?'■ 정지':'🔊 '+b.dataset.mediaLabel)})}
@@ -2095,6 +1974,9 @@ function drawSettings(body){
   }
   if(tab==='adv'){
     sec=node('div','sec','',body);node('h4','','Gemini 키',sec);
+    // V2: 키 받으러 가기 (Google AI Studio 키 만드는 페이지, 새 창)
+    const kl=node('a','action key-link','🔑 키 받으러 가기',sec);kl.href='https://aistudio.google.com/apikey';kl.target='_blank';kl.rel='noopener';
+    node('p','tiny','구글 계정으로 들어가 "API 키 만들기" → 만든 키(AIza…)를 복사해 아래 칸에 붙여넣고 저장하세요.',sec);
     const key=node('input','text-field','',sec);key.type='password';key.value=load('ai_key');key.placeholder='AIza…';key.autocomplete='off';
     button('저장','action primary',()=>{
       const had=geminiKey();store('ai_key',key.value.trim());gemStop='';gemHalts=0;
@@ -2155,7 +2037,6 @@ function finishDictation(d){
 /* ── AI ── */
 function geminiKey(){const k=load('ai_key').trim();return !!k&&!k.startsWith('sk-')}
 function provider(){return engine()==='gemini'?'gemini':null}
-function providerName(){return provider()?'Gemini':''}
 const aiReady=()=>!!provider();
 async function aiAsk(prompt,opt={}){
   if(!aiReady())throw Error('Gemini 키·모드가 필요합니다');
@@ -2212,7 +2093,6 @@ function splitText(text,max=380){
 }
 function decodeEntities(s){if(!s)return s;const t=document.createElement('textarea');let prev;do{prev=s;t.innerHTML=s;s=t.value}while(s!==prev&&/&[#a-z0-9]+;/i.test(s));return s}
 /* 번역 엔진: 무료(MyMemory) · Claude · Gemini. AI가 실패하면 무료 번역기로 자동 전환 */
-const ENGINES=[['free','무료 번역기'],['gemini','Gemini']];
 /* V36: Gemini 번역 모델 단계 선택 (빠름·균형·정확). 모델 이름을 직접 적으면 그게 우선 */
 const GEM_TIERS=[['fast','⚡ 빠름','gemini-3.5-flash-lite','가장 빠르고 아주 저렴'],['balanced','⚖️ 균형','gemini-3.8-flash','추천 · 문맥 잘 이해, 빠름'],['accurate','🎯 정확','gemini-4-argon','이상한 말도 가장 잘 알아들음 · 느리고 비쌈']];
 const GEM_FALLBACK='gemini-flash-lite-latest';
@@ -2375,7 +2255,7 @@ function scheduleEntry(entry,mode,options={}){
       // If this row is being spoken, replace only that playback and preserve other queued rows.
       const interrupt=outCur===entry?outInterrupt:null;
       if(interrupt){const i=outQ.indexOf(slot);if(i>=0){outQ.splice(i,1);outQ.unshift(slot)}}
-      outReady(slot,entry.translation,options.tone);if(interrupt)interrupt();
+      outReady(slot,entry.translation);if(interrupt)interrupt();
       render();
       if(options.retranslate&&!entry.speakingNow&&top!=null){const after=$('#transcript');if(after)after.scrollTop=top}
       else if(!options.retranslate&&!options.merged)scrollEnd();
@@ -2397,7 +2277,7 @@ async function retranslateEntry(entry,mode){
 }
 async function consume(text,source,opt={}){
   text=String(text||'').trim();if(isEmptyText(text))return;
-  if(source==='ko'&&!opt.retr)text=fixHeard(text);
+  if(source==='ko')text=fixHeard(text);
   const toListen=opt.toListen??(state.mode==='listen'),list=toListen?state.listening:state.items,target=source==='ko'?active().code:'ko';
   const micId=opt.micId??micSession;
   if(opt.fromMic&&!opt.noMerge){
@@ -2406,10 +2286,167 @@ async function consume(text,source,opt={}){
   }
   const entry={original:text,translation:'번역 중…',source,target,failed:false,correcting:true,fromMic:!!opt.fromMic,micId,createdAt:Date.now(),contextRun:translationRun,contextEpoch:transcriptEpoch};
   entry.timing=opt.timing||latencyStart();latencyMark(entry.timing,'consume');
-  if(opt.retr)entry.by='다시 번역';
   list.push(entry);const task=scheduleEntry(entry,currentEntryMode(),opt);scrollEnd();return task;
 }
 
+
+/* ── V2: 녹음 모드 ──
+   그냥 녹음해서 휴대폰(IndexedDB)에 저장. 소리는 15초마다 조각으로 바로 저장 → 앱이 갑자기 꺼져도 그때까지 녹음은 남음.
+   나중에 필요할 때 버튼으로 Gemini 받아쓰기 → 번역·요약 (소리는 받아쓰기 때 한 번만 보내고, 번역·요약은 받아쓴 글로 해서 크레딧 절약).
+   큰 녹음(14MB 넘음)은 Gemini 파일 올리기로 먼저 올린 뒤 받아씀. 파일로 내보내기(다운로드·다른 앱으로 보내기)도 됨. */
+let recDbP=null,recList=[],recNow=null,recOpen=null;const recUrls={},recBusy={};
+function recDb(){return recDbP||(recDbP=new Promise((res,rej)=>{const r=indexedDB.open('travel_recordings',1);r.onupgradeneeded=()=>{const db=r.result;db.createObjectStore('recs',{keyPath:'id'});db.createObjectStore('chunks',{autoIncrement:true}).createIndex('rec','rec')};r.onsuccess=()=>res(r.result);r.onerror=()=>{recDbP=null;rej(r.error)}}))}
+async function recTx(stores,mode,fn){const db=await recDb();return new Promise((res,rej)=>{const tx=db.transaction(stores,mode),box={};tx.oncomplete=()=>res(box.v);tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error||Error('저장 중단'));fn(tx,box)})}
+const recPut=meta=>recTx(['recs'],'readwrite',tx=>tx.objectStore('recs').put({...meta}));
+const recAddChunk=(id,blob)=>recTx(['chunks'],'readwrite',tx=>tx.objectStore('chunks').add({rec:id,blob}));
+async function recBlob(meta){const parts=await recTx(['chunks'],'readonly',(tx,box)=>{const q=tx.objectStore('chunks').index('rec').getAll(meta.id);q.onsuccess=()=>box.v=q.result});return new Blob((parts||[]).map(c=>c.blob),{type:meta.mime.split(';')[0]||'audio/webm'})}
+async function recLoad(){
+  try{const all=await recTx(['recs'],'readonly',(tx,box)=>{const q=tx.objectStore('recs').getAll();q.onsuccess=()=>box.v=q.result});
+    recList=(all||[]).sort((a,b)=>b.at-a.at);
+    for(const m of recList)if(m.status==='rec'){m.status='done';m.cut=true;recPut(m).catch(()=>{})} // 녹음 중에 앱이 꺼진 것 — 저장된 데까지 살림
+  }catch{recList=[]}
+  if(state.page==='main'&&state.mode==='record')render();
+}
+async function recDelete(meta){
+  await recTx(['recs','chunks'],'readwrite',tx=>{tx.objectStore('recs').delete(meta.id);const q=tx.objectStore('chunks').index('rec').openCursor(IDBKeyRange.only(meta.id));q.onsuccess=()=>{const c=q.result;if(c){c.delete();c.continue()}}});
+  if(recUrls[meta.id]){URL.revokeObjectURL(recUrls[meta.id]);delete recUrls[meta.id]}
+  recList=recList.filter(x=>x!==meta);if(recOpen===meta.id)recOpen=null;render();notify('녹음을 지웠습니다.');
+}
+const fmtDur=s=>{s=Math.max(0,Math.round(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=String(s%60).padStart(2,'0');return h?h+':'+String(m).padStart(2,'0')+':'+x:m+':'+x};
+const fmtMB=b=>b<1048576?Math.max(1,Math.round(b/1024))+'KB':(b/1048576).toFixed(b<10485760?1:0)+'MB';
+const recStamp=at=>{const d=new Date(at),p=n=>String(n).padStart(2,'0');return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+'-'+p(d.getHours())+p(d.getMinutes())};
+const recName=meta=>new Date(meta.at).toLocaleString('ko-KR',{month:'long',day:'numeric',weekday:'short',hour:'numeric',minute:'2-digit'});
+async function recStart(){
+  if(recNow)return;
+  if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder)return notify('이 브라우저는 녹음을 지원하지 않습니다. 크롬을 써 주세요.');
+  stopSpeech();
+  let stream;try{stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:true,autoGainControl:true}})}catch{return notify('마이크를 쓸 수 없습니다. 크롬의 사이트 마이크 권한을 확인해 주세요.')}
+  const want=['audio/webm;codecs=opus','audio/webm','audio/mp4'].find(t=>MediaRecorder.isTypeSupported?.(t))||'';
+  let mr;try{mr=new MediaRecorder(stream,want?{mimeType:want,audioBitsPerSecond:48000}:{})}catch(e){stream.getTracks().forEach(t=>t.stop());return notify('녹음을 시작하지 못했습니다 · '+e.message)}
+  const meta={id:'rec-'+Date.now().toString(36),at:Date.now(),dur:0,size:0,mime:mr.mimeType||want||'audio/webm',status:'rec'};
+  const ctx=recNow={meta,mr,stream,chain:recPut(meta).catch(()=>{}),timer:null,failed:false};
+  recList.unshift(meta);
+  mr.ondataavailable=e=>{if(!e.data?.size)return;meta.size+=e.data.size;meta.dur=(Date.now()-meta.at)/1000;const blob=e.data;
+    ctx.chain=ctx.chain.then(()=>recAddChunk(meta.id,blob)).then(()=>recPut(meta)).catch(()=>{if(!ctx.failed){ctx.failed=true;notify('⚠ 휴대폰 저장 공간이 부족해 녹음 일부를 저장하지 못했습니다.')}})};
+  mr.onstop=async()=>{clearInterval(ctx.timer);stream.getTracks().forEach(t=>t.stop());meta.dur=(Date.now()-meta.at)/1000;meta.status='done';
+    await ctx.chain;await recPut(meta).catch(()=>{});if(recNow===ctx)recNow=null;if(!state.mic)releaseWake();
+    if(state.page==='main')render();notify('💾 녹음을 저장했습니다 · '+fmtDur(meta.dur));};
+  mr.onerror=()=>recStop();
+  try{mr.start(15000)}catch(e){stream.getTracks().forEach(t=>t.stop());recNow=null;recList.shift();return notify('녹음을 시작하지 못했습니다 · '+e.message)}
+  navigator.storage?.persist?.().catch(()=>{}); // 휴대폰이 공간 정리할 때 녹음을 지우지 않게
+  keepAwake();
+  ctx.timer=setInterval(()=>{const sec=(Date.now()-meta.at)/1000;const c=$('#recClock');if(c)c.textContent=fmtDur(sec);const d=document.querySelector('[data-rec-dur="'+meta.id+'"]');if(d)d.textContent='● 녹음 중 '+fmtDur(sec);if(document.visibilityState==='visible')keepAwake()},1000);
+  render();
+}
+function recStop(){const c=recNow;if(!c)return;clearInterval(c.timer);try{if(c.mr.state!=='inactive')c.mr.stop();else c.mr.onstop()}catch{}}
+/* Gemini — 녹음 기능은 위쪽 번역 방식(무료)과 상관없이 키만 있으면 씀. 모델은 아래 바에서 고른 단계(빠름·균형·정확) */
+function recNeedGem(){if(!geminiKey()){notify('Gemini 키가 필요합니다. 설정 → 고급에서 넣어 주세요.');return false}if(!navigator.onLine){notify('인터넷이 필요합니다.');return false}return true}
+async function gemGen(parts,sys,ms){
+  const m=gemModel();
+  const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(load('ai_key').trim())}`,{method:'POST',_entryGemini:true,headers:{'content-type':'application/json'},
+    body:JSON.stringify({systemInstruction:{parts:[{text:sys}]},contents:[{role:'user',parts}],generationConfig:gemCfg(m)}),signal:AbortSignal.timeout(ms)});
+  const j=await res.json().catch(()=>({}));if(!res.ok)throw Error(j.error?.message||('Gemini 오류 '+res.status));
+  const c=j.candidates?.[0],out=(c?.content?.parts||[]).filter(x=>!x.thought).map(x=>x.text||'').join('').trim();
+  if(!out)throw Error(c?.finishReason==='MAX_TOKENS'?'답이 너무 길어 끊겼습니다':'빈 응답');
+  return {text:out,cut:c?.finishReason==='MAX_TOKENS'};
+}
+async function gemUpload(blob,mime,name,step){ // 큰 파일: Gemini 파일 올리기 (48시간 뒤 Google에서 저절로 지워짐)
+  const k=encodeURIComponent(load('ai_key').trim());
+  const st=await fetch(`https://generativelanguage.googleapis.com/upload/v1beta/files?key=${k}`,{method:'POST',headers:{'X-Goog-Upload-Protocol':'resumable','X-Goog-Upload-Command':'start','X-Goog-Upload-Header-Content-Length':String(blob.size),'X-Goog-Upload-Header-Content-Type':mime,'content-type':'application/json'},body:JSON.stringify({file:{display_name:name}})});
+  const url=st.headers.get('x-goog-upload-url');if(!st.ok||!url)throw Error('파일 올리기를 시작하지 못했습니다 ('+st.status+')');
+  const up=await fetch(url,{method:'POST',headers:{'X-Goog-Upload-Offset':'0','X-Goog-Upload-Command':'upload, finalize'},body:blob});
+  const j=await up.json().catch(()=>({}));if(!up.ok||!j.file)throw Error(j.error?.message||('파일 올리기 실패 '+up.status));
+  let f=j.file;
+  for(let i=0;i<100&&f.state==='PROCESSING';i++){step('Gemini가 녹음 파일을 준비하는 중…');await new Promise(r=>setTimeout(r,3000));f=await (await fetch(`https://generativelanguage.googleapis.com/v1beta/${f.name}?key=${k}`)).json()}
+  if(f.state!=='ACTIVE')throw Error('Gemini가 녹음 파일을 처리하지 못했습니다');
+  return f.uri;
+}
+const hangulRatio=t=>{const L=String(t).replace(/[\s\d.,!?。、，！？…·:;"'()\[\]~-]/g,'');return L?(t.match(/[가-힣]/g)||[]).length/L.length:0};
+const recTarget=meta=>meta.lang==='ko'?active().code:'ko';
+function recSetBusy(meta,t){recBusy[meta.id]=t;const el=document.querySelector('[data-rec-busy="'+meta.id+'"]');if(el)el.textContent='⏳ '+t;else render()}
+async function recTranscribe(meta){
+  const blob=await recBlob(meta);if(!blob.size)throw Error('저장된 소리가 없습니다');
+  const mime=blob.type||'audio/webm';let part;
+  if(blob.size<14e6){recSetBusy(meta,'녹음 보내는 중…');part={inline_data:{mime_type:mime,data:await fileB64(blob)}}}
+  else{recSetBusy(meta,'큰 녹음 올리는 중… ('+fmtMB(blob.size)+')');part={file_data:{mime_type:mime,file_uri:await gemUpload(blob,mime,'녹음 '+recStamp(meta.at),t=>recSetBusy(meta,t))}}}
+  recSetBusy(meta,'Gemini가 받아 적는 중… (녹음 길이에 따라 몇 분 걸릴 수 있어요)');
+  const sys='녹음을 들리는 그대로 받아 적으세요. 말한 언어 그대로 적고 번역하지 마세요. '+FILLER_RULE+' 문장마다, 그리고 말하는 사람이 바뀔 때 줄을 바꾸세요. 잘 안 들리는 곳은 (안 들림)으로. 설명·제목 없이 받아쓴 글만.'+glossaryHint();
+  const r=await gemGen([part,{text:'이 녹음을 받아 적으세요.'}],sys,900000);
+  meta.transcript=r.text;meta.lang=hangulRatio(r.text)>0.3?'ko':active().code;delete meta.translation;delete meta.trLang;
+  if(r.cut)notify('녹음이 길어 받아쓰기가 중간에 끊겼습니다. 나머지는 빠졌어요.');
+}
+async function recTranslate(meta){
+  const tg=recTarget(meta),parts=splitText(meta.transcript,3000),out=[];
+  const g=glossOut(),sys=`${nameOf(meta.lang)} 글을 ${nameOf(tg)}로 현지 사람이 바로 알아듣게 자연스럽게 번역하세요. 줄 나눔은 그대로. 설명·주석 없이 번역문만.`+(g?`\n용어는 이렇게: ${g}`:'');
+  for(let i=0;i<parts.length;i++){recSetBusy(meta,'번역하는 중… '+(parts.length>1?(i+1)+' / '+parts.length:''));out.push((await gemGen([{text:parts[i]}],sys,180000)).text)}
+  meta.translation=out.join('\n');meta.trLang=tg;
+}
+async function recSummarize(meta){
+  recSetBusy(meta,'요약하는 중…');
+  const sys='녹음을 받아쓴 글입니다. 한국어로 요약하세요. 맨 위에 한 줄 요약, 그다음 핵심 내용을 • 목록으로 5~10개. 숫자·이름·정한 일·할 일이 있으면 따로 모아 적으세요. 글에 없는 내용은 만들지 마세요.';
+  meta.summary=(await gemGen([{text:meta.transcript.slice(0,300000)}],sys,240000)).text;
+}
+async function recRun(meta,kind){
+  if(recBusy[meta.id]||meta.status==='rec'||!recNeedGem())return;
+  const have={tr:meta.transcript,tl:meta.translation,sum:meta.summary}[kind];
+  if(have&&!await askYes({tr:'다시 받아 적을까요?\n(Gemini 크레딧이 다시 듭니다. 번역은 지워집니다)',tl:'다시 번역할까요?\n(Gemini 크레딧이 다시 듭니다)',sum:'다시 요약할까요?\n(Gemini 크레딧이 다시 듭니다)'}[kind],'다시 하기'))return;
+  try{
+    if(kind==='tr'||!meta.transcript)await recTranscribe(meta);
+    if(kind==='tl')await recTranslate(meta);
+    if(kind==='sum')await recSummarize(meta);
+    await recPut(meta);notify({tr:'📝 받아쓰기를 저장했습니다.',tl:'🌐 번역을 저장했습니다.',sum:'📋 요약을 저장했습니다.'}[kind]);
+  }catch(e){notify('실패 · '+e.message)}
+  finally{delete recBusy[meta.id];await recPut(meta).catch(()=>{});if(state.page==='main')render()}
+}
+async function recExport(meta){
+  const blob=await recBlob(meta).catch(()=>null);if(!blob?.size)return notify('저장된 소리가 없습니다.');
+  const name='녹음-'+recStamp(meta.at)+(/mp4/.test(blob.type)?'.m4a':'.webm'),file=new File([blob],name,{type:blob.type});
+  const save=()=>{const a=node('a','','',document.body);a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},10000);notify('다운로드 폴더에 저장했습니다 · '+name)};
+  if(!navigator.canShare?.({files:[file]}))return save();
+  const back=node('div','confirm-back','',$('#app')),box=node('div','confirm-box','',back);node('p','','녹음 파일 내보내기\n'+name+' · '+fmtMB(blob.size),box);
+  const a=node('div','share-pick','',box);
+  button('💾 휴대폰 다운로드 폴더에 저장','action primary',()=>{back.remove();save()},a);
+  button('📤 다른 앱으로 보내기 (드라이브·카톡 등)','action',async()=>{back.remove();try{await navigator.share({files:[file],title:name})}catch(e){if(e.name!=='AbortError')notify('보내기 실패 · '+e.message)}},a);
+  button('취소','action',()=>back.remove(),a);back.onclick=e=>{if(e.target===back)back.remove()};
+}
+async function recPlay(meta){
+  if(recOpen===meta.id){recOpen=null;render();return}
+  stopSpeech();recOpen=meta.id;
+  if(!recUrls[meta.id]){const b=await recBlob(meta).catch(()=>null);if(!b?.size){recOpen=null;return notify('저장된 소리가 없습니다.')}recUrls[meta.id]=URL.createObjectURL(b)}
+  render();document.querySelector('.rec-audio')?.play().catch(()=>{});
+}
+function drawRecord(s){
+  const content=node('section','transcript','',s);content.id='transcript';
+  if(!recList.length)hint(content,'아래 ● 녹음 시작을 누르면 녹음해서 이 휴대폰에 저장합니다.\n\n나중에 녹음마다 Gemini로\n📝 받아쓰기 · 🌐 번역 · 📋 요약을 할 수 있고,\n💾 파일로 내보낼 수도 있어요.');
+  else node('p','tiny faint','받아쓰기·번역·요약은 Gemini '+GEM_TIERS.find(x=>x[0]===gemTier())[1]+' 단계로 합니다 (대화·듣기 화면 아래에서 바꿈). 녹음 소리는 받아쓰기 때 한 번만 보냅니다.',content);
+  recList.forEach(meta=>{
+    const live=meta.status==='rec',busy=recBusy[meta.id],box=node('div','rec-item'+(live?' live':''),'',content);
+    const h=node('div','rec-head','',box);node('b','',recName(meta),h);
+    const d=node('small','',live?'● 녹음 중 '+fmtDur(meta.dur):fmtDur(meta.dur)+' · '+fmtMB(meta.size)+(meta.cut?' · 중간에 끊김':''),h);d.dataset.recDur=meta.id;if(live)d.className='rec-live';
+    if(live)return;
+    const b=node('div','rec-btns','',box);
+    button(recOpen===meta.id?'■ 닫기':'▶ 듣기','',()=>recPlay(meta),b);
+    button('💾 내보내기','',()=>recExport(meta),b);
+    [['tr','📝 받아쓰기',meta.transcript],['tl','🌐 번역',meta.translation],['sum','📋 요약',meta.summary]].forEach(([k,t,done])=>{const x=button(t+(done?' ✓':''),done?'done':'',()=>recRun(meta,k),b);x.disabled=!!busy});
+    button('🗑','',()=>askConfirm('이 녹음을 지울까요?\n'+recName(meta)+' · '+fmtDur(meta.dur)+'\n지운 녹음은 되살릴 수 없습니다.','삭제',()=>recDelete(meta).catch(e=>notify('지우지 못했습니다 · '+e.message))),b).setAttribute('aria-label','녹음 삭제');
+    if(recOpen===meta.id&&recUrls[meta.id]){const au=node('audio','rec-audio','',box);au.controls=true;au.preload='auto';
+      // 크롬 녹음 파일은 길이 정보가 없어 앞뒤로 옮기기가 안 됨 → 끝까지 한 번 건너뛰어 길이를 알아낸 뒤 처음으로
+      au.onloadedmetadata=()=>{if(au.duration===Infinity){const back=()=>{au.removeEventListener('durationchange',back);au.currentTime=0};au.addEventListener('durationchange',back);au.currentTime=1e9}};au.src=recUrls[meta.id]}
+    if(busy)node('div','rec-busy','⏳ '+busy,box).dataset.recBusy=meta.id;
+    const out=(title,text,code)=>{if(!text)return;const o=node('div','rec-out','',box),hh=node('div','rec-out-h','',o);node('span','',title,hh);
+      button('📋 복사','',async()=>{try{await navigator.clipboard.writeText(text);notify('복사했습니다.')}catch{notify('글을 길게 눌러 복사해 주세요.')}},hh);
+      if(code)button(reading?.text===text?'■ 정지':'🔊 읽기','',()=>{speak(text,code);render()},hh);
+      const t=node('div','rec-text selectable-text',text,o);t.dir='auto'};
+    out('📝 받아쓰기 · '+nameOf(meta.lang||'ko'),meta.transcript,meta.lang);
+    out('🌐 번역 · '+nameOf(meta.trLang||'ko'),meta.translation,meta.trLang);
+    out('📋 요약',meta.summary,'ko');
+  });
+  const bar=node('footer','rec-bar','',s);
+  node('div','rec-clock',recNow?fmtDur((Date.now()-recNow.meta.at)/1000):'0:00',bar).id='recClock';
+  button(recNow?'■ 멈추고 저장':'● 녹음 시작','rec-go'+(recNow?' on':''),()=>recNow?recStop():recStart(),bar);
+  node('div','rec-tip',recNow?'15초마다 휴대폰에 저장하고 있어요. 화면은 켜 두는 게 가장 안전합니다.':'녹음은 이 휴대폰에만 저장됩니다. 앱을 지우거나 사이트 데이터를 지우면 함께 지워져요.',bar);
+}
+recLoad();
 
 /* ── 전체 보내기 ── */
 const APP_URL='https://lsc571-max.github.io/travel/';
@@ -2469,7 +2506,7 @@ t: s를 현지인이 바로 알아듣게 자연스럽게 번역. 설명·주석�
   for(const m of models){
     const controller=new AbortController(),cancel=()=>controller.abort();
     if(opt.signal?.aborted)controller.abort();else opt.signal?.addEventListener('abort',cancel,{once:true});
-    const timeout=setTimeout(cancel,(tier==='accurate'?20000:tier==='balanced'?16000:12000)+Math.min(30000,text.length*30)); // V0: 1분 묶음처럼 긴 글은 기다리는 시간도 길게
+    const timeout=setTimeout(cancel,(tier==='accurate'?20000:tier==='balanced'?16000:12000)+Math.min(240000,text.length*40)); // V2: 5분·10분 묶음처럼 긴 글은 기다리는 시간도 길게 (최대 4분 더)
     try{
       if(timing)timing.marks.referenceChars=fixed.length;compareMark(timing,sys,user);latencyMark(timing,'request');
       const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(load('ai_key').trim())}`,{method:'POST',_entryGemini:true,headers:{'content-type':'application/json'},
@@ -2504,7 +2541,7 @@ function pauseRecognizer(){const r=state.recognizer;state.recognizer=null;try{r?
 function resumeRecognizer(){if(isConv()&&(outBusy||state.speaking))return;if(state.mic&&!state.recognizer&&!state.modal&&!dict&&state.page==='main'&&!document.hidden)startRecognition()}
 /* ── 화면 꺼짐 방지와 자동 종료 ──
    대화 모드: 2분 동안 말이 없으면 마이크 끄고 화면도 원래대로.
-   듣기 모드: 2분 말이 없으면 화면만 자동으로 어둡게(마이크는 계속), 그 뒤 5분 더 없으면 마이크와 화면 모두 끔. */
+   듣기 모드: 2분 말이 없으면 화면만 자동으로 어둡게(마이크는 계속). 마이크는 7분(1분 이하·5분 묶음), 10분 묶음은 12분 동안 말이 없으면 끔 — 고른 묶음 시간 + 2분, 최소 7분 */
 let wakeLock=null,idle1=null,idle2=null;
 async function keepAwake(){
   if(wakeLock||!('wakeLock'in navigator)||document.visibilityState!=='visible')return;
@@ -2518,8 +2555,9 @@ function activity(){
     if(!state.mic)return;
     if(state.mode==='listen'){
       if(!state.dim)setDim(true);
-      idle2=setTimeout(()=>{if(!state.mic)return;stopMic(true);state.dim=false;render();notify('5분 동안 말소리가 없어 마이크를 껐습니다. 다시 쓰려면 마이크를 누르세요.')},300000);
-    }else{stopMic();clearPending();render();notify('2분 동안 말소리가 없어 마이크를 껐습니다.')}
+      const off=Math.max(420000,listenChunk()*1000+120000);
+      idle2=setTimeout(()=>{if(!state.mic)return;stopMic(true);state.dim=false;render();notify(Math.round(off/60000)+'분 동안 말소리가 없어 마이크를 껐습니다. 다시 쓰려면 언어 버튼을 누르세요.')},off-120000);
+    }else{stopMic();render();notify('2분 동안 말소리가 없어 마이크를 껐습니다.')}
   },120000);
 }
 function setDim(on){state.dim=on;render()}
@@ -2531,11 +2569,11 @@ document.addEventListener('visibilitychange',()=>{
     if(!isEmptyText(left))consume(left,t.source,{toListen:true,fromMic:true,noMerge:true})} // V0: 화면이 꺼져도 그때까지 들은 말은 번역
   else if(state._offByHide){state._offByHide=false;if(state.page==='main'){render();notify('다른 화면으로 가서 마이크를 껐습니다. 다시 누르면 이어서 듣습니다.')}}
 });
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&['refRec','refPhotos'].includes(state.modal?.type))render()});
-window.addEventListener('pagehide',()=>{resetTranscripts(false);killAllMics()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&(['refRec','refPhotos'].includes(state.modal?.type)||(state.page==='main'&&state.mode==='record'&&!state.modal)))render()});
+window.addEventListener('pagehide',()=>{resetTranscripts(false);killAllMics();recStop()});
 // L19: 마이크 정지는 현재 작업을 보존. 삭제·모드 전환만 이전 작업을 무효화.
 let transcriptEpoch=0,micSession=0;
-const isManualInput=()=>state.mode==='listen'||state.recog!=='auto'; // V0: 듣기 모드는 늘 1분 묶음
+const isManualInput=()=>state.mode==='listen'||state.recog!=='auto'; // 듣기 모드는 늘 묶음으로 모아 번역
 let manualTurn=null;
 function newManualTurn(prevPart=''){return {parts:[],live:'',prevPart,firstAt:0,source:talkKey()==='ko'?'ko':active().code,toListen:state.mode==='listen',micId:micSession,epoch:transcriptEpoch,started:performance.now(),submit:false,finished:false}}
 
@@ -2559,8 +2597,18 @@ function addTurnPart(turn,text){
   }
   if(!isEmptyText(text))turn.parts.push(text);
 }
-/* V0: 듣기 모드 1분 묶음 — 1분이 지나 문장이 끝나는 곳(쉼)에서 끊음. 2분이 넘으면 문장 끝이 아니어도 쉬는 곳에서, 15초 동안 말이 없으면 모인 말을 바로 번역 */
-const LISTEN_CHUNK=60,LISTEN_CHUNK_MAX=120,LISTEN_QUIET=15000;
+/* V2: 듣기 모드 묶음 시간 — 언어 버튼 옆 버튼으로 20초·40초·1분·5분·10분 중 고름 (휴대폰에 저장, 듣는 중에 바꾸면 바로 적용).
+   고른 시간이 지나 문장이 끝나는 곳(쉼)에서 끊어 한 번에 번역. 끊는 최대 시간을 넘으면 문장 끝이 아니어도 쉬는 곳에서 끊음.
+   조용하면 바로 번역: 1분 이하는 15초, 5분·10분은 1분 동안 말이 없을 때 */
+const LISTEN_CHUNKS=[20,40,60,300,600];
+function listenChunk(){const v=+load('listen_chunk','60');return LISTEN_CHUNKS.includes(v)?v:60}
+const listenChunkMax=()=>{const c=listenChunk();return c<=60?c*2:c+60}; // 40·80·120초, 6분·11분
+const listenQuiet=()=>listenChunk()<=60?15000:60000;
+const fmtSec=sec=>Math.floor(sec/60)+':'+String(Math.floor(sec%60)).padStart(2,'0');
+const chunkLabel=c=>c<60?c+'초':(c/60)+'분';
+function nextListenChunk(){const i=LISTEN_CHUNKS.indexOf(listenChunk());store('listen_chunk',String(LISTEN_CHUNKS[(i+1)%LISTEN_CHUNKS.length]));
+  if(state.mic&&state.mode==='listen'){activity();clearTimeout(listenQuietTimer);if(manualTurn?.firstAt)listenQuietTimer=setTimeout(()=>maybeCutListen(manualTurn,true),listenQuiet());maybeCutListen(manualTurn)}
+  render()}
 const SENT_END=/(?:[.!?。！？]|습니다|니다|세요|어요|아요|에요|예요|해요|죠|다|요|ます|です|ました|でした|ません|ください)$/;
 let listenQuietTimer=null;
 // 지금까지 모인 말. 화면에는 sep=' · '로 — 마이크가 다시 켜진 자리를 작은 점으로 보여 줌 (번역·소리에는 넣지 않음)
@@ -2578,14 +2626,14 @@ function maybeCutListen(turn,quiet){
   if(state.mode!=='listen'||!state.mic||state.listenStopping||!turn||turn.finished||turn!==manualTurn||!turn.firstAt)return;
   const text=turnText(turn);if(isEmptyText(text))return;
   const sec=(performance.now()-turn.firstAt)/1000;
-  if(quiet||sec>=LISTEN_CHUNK_MAX||(sec>=LISTEN_CHUNK&&SENT_END.test(text.replace(/[\s"'”’」』)）]+$/,''))))cutListenTurn();
+  if(quiet||sec>=listenChunkMax()||(sec>=listenChunk()&&SENT_END.test(text.replace(/[\s"'”’」』)）]+$/,''))))cutListenTurn();
 }
 function listenStop(){
   state.listenStopping=true;clearTimeout(listenQuietTimer);updateMic();
   setTimeout(()=>{if(!state.listenStopping)return;state.listenStopping=false;if(state.mic&&state.mode==='listen'){stopMic(true);render()}},1000); // 1초 더 들어 말끝이 잘리지 않게
 }
 function resetTranscripts(clearHistory=true){
-  transcriptEpoch++;activeEntryControllers.forEach(c=>c.abort());activeEntryControllers.clear();listenTextChain=Promise.resolve();stopMic();stopSpeech();clearPending();
+  transcriptEpoch++;activeEntryControllers.forEach(c=>c.abort());activeEntryControllers.clear();listenTextChain=Promise.resolve();stopMic();stopSpeech();
   state.interim='';state.listenPreview='';
   if(clearHistory){state.items=[];state.listening=[]}
   else [...state.items,...state.listening].forEach(entry=>{
@@ -2599,7 +2647,7 @@ function stopMic(submitManual=false){
   const turn=manualTurn;
   state.listenStopping=false;clearTimeout(listenQuietTimer);
   if(turn){turn.submit=submitManual;if(!submitManual){turn.finished=true;manualTurn=null}}
-  clearTimeout(micRetryTimer);clearTimeout(micWatchdog);stopTone();state.mic=false;
+  clearTimeout(micRetryTimer);clearTimeout(micWatchdog);state.mic=false;
   const r=state.recognizer;
   if(r){
     r._draining=true;state.recognizer=null;
@@ -2628,12 +2676,12 @@ function scheduleMicRetry(message){
 }
 function toggleMic(){
   if(state.mic){
-    stopMic(isManualInput());clearPending();clearTimeout(micRetryTimer);clearTimeout(micWatchdog);document.getElementById('micDiagnostic')?.remove();render();return}
+    stopMic(isManualInput());clearTimeout(micRetryTimer);clearTimeout(micWatchdog);document.getElementById('micDiagnostic')?.remove();render();return}
   micSession++;state.listenPreview='';state.interim='';lastFinal={text:'',at:0}; // L12: 새로 켜면 예전 문장 기억은 지우고 시작
   if(!SR){micDiagnostic('이 브라우저에서는 음성 인식이 지원되지 않습니다. Chrome을 이용해 주세요.');return}
   clearTimeout(micRetryTimer);clearTimeout(micWatchdog);micRetry=0;micLastError='';
   manualTurn=isManualInput()?newManualTurn():null;
-  state.mic=true;state.sourceTurn=0;activity();startTone();render();warmGemini();
+  state.mic=true;state.sourceTurn=0;activity();render();warmGemini();
   // Explicit start preserves user-gesture context and avoids a silent 'on' state.
   if(!state.recognizer)startRecognition();
   if(!state.recognizer&&state.mic)scheduleMicRetry('음성 인식 시작을 다시 시도합니다.');
@@ -2708,10 +2756,10 @@ function startRecognition(){
     const owns=!state.recognizer||state.recognizer===r;
     if(turn){turn.live=echo?'':text;if(owns&&manualTurn===turn&&!turn.finished){state.interim=turnText(turn,' · ');updateLive()}
       if(r.continuous&&!r._draining){clearTimeout(refreshTimer);refreshTimer=setTimeout(refresh,SR_QUIET)}
-      if(live&&text&&!turn.finished){ // V0: 말이 쉬는 곳마다 1분 묶음을 끊을지 확인
+      if(live&&text&&!turn.finished){ // 말이 쉬는 곳마다 묶음을 끊을지 확인
         if(!turn.firstAt)turn.firstAt=performance.now();
         const t=turn,fin=!!event.results[event.results.length-1]?.isFinal;clearTimeout(gapTimer);gapTimer=setTimeout(()=>{if(valid()&&state.recognizer===r)maybeCutListen(t)},fin?400:1500);
-        clearTimeout(listenQuietTimer);listenQuietTimer=setTimeout(()=>{if(valid())maybeCutListen(manualTurn,true)},LISTEN_QUIET);
+        clearTimeout(listenQuietTimer);listenQuietTimer=setTimeout(()=>{if(valid())maybeCutListen(manualTurn,true)},listenQuiet());
       }
       return}
     if(owns){state.interim=echo?'':text;if(live&&text)state.listenPreview=text;updateLive()}
