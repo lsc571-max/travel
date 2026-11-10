@@ -10,12 +10,10 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap" rel="stylesheet">
 <title>여행 통역</title>
 <style>
 /* ── 테마 (설정에서 바꿈) ── */
-#app{--accent:#29865c;--accent2:#2378c9;--bg:#fff;--surface:#f4f8f6;--text:#16221c;--muted:#6e7c76;--line:#e6ece9;--ko:#e4f4e9;--fg:#f0f2f3;--blue:#2479b9;--radius:16px;--font:system-ui,-apple-system,'Noto Sans KR','Malgun Gothic',sans-serif}
+#app{--accent:#29865c;--accent2:#2378c9;--bg:#fff;--surface:#f4f8f6;--text:#16221c;--muted:#6e7c76;--line:#e6ece9;--ko:#e4f4e9;--fg:#f0f2f3;--blue:#2479b9;--turn-ko:#e4f4e9;--turn-foreign:#fce8ef;--radius:16px;--font:system-ui,-apple-system,'Noto Sans KR','Malgun Gothic',sans-serif}
 *{box-sizing:border-box;scrollbar-width:none}
 *::-webkit-scrollbar{display:none;width:0;height:0}
 .modal-content,.drawer,.transcript,.select-pop{overflow-x:hidden!important}
@@ -37,7 +35,7 @@ svg{display:block}
 .screen{display:flex;flex-direction:column;height:var(--app-h);overflow:hidden;--acc:var(--accent)}
 .screen.listen{--acc:var(--accent2)}
 .top{position:relative;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:4px;padding:calc(22px + env(safe-area-inset-top)) 10px 10px;border-bottom:1px solid var(--line)}
-.top-left{justify-self:start}.top-right{justify-self:end;display:flex}
+.top-left{justify-self:start;display:flex;gap:4px;align-items:center;min-width:0}.top-right{justify-self:end;display:flex}
 .home-btn{display:flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:7px 9px;font-size:14px;font-weight:650;white-space:nowrap}
 .mode-wrap{display:flex;align-items:center;justify-content:center;gap:0;min-width:0}
 .moon-btn{border:0;background:transparent;font-size:16px;padding:4px 2px;opacity:.8;line-height:1}
@@ -45,7 +43,7 @@ svg{display:block}
 .icon-btn{border:0;background:none;padding:7px;color:var(--muted);border-radius:10px}
 .listen-preview{display:flex;align-items:center;gap:7px;flex-shrink:0;min-height:30px;padding:5px 16px;border-bottom:1px solid #f5e7ec;color:var(--text);background:#fff5f8;font-size:14px;line-height:1.4}
 .listen-preview small{flex-shrink:0;color:var(--muted);font-size:11px}.listen-preview span{display:block;min-width:0;flex:1;overflow:hidden;white-space:nowrap}
-.listen-row .ctrls{flex-wrap:wrap}
+
 .transcript{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:16px 16px 18px}
 .hint{color:var(--muted);text-align:center;margin:13vh 0 0;font-size:15px;line-height:1.8;white-space:pre-line}
 .hint svg{margin:0 auto 10px}
@@ -55,7 +53,7 @@ svg{display:block}
 .bubble.foreign{background:var(--fg);align-self:flex-end}
 .bubble.fail{background:#fff0e0;color:#8a4b12}
 .bubble .edit{position:absolute;right:4px;bottom:2px;min-width:30px;min-height:30px;font-size:15px;color:var(--muted);border:0;background:transparent}
-.listen-row{padding:12px 14px;background:var(--surface);border-radius:var(--radius);margin-bottom:9px;line-height:1.6;overflow-wrap:anywhere;white-space:pre-wrap;cursor:pointer}
+.listen-row{position:relative;padding:12px 14px;background:var(--surface);border-radius:var(--radius);margin-bottom:9px;line-height:1.6;overflow-wrap:anywhere;white-space:pre-wrap;cursor:pointer}
 .listen-row .orig{display:block;font-size:13px;color:var(--muted);margin-top:5px;line-height:1.45}
 /* 아래 한 줄 */
 .bar{border-top:1px solid var(--line);padding:8px 10px calc(10px + env(safe-area-inset-bottom));display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:6px}
@@ -97,6 +95,7 @@ svg{display:block}
 .go-btn{flex:0 0 auto;padding:14px 18px;border-radius:14px;border:0;background:var(--blue);color:#fff;font-size:16px;font-weight:700}
 .row-btns{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
 .row-btns .action{flex:1;min-width:0;white-space:nowrap;font-size:14px;padding:11px 8px}
+.row-btns.two .action{flex:1 1 calc(50% - 8px);white-space:normal}
 .count{font-size:12px;color:var(--muted);text-align:right;margin-top:4px}
 .tiny{font-size:12px;color:var(--muted);line-height:1.6}
 .notice{position:absolute;left:14px;right:14px;bottom:120px;z-index:30;background:#243f37;color:#fff;padding:11px 16px;border-radius:12px;box-shadow:0 3px 15px #0003;font-size:13px}
@@ -119,7 +118,7 @@ svg{display:block}
 .bubble .ctrls{display:flex;justify-content:flex-end;gap:2px;margin:4px -8px -6px 0}
 .bubble .ctrl,.listen-row .ctrl{border:0;background:transparent;color:var(--muted);opacity:.65;min-width:32px;min-height:30px;border-radius:8px;font-size:14px;font-weight:700;display:grid;place-items:center}
 .bubble .ctrl.on,.listen-row .ctrl.on{opacity:1;color:var(--accent)}
-.listen-row{position:relative}
+
 .bubble .ctrl.edit-ctrl,.listen-row .ctrl.edit-ctrl{font-size:15px;font-weight:400}
 .faint{opacity:.65;font-weight:400;font-size:11px}
 .photo-prev{display:block;max-width:100%;max-height:200px;margin:12px auto 0;border-radius:12px}
@@ -134,13 +133,13 @@ svg{display:block}
 .ai-state.on{color:#7b4ed6;opacity:.85}
 .ai-state{display:block;font-size:14px;font-weight:600;text-align:center;padding:7px 6px;border:1px solid currentColor;border-radius:10px;overflow:hidden;text-overflow:ellipsis;color:var(--muted);opacity:.7;white-space:nowrap}
 .ai-state.tier{cursor:pointer;opacity:.95}
-.listen-row.now{background:#fff3f7;box-shadow:none;font-weight:400}
+
 .listen-row .l-orig{color:#3f9d6e;opacity:.9;line-height:1.4;margin-bottom:4px}
 .side-tabs{position:absolute;right:0;top:45%;transform:translateY(-50%);display:flex;flex-direction:column;gap:10px;z-index:3}
 .side-tab2{width:26px;height:108px;border:0;border-radius:9px 0 0 9px;color:#fff;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;box-shadow:-2px 2px 8px #0002}
 .side-tab2 i{font-style:normal;font-size:11px;opacity:.85}.side-tab2 span{font-size:11px;font-weight:700;writing-mode:vertical-rl;letter-spacing:2px}
 .st-notes{background:#dce8f6;color:#4c719f}.st-refs{background:#e0efe6;color:#517b64}
-.top-left{display:flex;gap:4px;align-items:center;min-width:0}.top-left .home-btn{padding:6px 7px;font-size:13px}.home-btn.play-all{color:#2e9b62;border-color:#2e9b6266}.home-btn.play-all.on{background:#2e9b62;color:#fff}
+.top-left .home-btn{padding:6px 7px;font-size:13px}.home-btn.play-all{color:#2e9b62;border-color:#2e9b6266}.home-btn.play-all.on{background:#2e9b62;color:#fff}
 .refs-drawer .drawer-tip{margin-bottom:10px}
 .ref-busy{font-size:13px;background:#fdf1dc;border-radius:10px;padding:8px 10px;margin:0 0 10px}.ref-busy.err{background:#fbe6e6}
 .rg{border-radius:12px;padding:6px 8px 8px;margin-bottom:10px;color:#1d2a35;border:2px solid transparent}.rg.on{border-color:#2e9b6255}
@@ -200,7 +199,7 @@ svg{display:block}
 .big-pron{font-size:20px;color:var(--muted);margin-top:10px;text-align:center}
 .big-tip{font-size:11px;color:var(--muted);text-align:center;opacity:.7}
 .bubble .ctrl.star,.listen-row .ctrl.star{font-size:17px;color:#d4a017;opacity:.9}.bubble .ctrl.star.on,.listen-row .ctrl.star.on{color:#e0a800;opacity:1}
-.listen-row .ctrls{display:flex;justify-content:flex-end;align-items:center;gap:2px;margin-top:6px}
+.listen-row .ctrls{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:2px;margin-top:6px}
 .listen-row .pron{display:block;font-size:13px;color:var(--muted);margin-top:4px}
 .share-pick{display:flex;flex-direction:column;gap:8px}
 .saved-row{display:flex;gap:6px;align-items:stretch}
@@ -297,6 +296,16 @@ svg{display:block}
 .bubble .ctrls,.listen-row .ctrls{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:2px;margin-right:0}
 .ph-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
 .ph-grid img{width:100%;height:90px;object-fit:cover;border-radius:8px}
+.ph-cell{position:relative;border-radius:10px;overflow:hidden;background:var(--surface);border:2px solid transparent}.ph-cell.on{border-color:var(--accent)}
+.ph-cell img{height:96px}.ph-sel{position:absolute;top:4px;left:4px;width:28px;height:28px;border-radius:50%;border:2px solid #fff;background:#0007;color:#fff;font-size:15px;line-height:1;padding:0}.ph-cell.on .ph-sel{background:var(--accent)}
+.ph-stat{font-size:11px;color:var(--muted);padding:3px 6px;min-height:20px;line-height:1.3}
+.row-mini{display:flex;gap:4px;padding:0 4px 5px}.row-mini button{flex:1;font-size:12px;padding:7px 2px;border:1px solid var(--line);border-radius:8px;background:var(--bg);min-width:0}
+.crop-wrap{display:flex;justify-content:center;margin:8px 0}.crop-cv{max-width:100%;max-height:58vh;touch-action:none;border-radius:10px;background:#222;display:block}
+.pdf-row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}.pdf-row span{flex:1;min-width:0;overflow-wrap:anywhere}.pdf-row .action{padding:7px 10px;font-size:13px}
+.rec-part{background:var(--surface);border-radius:12px;padding:10px 12px;margin:8px 0;border:2px solid transparent}.rec-part.on{border-color:var(--accent)}.rec-part .text-field{margin-top:8px}
+.ph-sel.static{position:static;flex:none;border-color:var(--accent);background:transparent;color:var(--accent)}.rec-part.on .ph-sel.static{background:var(--accent);color:#fff}
+.usage-row{display:flex;gap:8px;font-size:13px;padding:5px 0;border-bottom:1px solid var(--line)}.usage-row b{flex:1}.usage-row span{font-variant-numeric:tabular-nums;color:var(--muted)}
+.tx-unit{display:flex;gap:8px;align-items:flex-start;padding:8px;border:1px solid var(--line);border-radius:10px;margin:6px 0;font-size:14px;line-height:1.5;background:var(--surface)}.tx-unit.on{border-color:var(--accent)}.tx-unit span{flex:1;white-space:pre-wrap;overflow-wrap:anywhere}
 .ph-editor{width:100%;min-height:85px;font:inherit;line-height:1.5;padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:inherit}
 .ph-history{display:flex;gap:10px;align-items:center;margin:12px 0}.ph-history img{width:68px;height:68px;object-fit:cover;border-radius:8px}
 .ph-history .action{flex:1}.action.on{color:var(--accent);border-color:var(--accent)}
@@ -308,7 +317,7 @@ svg{display:block}
 .ref-camera{display:block;width:100%;max-height:45vh;object-fit:contain;background:#111;border-radius:10px;margin:8px 0}
 .ref-draft{min-height:220px;white-space:pre-wrap}
 /* L27: 말한 언어별로 원문과 번역을 하나의 배경에 표시 */
-#app{--turn-ko:#e4f4e9;--turn-foreign:#fce8ef}
+
 .pair.turn-ko,.listen-row.turn-ko{background:var(--turn-ko)!important}
 .pair.turn-foreign,.listen-row.turn-foreign{background:var(--turn-foreign)!important}
 .pair.turn-ko,.pair.turn-foreign{border-radius:var(--radius);padding:4px 0;gap:0}
@@ -462,6 +471,20 @@ const recogModes=['ko','foreign','auto'];
 function store(k,v){try{localStorage.setItem(k,v)}catch{}}
 function load(k,d=''){try{return localStorage.getItem(k)??d}catch{return d}}
 function loadJSON(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch{return d}}
+/* 휴대폰 저장소(IndexedDB) 공통: dbOpen은 연결을 한 번만 열어 주는 함수를, dbTx는 한 번의 읽기·쓰기를 약속(Promise)으로 돌려줌. 명함 사진·사진 통역 기록·녹음이 같이 씀 */
+function dbOpen(name,version,upgrade){let p=null;return()=>p||(p=new Promise((res,rej)=>{const r=indexedDB.open(name,version);r.onupgradeneeded=()=>upgrade(r.result,r);r.onsuccess=()=>res(r.result);r.onerror=()=>{p=null;rej(r.error)}}))}
+async function dbTx(open,stores,mode,fn){const db=await open();return new Promise((res,rej)=>{const tx=db.transaction(stores,mode),box={};tx.oncomplete=()=>res(box.v);tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error||Error('저장 중단'));fn(tx,box)})}
+const cardDb=dbOpen('travel_card_images',1,db=>db.createObjectStore('images'));
+const cardStore=(id,data)=>dbTx(cardDb,'images','readwrite',tx=>{const os=tx.objectStore('images');if(data===null)os.delete(id);else os.put(data,id)});
+const cardImage=id=>dbTx(cardDb,'images','readonly',(tx,box)=>{tx.objectStore('images').get(id).onsuccess=e=>box.v=e.target.result||null}).then(v=>v??null);
+const phDb=dbOpen('travel_photo_history',2,(db,r)=>{const os=db.objectStoreNames.contains('photos')?r.transaction.objectStore('photos'):db.createObjectStore('photos',{keyPath:'id'});if(!os.indexNames.contains('sig'))os.createIndex('sig','sig')});
+const phTx=(mode,fn)=>dbTx(phDb,'photos',mode,fn);
+const phStore=record=>phTx('readwrite',tx=>tx.objectStore('photos').put(record));
+const phGet=id=>phTx('readonly',(tx,box)=>{tx.objectStore('photos').get(id).onsuccess=e=>box.v=e.target.result});
+const phFindSig=sig=>phTx('readonly',(tx,box)=>{tx.objectStore('photos').index('sig').get(sig).onsuccess=e=>box.v=e.target.result||null});
+const phAll=()=>phTx('readonly',(tx,box)=>{tx.objectStore('photos').getAll().onsuccess=e=>box.v=e.target.result.sort((a,b)=>b.at-a.at)});
+const recDb=dbOpen('travel_recordings',1,db=>{db.createObjectStore('recs',{keyPath:'id'});db.createObjectStore('chunks',{autoIncrement:true}).createIndex('rec','rec')});
+const recTx=(stores,mode,fn)=>dbTx(recDb,stores,mode,fn);
 
 const state={listenStopping:false,listenFrom:'foreign',dim:false,adminOpen:false,page:'home',mode:'conversation',lang:2,items:[],listening:[],speech:0,koSize:0,foreignSize:0,listenKoSize:0,listenForeignSize:0,mic:false,recognizer:null,side:false,modal:null,interim:'',sourceTurn:0,speaking:false,recog:'ko',rate:1.5,voices:{},listenLang:'ko',flash:null};
 (()=>{const s=loadJSON('travel_settings',{});
@@ -572,7 +595,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='V3 · Claude · 받아쓰기 반복·빠짐 고침 · 2026.11.10';
+const APP_VERSION='V4 · Claude · 사진·PDF 영역 선택 · 녹음 무음 제거 · 크레딧 절약 · 2026.11.10';
 /* L18: 개발자 도구 window.L18_TIMINGS / console 표: 마지막 인식 갱신부터 TTS 시작까지(ms).
    브라우저 speechend가 있으면 실제 발화 종료 신호도 별도로 기록. 키·문장 내용은 기록하지 않음. */
 window.L21_TIMINGS=[];window.L20_TIMINGS=window.L18_TIMINGS=window.L21_TIMINGS;
@@ -603,6 +626,13 @@ function latencyReport(t){if(!t)return;const row={model:t.model,...t.marks};
   window.L18_TIMINGS.push(row);if(window.L18_TIMINGS.length>100)window.L18_TIMINGS.shift();console.table([row]);}
 /* L14: 크레딧 지키기 — 사용 한도 초과·키 오류가 한 번 나면 그 뒤로는 Gemini에 요청을 아예 보내지 않고 마이크도 끔
    (예전에는 실패할 때마다 모델 3개 × 재시도 4번으로 계속 다시 보냈음) */
+/* AI 사용량 기록 — 작업별 호출 수와 Gemini가 응답에 알려 준 실제 입력·출력 토큰 (이 휴대폰에만 저장, 설정 → 고급에서 확인) */
+let aiUsage=loadJSON('ai_usage',null),usageTimer=0;if(!aiUsage?.t)aiUsage={since:Date.now(),t:{}};
+function usageAdd(task,res){
+  res.json().then(j=>{const u=j.usageMetadata;if(!u)return;const r=aiUsage.t[task||'기타']||(aiUsage.t[task||'기타']={n:0,i:0,o:0});
+    r.n++;r.i+=u.promptTokenCount||0;r.o+=(u.candidatesTokenCount||0)+(u.thoughtsTokenCount||0);
+    clearTimeout(usageTimer);usageTimer=setTimeout(()=>store('ai_usage',JSON.stringify(aiUsage)),1500)}).catch(()=>{});
+}
 let gemStop='',gemStopAt=0,gemHalts=0;
 const GEM_RECHECK=180000; // L16: 멈춘 뒤 3분 지나면 한 번만 다시 시도 (한도를 올렸으면 저절로 다시 씀)
 const _rawFetch=window.fetch.bind(window);
@@ -612,8 +642,9 @@ window.fetch=async(url,opt)=>{
   if(engine()==='free'&&!(opt?._entryGemini&&geminiKey()))throw Object.assign(Error('Gemini 키·모드가 필요합니다'),{stop:true});
   if(gemStop&&Date.now()-gemStopAt>GEM_RECHECK)gemStop='';
   if(gemStop)throw Object.assign(new Error(gemStop),{status:429,stop:true});
-  const request=opt?._entryGemini?{...opt}:opt;if(request?._entryGemini)delete request._entryGemini;
+  const task=opt?._task,request=opt?{...opt}:opt;if(request){delete request._entryGemini;delete request._task}
   const res=await _rawFetch(url,request);
+  if(res.ok)usageAdd(task,res.clone());
   if(!res.ok&&[400,401,403,429].includes(res.status)){
     let m='';try{m=(await res.clone().json()).error?.message||''}catch{}
     if(/spending cap|spend cap|ai\.studio\/spend/i.test(m))gemHalt('Gemini 지출 한도(AI Studio에서 정해 둔 월 금액)에 닿았습니다. aistudio.google.com/spend 에서 한도를 올리면 3분 안에 저절로 다시 씁니다. 그동안은 마이크를 다시 누르면 무료 받아쓰기·무료 번역으로 이어서 쓸 수 있어요.');
@@ -740,7 +771,7 @@ function warmGemini(){if(!aiReady()||!navigator.onLine||Date.now()-warmAt<60000)
 function goMain(){setTimeout(warmGemini,0);state.page='main';try{history.pushState({app:'main'},'')}catch{}render()}
 function goHome(){stopSpeech();state.modal=null;stopDictation();if(history.state?.app==='main')history.back();else home()}
 function home(){recStop();recOpen=null;state.dim=false;resetTranscripts(false);stopDictation();state.page='home';state.modal=null;state.side=false;render()}
-function closeLayer(){stopRefCamera();if(state.modal?.type==='refPhotos'&&!state.modal.busy)releaseRefPhotos(state.modal);stopSpeech();if(refRec)stopRefRec();state.modal=null;state.side=false;stopDictation();render()}
+function closeLayer(){stopRefCamera();if(state.modal?.type==='refPhotos'&&!state.modal.busy)releaseRefPhotos(state.modal);if(state.modal?.type==='photo')releasePhotoModal(state.modal);if(state.modal?.type==='recPrep')releaseRecPrep(state.modal);stopSpeech();if(refRec)stopRefRec();state.modal=null;state.side=false;stopDictation();render()}
 window.addEventListener('popstate',()=>{
   if(state.page!=='main')return;
   if(state.modal||state.side){closeLayer();try{history.pushState({app:'main'},'')}catch{}}
@@ -764,7 +795,8 @@ function openDrawer(k){if(state.mode!=='listen'&&k!=='refs')stopSpeech();state.s
 function render(){
   entryModeMenu?.();
   const root=$('#app');
-  const settingsScroll=state.modal?.type==='settings' ? root.querySelector('.modal-content')?.scrollTop : null;
+  const m0=state.modal,keepScroll=m0&&['settings','photo','recPrep'].includes(m0.type)&&!m0.resetScroll; if(m0)m0.resetScroll=false;
+  const settingsScroll=keepScroll ? root.querySelector('.modal-content')?.scrollTop : null;
   const oldT=$('#transcript');const keep=oldT?{top:oldT.scrollTop,atBottom:oldT.scrollHeight-oldT.scrollTop-oldT.clientHeight<60}:null;
   root.replaceChildren();
   document.querySelector('meta[name=theme-color]').content=getComputedStyle(root).getPropertyValue('--accent').trim()||'#29865c';
@@ -1064,25 +1096,16 @@ function refHint(max,full){
   return out?`\n\n[배경 자료 · 참고만, 번역하거나 그대로 옮기지 마세요]\n${out}`:'';
 }
 function fileB64(file){return new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(String(fr.result).split(',')[1]);fr.onerror=()=>rej(Error('파일을 읽지 못했습니다'));fr.readAsDataURL(file)})}
-async function refExtract(b64,mime,card,fname){
+async function refExtract(parts,card,fname){
   const langOfCard=active().code;
   const sys=card
     ?`이 명함을 읽어 정리하세요. title: "이름 · 회사" 형식. sum: 이름·직함·부서·회사·주소를 원어 그대로와 한국어 읽기를 함께 (전화·메일은 빼도 됨). terms: 이름·회사명·직함·부서명마다 한 줄씩 "한국어 읽기|잘못 들리기 쉬운 한국어 → ${langOfCard}: 원어 표기" 형식 (원어가 한국어면 → 부분 생략). text: 명함 글자 전체 그대로.`
     :`이 자료(사진·PDF·녹음)는 통역 앱이 받아쓰기와 번역 품질을 높이려고 참고할 배경 자료입니다. 분야는 금형·기계가공·CAD·공장 견학·강의일 수 있습니다.
 title: 자료를 알아보기 쉬운 짧은 제목. sum: 핵심 내용 요약 3~6줄. terms: 전문 용어·고유명사·사람·회사·제품·지명을 최대 80개. 각 항목 형식 "한국어 바른 말|음성 인식에서 잘못 들리기 쉬운 한국어(쉼표로, 없으면 |부분 생략) → ${active().code}: ${nameOf(active().code)} 표기" (예: "보압|고압,보 압 → ${active().code}: …"). 자료가 외국어여도 바른 말은 한국어, → 뒤에 원어 표기 — 무료 번역기도 이 용어를 씁니다. text: 자료의 글(녹음이면 받아쓴 말)을 문장 그대로 최대 8000자, 문장마다 줄을 바꿔서.`;
-  const body={systemInstruction:{parts:[{text:sys+' JSON {"title","sum","terms","text"}로만 답하세요.'}]},contents:[{role:'user',parts:[{inline_data:{mime_type:mime,data:b64}},{text:'파일 이름: '+(fname||'')+'\n이 자료를 정리하세요.'}]}],
+  const body={systemInstruction:{parts:[{text:sys+' JSON {"title","sum","terms","text"}로만 답하세요.'}]},contents:[{role:'user',parts:[...parts,{text:'파일 이름: '+(fname||'')+'\n이 자료를 정리하세요.'}]}],
     generationConfig:{temperature:0.2,responseMimeType:'application/json',responseSchema:{type:'OBJECT',properties:{title:{type:'STRING'},sum:{type:'STRING'},terms:{type:'ARRAY',items:{type:'STRING'}},text:{type:'STRING'}},required:['title','sum','terms','text']}}};
-  let err;
-  for(const m of [...new Set([gemModel(),'gemini-3.8-flash',GEM_FALLBACK])]){ // L16: 고른 모드 먼저
-    try{
-      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(load('ai_key').trim())}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(150000)});
-      const j=await res.json().catch(()=>({}));if(!res.ok)throw Error(j.error?.message||('Gemini 오류 '+res.status));
-      const raw=(j.candidates?.[0]?.content?.parts||[]).filter(x=>!x.thought).map(x=>x.text||'').join('').trim();
-      const o=JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g,''));
-      return {title:String(o.title||fname||'자료').trim().slice(0,60),sum:String(o.sum||'').trim().slice(0,1200),terms:(o.terms||[]).map(x=>String(x).trim()).filter(Boolean).slice(0,100),text:String(o.text||'').trim().slice(0,9000)};
-    }catch(e){err=e}
-  }
-  throw err||Error('자료 정리 실패');
+  const o=await gemEach(async m=>parseJSON(gemText(await gemPost(m,body,{ms:150000,task:card?'명함':'자료 정리',dedupe:true}))));
+  return {title:String(o.title||fname||'자료').trim().slice(0,60),sum:String(o.sum||'').trim().slice(0,1200),terms:(o.terms||[]).map(x=>String(x).trim()).filter(Boolean).slice(0,100),text:String(o.text||'').trim().slice(0,9000)};
 }
 let refBusy='',refErr='',refTap=null;
 // 새 자료를 그룹에 넣을 때: 꺼진 그룹이면 그 자료만 켜진 채로 그룹을 켬 (부분 선택)
@@ -1090,19 +1113,18 @@ function refTurnOn(r){const g=refGroup(r.gid);if(!g.base&&!g.on){g.on=true;refs.
 function refAdd(gid,kind,x){let id=Date.now();while(refs.some(r=>r.id===id))id++;const r={id,gid,kind,...x,on:true,prio:false,at:Date.now()};refs.unshift(r);refTurnOn(r);saveRefs();return r}
 function refPick(gid,accept,capture,card){
   if(!card&&accept.includes('image/'))return openRefPhotos(gid,capture,accept.includes('pdf'));
-  if(provider()!=='gemini')return notify('Gemini 키·모드가 필요합니다');
-  if(!navigator.onLine)return notify('자료를 올릴 때는 인터넷이 필요합니다.');
-  const f=document.createElement('input');f.type='file';f.accept=accept;if(capture)f.setAttribute('capture','environment');
-  f.onchange=async()=>{
-    const file=f.files[0];if(!file)return;
+  if(!aiGate('자료를 올릴 때는 인터넷이 필요합니다.'))return;
+  pickFiles(accept,false,async([file])=>{
+    if(!file)return;
     if(file.size>18e6)return notify('파일이 너무 큽니다 (18MB까지). 나눠서 올려 주세요.');
-    refBusy=(card?'명함':file.name)+' 정리 중… (사진 10초 · PDF·음성은 1분 넘게 걸릴 수 있어요)';refErr='';render();
+    refBusy=(card?'명함':file.name)+' 정리 중… (사진 10초 · 음성은 1분 넘게 걸릴 수 있어요)';refErr='';render();
     try{
       let b64,mime=file.type||'';
+      if(isPdf(file))throw Error('PDF는 「사진·PDF」 메뉴에서 쪽을 골라 올려 주세요.');
       if(mime.startsWith('image/')){b64=(await shrinkImage(file,2000)).split(',')[1];mime='image/jpeg'}
-      else{b64=await fileB64(file);if(!mime)mime=/\.pdf$/i.test(file.name)?'application/pdf':'audio/mpeg'}
-      const kind=card?'명함':mime==='application/pdf'?'PDF':mime.startsWith('audio/')?'음성':'사진';
-      const r=refAdd(card?baseRefGroup().id:gid,kind,await refExtract(b64,mime,card,file.name));
+      else{b64=await fileB64(file);if(!mime)mime='audio/mpeg'}
+      const kind=card?'명함':mime.startsWith('audio/')?'음성':'사진';
+      const r=refAdd(card?baseRefGroup().id:gid,kind,await refExtract([{inline_data:{mime_type:mime,data:b64}}],card,file.name));
       if(card){
         try{await cardStore(r.id,'data:'+mime+';base64,'+b64);r.hasCardImage=true;saveRefs()}
         catch{notify('명함 내용은 저장했지만 사진을 저장하지 못했습니다. 사진 추가로 다시 시도해 주세요.')}
@@ -1111,8 +1133,7 @@ function refPick(gid,accept,capture,card){
       notify('📚 「'+r.title+'」 저장했습니다. 용어 '+r.terms.length+'개 · ✎로 고칠 수 있어요');
     }catch(e){refErr=e.message}
     refBusy='';render();
-  };
-  f.click();
+  },capture);
 }
 /* L24: 내 용어 보관함은 자료 그룹과 별도로 유지. */
 function baseRefGroup(){return refGroups.find(g=>g.base)||refGroups[0]}
@@ -1167,15 +1188,14 @@ function drawPersonalTerms(body,actions){
   button('＋ 직접 용어 추가','action primary',()=>{let r=personalBuckets().find(x=>x.categoryName==='직접 추가');if(!r){r=refAdd(baseRefGroup().id,'용어',{title:'내 용어',categoryName:'직접 추가',personalTerms:true,terms:[],text:'',sum:''})}state.modal={type:'refTerms',id:r.id,back:'personalTerms'};render()},actions);
 }
 /* 명함 원본 이미지는 텍스트 저장 공간과 분리해 휴대폰 IndexedDB에 보관. */
-let cardDatabase=null;
-function cardDb(){return cardDatabase||(cardDatabase=new Promise((resolve,reject)=>{const r=indexedDB.open('travel_card_images',1);r.onupgradeneeded=()=>r.result.createObjectStore('images');r.onsuccess=()=>resolve(r.result);r.onerror=()=>{cardDatabase=null;reject(r.error)}}))}
-async function cardStore(id,data){const db=await cardDb();return new Promise((resolve,reject)=>{const tx=db.transaction('images','readwrite');const os=tx.objectStore('images');if(data===null)os.delete(id);else os.put(data,id);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('명함 사진 저장 중단'))})}
-async function cardImage(id){const db=await cardDb();return new Promise((resolve,reject)=>{const q=db.transaction('images').objectStore('images').get(id);q.onsuccess=()=>resolve(q.result||null);q.onerror=()=>reject(q.error)})}
+
+
+
 function openCard(id){state.side=false;state.modal={type:'cardView',id};render()}
 function openCards(){state.side=false;state.modal={type:'cards'};render()}
 async function removeCard(r){try{await cardStore(r.id,null);refs=refs.filter(x=>x!==r);saveRefs();state.modal={type:'cards'};render();notify('선택한 명함을 지웠습니다.')}catch{notify('명함 사진을 지우지 못했습니다. 다시 시도해 주세요.')}}
 function askRemoveCard(r){askConfirm('이 명함만 지울까요?\n'+r.title,'삭제',()=>removeCard(r))}
-function replaceCardPhoto(r){const f=document.createElement('input');f.type='file';f.accept='image/*';f.onchange=async()=>{const file=f.files?.[0];if(!file)return;try{await cardStore(r.id,await shrinkImage(file,2000));r.hasCardImage=true;saveRefs();render();notify('명함 사진을 저장했습니다.')}catch{notify('사진을 저장하지 못했습니다. 다시 시도해 주세요.')}};f.click()}
+function replaceCardPhoto(r){pickFiles('image/*',false,async([file])=>{if(!file)return;try{await cardStore(r.id,await shrinkImage(file,2000));r.hasCardImage=true;saveRefs();render();notify('명함 사진을 저장했습니다.')}catch{notify('사진을 저장하지 못했습니다. 다시 시도해 주세요.')}})}
 function drawCards(body,actions){
   const cards=refs.filter(r=>r.kind==='명함');
   if(!cards.length)node('p','tiny','명함을 추가하면 여기에 모입니다.',body);
@@ -1422,15 +1442,7 @@ async function refGroupTerms(g){
 각 항목 형식: "한국어 바른 말|음성 인식에서 잘못 들리기 쉬운 한국어(쉼표로 여러 개, 없으면 |부분 생략) → ${fg}: ${nameOf(fg)} 표기"
 예: "보압|고압,보 압 → ${fg}: …", "이젝터 핀|이젝트 핀 → ${fg}: …". 자료가 외국어여도 바른 말은 한국어로, → 뒤에 원어 표기. JSON {"terms":[...]}로만.`;
     const body={systemInstruction:{parts:[{text:sys}]},contents:[{role:'user',parts:[{text:src}]}],generationConfig:{temperature:0.2,maxOutputTokens:8192,responseMimeType:'application/json',responseSchema:{type:'OBJECT',properties:{terms:{type:'ARRAY',items:{type:'STRING'}}},required:['terms']}}};
-    let terms=null,err;
-    for(const m of [...new Set([gemModel(),'gemini-3.8-flash'])]){ // L16: 고른 모드 먼저
-      try{const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(load('ai_key').trim())}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(90000)});
-        const j=await res.json().catch(()=>({}));if(!res.ok)throw Error(j.error?.message||('Gemini 오류 '+res.status));
-        const raw=(j.candidates?.[0]?.content?.parts||[]).filter(x=>!x.thought).map(x=>x.text||'').join('').trim();
-        terms=(JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g,'')).terms||[]).map(x=>String(x).trim()).filter(Boolean);break;
-      }catch(e){err=e;if(e.stop||gemStop)break}
-    }
-    if(!terms)throw err||Error('용어 만들기 실패');
+    const terms=((await gemEach(async m=>parseJSON(gemText(await gemPost(m,body,{ms:90000,task:'용어 만들기',dedupe:true}))))).terms||[]).map(x=>String(x).trim()).filter(Boolean);
     if(!refGroups.includes(g))throw Error('대상 그룹이 삭제되어 용어 만들기를 중단했습니다.');
     let box=refs.find(r=>r.gid===g.id&&r.kind==='용어'&&r.title==='용어 모음'&&(!r.personalTerms||g.base));
     if(!box){box={id:Date.now(),gid:g.id,kind:'용어',title:'용어 모음',sum:'',terms:[],text:'',on:true,prio:false,at:Date.now()};refs.push(box)}
@@ -1588,8 +1600,10 @@ function openNote(i){state.side=false;state.modal={type:'note',index:i};render()
 function openEnlarge(text,code,sub,other){state.modal={type:'enlarge',text,code,sub,other:other||(code==='ko'?active().code:'ko'),rotated:false};render()}
 function openEdit(index,list){stopSpeech();state.modal={type:'edit',index,list:list||'items'};render()}
 function openSettings(){state.modal={type:'settings'};render()}
+// 긴 글을 줄(문단) 단위로 나누고, 너무 긴 줄은 문장 단위로 나눔 → 골라 번역하기용
+function textUnits(text){return String(text).split(/\n+/).map(s=>s.trim()).filter(Boolean).flatMap(l=>l.length>300?splitText(l,300):[l])}
 function openText(){stopSpeech();state.side=false;state.modal={type:'text'};render()}
-function openPhoto(){stopSpeech();stopDictation();state.side=false;state.modal={type:'photo',dir:'ko',mode:state.mode,fg:active().code};render()}
+
 function openPhrases(){state.side=false;state.modal={type:'phrases',cat:Object.keys(allPhrases())[0]};render()}
 
 /* L3: 크게 보기 — 처음엔 가로로 크게, 위 버튼으로 세로·가로 바꾸기와 180° 회전. 원문은 위쪽 구석에 작게 */
@@ -1635,9 +1649,9 @@ function drawModal(root){
     const nav=node('div','head-nav','',header);
     const hb=button('','home-btn',goHome,nav);hb.innerHTML=ICON.home(15)+'<span>처음으로</span>';
     button('‹ 뒤로','home-btn',closeLayer,nav);
-  }else button('‹ 뒤로','plain',()=>{if(data.type==='refRec'){finishRefRec(false);return}if(data.type==='refTerms'){state.modal={type:'refEdit',id:data.id};render();return}if(data.type==='refEdit'||data.type==='refGroup'){backToRefs();return}closeLayer()},header);
+  }else button('‹ 뒤로','plain',()=>{if(data.type==='photo'&&data.stage&&data.stage!=='collect'){photoBack(data);return}if(data.type==='refRec'){finishRefRec(false);return}if(data.type==='refTerms'){state.modal={type:'refEdit',id:data.id};render();return}if(data.type==='refEdit'||data.type==='refGroup'){backToRefs();return}closeLayer()},header);
   const badge=node('span','ai-badge','',header);badge.id='aiBadge';badge.innerHTML='<i></i><b>AI 교정 중</b>';
-  const titles={personalTerms:'내 용어',cards:'명함',cardView:'명함 보기',edit:'문장·번역 고치기',photoHistory:'사진 통역 기록',refPhotos:'사진 모아 올리기',photo:'사진 통역',note:data.index<0?'문장 추가':'자주 쓰는 문장',text:'글로 통역하기',settings:'설정',phrases:'여행 문구 · '+active().name,addPhrase:'여행 문구 추가',refEdit:'자료 고치기',refGroup:data.id?'그룹 고치기':'새 그룹',refRec:'녹음해서 자료 만들기',refTerms:'용어'};
+  const titles={personalTerms:'내 용어',cards:'명함',cardView:'명함 보기',edit:'문장·번역 고치기',photoHistory:'사진 통역 기록',recPrep:'AI 전송용 소리 정리',refPhotos:'사진 모아 올리기',photo:data.purpose==='ref'?'PDF 쪽 골라 올리기':'사진·PDF 통역',note:data.index<0?'문장 추가':'자주 쓰는 문장',text:'글로 통역하기',settings:'설정',phrases:'여행 문구 · '+active().name,addPhrase:'여행 문구 추가',refEdit:'자료 고치기',refGroup:data.id?'그룹 고치기':'새 그룹',refRec:'녹음해서 자료 만들기',refTerms:'용어'};
   node('h2','',titles[data.type],header);
   const body=node('div','modal-content','',modal),actions=node('div','actions','',modal);
 
@@ -1691,11 +1705,12 @@ function drawModal(root){
     const inp=node('textarea','editor','',body);inp.placeholder='번역할 글을 붙여넣거나, 말하거나, 직접 쓰세요.\n길이 제한 없이 문장 단위로 나눠 번역합니다.';inp.style.marginTop='10px';inp.value=data.initial||'';
     const cnt=node('div','count','0자',body);
     const upd=()=>cnt.textContent=inp.value.length.toLocaleString()+'자';inp.oninput=upd;upd();
-    const go=async()=>{
-      const t=inp.value.trim();if(!t)return notify('글을 입력하세요');
+    const run=async text=>{
+      const t=text.trim();if(!t)return notify('글을 입력하세요');
       stopSpeech();stopDictation();state.modal=null;render();
       await consume(t,sel.value==='ko'?'ko':active().code,{fromText:true});
     };
+    const go=()=>run(inp.value);
     voiceRow(body,inp,()=>sel.value==='ko'?'ko':active().code,upd,'번역하기',go);
     sel.onchange=()=>{stopSpeech();stopDictation()};
     const rb=node('div','row-btns','',body);
@@ -1707,6 +1722,17 @@ function drawModal(root){
     file.onchange=async()=>{const f=file.files[0];if(!f)return;try{const t=await f.text();inp.value=inp.value?inp.value+'\n'+t:t;upd();notify(`"${f.name}" 내용을 넣었습니다.`)}catch{notify('파일을 읽지 못했습니다.')}file.value=''};
     button('📁 파일 올리기','action',()=>file.click(),rb);
     button('지우기','action',()=>{stopSpeech();inp.value='';upd()},rb);
+    // 긴 글에서 필요한 부분만: 글 칸에서 끌어서 고른 부분, 또는 문단·문장 목록에서 체크한 것만 번역 (전체 번역은 '번역하기')
+    const rb2=node('div','row-btns','',body),pk=node('div','','',body);
+    button('✂ 고른 부분만 번역','action',()=>{const t=inp.value.slice(inp.selectionStart,inp.selectionEnd);if(!t.trim())return notify('글 칸에서 번역할 부분을 길게 눌러 끌어서 고른 뒤 다시 눌러 주세요.');run(t)},rb2);
+    button('☑ 문단 골라 번역','action',()=>{
+      pk.replaceChildren();const units=textUnits(inp.value);if(!units.length)return notify('글을 먼저 입력하세요.');
+      const on=units.map(()=>true),cnt2=node('span','',units.length,null),mark=(r,i)=>{r.classList.toggle('on',on[i]);r.firstChild.textContent=on[i]?'✓':'○'};
+      const go2=button('고른 ','action primary',()=>run(units.filter((_,i)=>on[i]).join('\n')),pk);go2.append(cnt2,'개 번역');
+      button('모두 선택·해제','action',()=>{const all=on.every(Boolean);on.fill(!all);list.querySelectorAll('.tx-unit').forEach((r,i)=>mark(r,i));cnt2.textContent=on.filter(Boolean).length},pk);
+      const list=node('div','','',pk);
+      units.forEach((u,i)=>{const r=node('div','tx-unit on','',list);node('b','','✓',r);node('span','',u,r);r.onclick=()=>{on[i]=!on[i];mark(r,i);cnt2.textContent=on.filter(Boolean).length}});
+    },rb2);
     mediaButton(rb,'입력한 글 듣기','text-input',()=>[{text:inp.value,code:sel.value==='ko'?'ko':active().code}]);
     node('p','tiny','번역이 끝나면 바로 소리로 읽어 줍니다 (아래 소리 버튼이 "끔"이면 읽지 않음). 말이 끝나고 잠시 조용하면 마이크가 자동으로 멈춥니다.'+(aiReady()?' 멈추면 AI가 문장을 다듬어 줍니다.':' (설정에 AI 키를 넣으면 말한 문장을 AI가 다듬어 줍니다.)')+' 파일은 글자 파일(.txt)을 올릴 수 있습니다.',body);
   }
@@ -1719,49 +1745,396 @@ function drawModal(root){
   if(data.type==='refRec')drawRefRec(body,data,actions);
   
   if(data.type==='refTerms')drawRefTerms(body,data,actions);
+  if(data.type==='recPrep')drawRecPrep(body,data,actions);
   if(data.type==='phrases')drawPhrases(body,data);
   if(data.type==='addPhrase')drawAddPhrase(body,data);
   if(data.type==='settings')drawSettings(body);
 }
 
 /* ── 사진 통역 (Gemini) ── */
-function shrinkImage(file,max=1600){return new Promise((res,rej)=>{const url=URL.createObjectURL(file);const im=new Image();im.onload=()=>{const k=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',0.85))};im.onerror=()=>{URL.revokeObjectURL(url);rej(Error('사진을 열지 못했습니다'))};im.src=url})}
+/* ── 사진·PDF 공통: 불러오기 → 영역 자르기 → 크기 줄이기 (사진, 스캔 PDF, 자료 사진이 모두 이 함수들을 씀) ── */
+async function loadSrc(blob){ // 사진 파일 → {img,w,h}. 휴대폰이 기록한 회전 정보를 반영
+  if(window.createImageBitmap){try{const img=await createImageBitmap(blob,{imageOrientation:'from-image'});return {img,w:img.width,h:img.height}}catch{}}
+  const url=URL.createObjectURL(blob);
+  try{const im=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>rej(Error('사진을 열지 못했습니다'));i.src=url});return {img:im,w:im.naturalWidth,h:im.naturalHeight}}
+  finally{URL.revokeObjectURL(url)}
+}
+// rect: 0~1 비율 {x,y,w,h} (없으면 전체) → 긴 변 maxSide 이하 JPEG 데이터 주소. 원본은 건드리지 않음
+function cropJpeg(src,rect,maxSide=PH_SIDE,q=PH_QUALITY){
+  const r=rect||{x:0,y:0,w:1,h:1},sx=Math.round(r.x*src.w),sy=Math.round(r.y*src.h),sw=Math.max(1,Math.min(src.w-sx,Math.round(r.w*src.w))),sh=Math.max(1,Math.min(src.h-sy,Math.round(r.h*src.h)));
+  const k=Math.min(1,maxSide/Math.max(sw,sh)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(sw*k));c.height=Math.max(1,Math.round(sh*k));
+  const g=c.getContext('2d');g.imageSmoothingQuality='high';g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(src.img,sx,sy,sw,sh,0,0,c.width,c.height);
+  return c.toDataURL('image/jpeg',q);
+}
+const PH_SIDE=1280,PH_QUALITY=0.82,REF_SIDE=1600;
+const PH_SIZES=[[1280,'보통 1280'],[1600,'작은 글씨 1600'],[2000,'아주 작은 글씨 2000']];
+async function shrinkImage(file,max=PH_SIDE,q=0.85){const src=await loadSrc(file);try{return cropJpeg(src,null,max,q)}finally{src.img.close?.()}}
+function pickFiles(accept,multiple,done,capture){const f=document.createElement('input');f.type='file';f.accept=accept;if(multiple)f.multiple=true;if(capture)f.setAttribute('capture','environment');f.onchange=()=>done([...f.files]);f.click()}
+const newItem=file=>({file,url:file.type.startsWith('image/')?URL.createObjectURL(file):null,sel:true,rect:null,res:PH_SIDE});
+
+/* 영역 선택기: 손가락으로 네모 그리기 · 안쪽을 끌면 이동 · 변·모서리를 끌면 크기 조절 */
+function cropPicker(parent,src,rect,onChange){
+  const wrap=node('div','crop-wrap','',parent),cv=node('canvas','crop-cv','',wrap),k=Math.min(1,1100/Math.max(src.w,src.h));
+  cv.width=Math.round(src.w*k);cv.height=Math.round(src.h*k);
+  const g=cv.getContext('2d'),base=document.createElement('canvas');base.width=cv.width;base.height=cv.height;base.getContext('2d').drawImage(src.img,0,0,cv.width,cv.height);
+  let r=rect?{...rect}:null,drag=null;const MIN=0.03,HIT=24;
+  const draw=()=>{
+    g.drawImage(base,0,0);if(!r)return;
+    const x=r.x*cv.width,y=r.y*cv.height,w=r.w*cv.width,h=r.h*cv.height;
+    g.fillStyle='rgba(0,0,0,.5)';g.beginPath();g.rect(0,0,cv.width,cv.height);g.rect(x,y,w,h);g.fill('evenodd');
+    const u=Math.max(2,cv.width/320);g.strokeStyle='#2fd388';g.lineWidth=u;g.strokeRect(x,y,w,h);g.fillStyle='#2fd388';
+    for(const hx of [x,x+w/2,x+w])for(const hy of [y,y+h/2,y+h])if(hx!==x+w/2||hy!==y+h/2)g.fillRect(hx-u*2.2,hy-u*2.2,u*4.4,u*4.4);
+  };
+  const pt=e=>{const b=cv.getBoundingClientRect();return {x:Math.min(1,Math.max(0,(e.clientX-b.left)/b.width)),y:Math.min(1,Math.max(0,(e.clientY-b.top)/b.height)),pw:b.width,ph:b.height}};
+  cv.onpointerdown=e=>{
+    e.preventDefault();const p=pt(e);cv.setPointerCapture(e.pointerId);drag=null;
+    if(r){
+      const dl=Math.abs(p.x-r.x)*p.pw,dr=Math.abs(p.x-r.x-r.w)*p.pw,dt=Math.abs(p.y-r.y)*p.ph,db=Math.abs(p.y-r.y-r.h)*p.ph;
+      const nearX=p.x>r.x-HIT/p.pw&&p.x<r.x+r.w+HIT/p.pw,nearY=p.y>r.y-HIT/p.ph&&p.y<r.y+r.h+HIT/p.ph;
+      const L=nearY&&dl<HIT&&dl<=dr,R=nearY&&dr<HIT&&dr<dl,T=nearX&&dt<HIT&&dt<=db,B=nearX&&db<HIT&&db<dt;
+      if(L||R||T||B)drag={m:'size',L,R,T,B,o:{...r}};
+      else if(p.x>r.x&&p.x<r.x+r.w&&p.y>r.y&&p.y<r.y+r.h)drag={m:'move',dx:p.x-r.x,dy:p.y-r.y};
+    }
+    if(!drag){drag={m:'new',x0:p.x,y0:p.y};r={x:p.x,y:p.y,w:0,h:0}}
+    draw();
+  };
+  cv.onpointermove=e=>{
+    if(!drag)return;e.preventDefault();const p=pt(e);
+    if(drag.m==='new')r={x:Math.min(drag.x0,p.x),y:Math.min(drag.y0,p.y),w:Math.abs(p.x-drag.x0),h:Math.abs(p.y-drag.y0)};
+    else if(drag.m==='move')r={...r,x:Math.min(1-r.w,Math.max(0,p.x-drag.dx)),y:Math.min(1-r.h,Math.max(0,p.y-drag.dy))};
+    else{const o=drag.o;let x1=o.x,x2=o.x+o.w,y1=o.y,y2=o.y+o.h;if(drag.L)x1=p.x;if(drag.R)x2=p.x;if(drag.T)y1=p.y;if(drag.B)y2=p.y;r={x:Math.min(x1,x2),y:Math.min(y1,y2),w:Math.abs(x2-x1),h:Math.abs(y2-y1)}}
+    draw();
+  };
+  const end=()=>{if(!drag)return;drag=null;if(r&&(r.w<MIN||r.h<MIN))r=null;draw();onChange(r?{...r}:null)};
+  cv.onpointerup=end;cv.onpointercancel=end;draw();
+  return {set(v){r=v?{...v}:null;draw();onChange(v?{...v}:null)}};
+}
+const rectInfo=(src,rect,side)=>{const w=Math.round((rect?rect.w:1)*src.w),h=Math.round((rect?rect.h:1)*src.h),k=Math.min(1,side/Math.max(w,h));return Math.round(w*k)+'×'+Math.round(h*k)+'px로 보냄'+(rect?' · 선택한 부분만':' · 전체')};
+
+/* ── 사진 통역 화면: 모으기 → (영역 지정) → 번역 ── */
+function openPhoto(){stopSpeech();stopDictation();state.side=false;state.modal={type:'photo',stage:'collect',files:[],mode:state.mode,fg:active().code};render()}
+function setStage(data,stage){data.stage=stage;data.resetScroll=true;render()}
+function releasePhotoModal(data){if(refCamera?.data===data)stopRefCamera();for(const x of data.files||[])if(x.url)URL.revokeObjectURL(x.url);data.pdf?.doc?.destroy?.();data.src?.img?.close?.()}
+function photoBack(data){
+  const pd=data.pdf;
+  if(data.stage==='crop')setStage(data,'collect');
+  else if(data.stage==='pdfPage')setStage(data,'pdf');
+  else if(pd?.back){const b=pd.back;releasePhotoModal(data);state.modal=b;render()}
+  else if(data.stage==='pdf'){data.pdf.doc?.destroy?.();data.pdf=null;setStage(data,'collect')}
+  else closeLayer();
+}
+function drawPhoto(body,data,actions){
+  if(data.stage==='crop')return drawPhotoCrop(body,data,actions);
+  if(data.stage==='pdf')return drawPdf(body,data,actions);
+  if(data.stage==='pdfPage')return drawPdfPage(body,data,actions);
+  if(data.stage==='load')return void node('p','tiny','PDF를 여는 중…',body);
+  if(data.stage==='collect')return drawPhotoCollect(body,data,actions);
+  drawPhotoResult(body,data,actions);
+}
+function addPhotoFiles(data,files){
+  for(const f of files){
+    if(isPdf(f)){openPdf(data,f);return}
+    if(f.type.startsWith('image/'))data.files.push(newItem(f));
+  }
+  if(state.modal===data)render();
+}
+function drawCameraBar(body,data,onSingle){
+  if(data.cameraError)node('p','tiny',data.cameraError,body);
+  if(refCamera?.data!==data)return;
+  const camera=refCamera,video=node('video','ref-camera','',body);video.muted=true;video.autoplay=true;video.playsInline=true;camera.video=video;
+  if(camera.stream){video.srcObject=camera.stream;video.play().catch(()=>{})}
+  const row=node('div','row-btns','',body);button('● 촬영','action primary',()=>captureRefFrame(data),row);
+  if(onSingle)button('이 한 장 바로 올리기','action',()=>captureRefFrame(data,true),row);
+  button('촬영 마침','action',()=>{stopRefCamera();render()},row);
+}
+function aiGate(offline='사진·PDF 통역은 인터넷이 필요합니다.'){if(provider()!=='gemini'){notify('Gemini 키·모드가 필요합니다');return false}if(!navigator.onLine){notify(offline);return false}return true}
+function drawPhotoCollect(body,data,actions){
+  node('p','tiny faint','번역할 사진을 고르고, 필요한 부분만 손가락으로 네모를 그려 지정하면 그 부분만 AI에 보내 크레딧을 아낍니다. 원본 사진은 그대로 보관합니다. 번역한 결과는 이 스마트폰에 자동 저장합니다.',body);
+  const bar=node('div','row-btns two','',body);
+  button('📷 연속 촬영','action primary',()=>startRefCamera(data),bar).disabled=!!data.busy;
+  button('🖼 사진 고르기','action',()=>{stopRefCamera();pickFiles('image/*,application/pdf',true,fs=>{if(state.modal===data)addPhotoFiles(data,fs)})},bar).disabled=!!data.busy;
+  button('📄 PDF 열기','action',()=>{stopRefCamera();pickFiles('application/pdf',false,fs=>{if(fs[0]&&state.modal===data)openPdf(data,fs[0])})},bar).disabled=!!data.busy;
+  button('사진 통역 기록','action',openPhotoHistory,bar);
+  drawCameraBar(body,data);
+  if(data.err)node('p','tiny',data.err,body);
+  if(data.busy)node('p','tiny','번역하는 중… '+(data.progress||''),body);
+  const grid=node('div','ph-grid','',body);
+  data.files.forEach((x,i)=>{
+    const cell=node('div','ph-cell'+(x.sel?' on':''),'',grid),im=node('img','','',cell);im.src=x.url;im.alt='사진 '+(i+1);
+    const sel=button(x.sel?'✓':'','ph-sel',()=>{x.sel=!x.sel;cell.classList.toggle('on',x.sel);sel.textContent=x.sel?'✓':'';count.textContent=data.files.filter(y=>y.sel).length},cell);sel.setAttribute('aria-label','번역할 사진으로 선택');
+    im.onclick=()=>sel.click();
+    node('div','ph-stat',x.err?'실패 · '+x.err:x.status||(x.rect?'✂ 영역 지정됨':'전체 사진'),cell);
+    const mini=node('div','row-mini','',cell);
+    button('✂ 영역','',()=>openCrop(data,x),mini).disabled=!!data.busy;
+    if(x.rec)button('열기','',()=>openSavedPhoto(x.rec),mini);
+    button('빼기','',()=>{URL.revokeObjectURL(x.url);data.files.splice(i,1);render()},mini).disabled=!!data.busy;
+  });
+  const count=node('span','','',null);count.textContent=data.files.filter(y=>y.sel).length;
+  const go=button('선택한 사진 번역 (','action primary',()=>runPhotoItems(data),actions);go.append(count,'장)');go.disabled=!!data.busy||!data.files.length;
+  button('모두 선택·해제','action',()=>{const all=data.files.every(x=>x.sel);data.files.forEach(x=>x.sel=!all);render()},actions).disabled=!data.files.length;
+}
+async function openCrop(data,x){
+  stopRefCamera();data.cur=x;data.src?.img?.close?.();data.src=null;setStage(data,'crop');
+  try{const s=await loadSrc(x.file);if(state.modal!==data||data.cur!==x){s.img.close?.();return}data.src=s}catch(e){data.err=e.message;if(state.modal===data)setStage(data,'collect');return}
+  render();
+}
+function drawPhotoCrop(body,data,actions){
+  const x=data.cur;
+  node('p','tiny faint','번역할 부분을 손가락으로 끌어 네모로 그리세요. 네모 안을 끌면 옮겨지고, 변이나 모서리를 끌면 크기가 바뀝니다. 아무것도 안 그리면 사진 전체입니다.',body);
+  if(!data.src){node('p','tiny','사진을 여는 중…',body);return}
+  const info=node('p','tiny','',body);let picker;
+  const upd=()=>info.textContent=rectInfo(data.src,x.rect,x.res);
+  picker=cropPicker(body,data.src,x.rect,r=>{x.rect=r;x.status='';x.rec=null;upd()});
+  const sz=node('div','chips','',body);
+  PH_SIZES.forEach(([v,t])=>button(t,'chip'+(x.res===v?' on':''),()=>{x.res=v;[...sz.children].forEach((c,i)=>c.classList.toggle('on',PH_SIZES[i][0]===v));upd()},sz));
+  node('p','tiny faint','글씨가 작으면 큰 숫자를 고르세요. 크기가 커져도 AI 사용량이 크게 늘지 않을 수 있지만, 읽는 정확도는 올라갑니다.',body);upd();
+  button('이 영역 번역','action primary',()=>{setStage(data,'collect');runPhotoItems(data,[x])},actions);
+  button('영역 저장하고 돌아가기','action',()=>setStage(data,'collect'),actions);
+  button('전체로 되돌리기','action',()=>picker.set(null),actions);
+}
+/* 사진 한 장(또는 PDF 쪽) → 번역 → 기록. 같은 그림·같은 언어는 저장된 기록을 다시 씀 (AI 호출 없음) */
+const noTextSigs=new Set();
+async function translateImage(data,url,from,orig){
+  const sig=hashStr(url+'|'+data.fg);
+  let rec=await phFindSig(sig);
+  if(rec)return {...rec,reused:true};
+  if(noTextSigs.has(sig))throw Error('글자를 찾지 못했습니다');
+  const blocks=await photoTranslate(url,data.fg);
+  if(!blocks.length){noTextSigs.add(sig);throw Error('글자를 찾지 못했습니다')}
+  rec={id:null,img:url,blocks,fg:data.fg,mode:data.mode,sig,from,orig:orig&&orig.size<=15e6?orig:undefined};
+  await savePhoto(rec);return rec;
+}
+async function runPhotoItems(data,items){
+  if(data.busy||!aiGate())return;
+  items=items||data.files.filter(x=>x.sel);if(!items.length)return notify('번역할 사진을 선택하세요.');
+  stopRefCamera();stopSpeech();data.busy=true;data.err='';const done=[];
+  for(const [i,x] of items.entries()){
+    if(state.modal!==data)break; // 화면을 닫으면 남은 사진은 보내지 않음
+    x.status='번역 중…';x.err='';data.progress=(i+1)+' / '+items.length;render();
+    let src;
+    try{src=await loadSrc(x.file);const rec=await translateImage(data,cropJpeg(src,x.rect,x.res),null,x.file);
+      x.rec=rec.id;x.status=rec.reused?'이미 번역함 · 저장본 사용':'완료';done.push(rec);
+      if(items.length===1)updatePhotoEntries({...rec,mode:data.mode},true);
+    }catch(e){x.err=e.message;x.status=''}
+    finally{src?.img.close?.()}
+  }
+  data.busy=false;
+  if(state.modal!==data)return;
+  if(items.length===1&&done.length===1){state.modal=null;state.mode=data.mode;releasePhotoModal(data);render();scrollEnd();notify('사진과 번역을 저장했습니다. 📷 버튼이나 사진 통역 기록에서 다시 열 수 있습니다.');return}
+  render();notify(done.length+'장 번역·저장했습니다.'+(done.length<items.length?' 실패한 사진만 다시 번역할 수 있어요.':''));
+}
+const isPdf=f=>/pdf/i.test(f.type)||/\.pdf$/i.test(f.name);
+function openRefPdf(back,file){ // 자료 올리기: PDF는 전체를 보내지 않고 쪽을 고르는 화면으로
+  const d={type:'photo',stage:'load',purpose:'ref',gid:back.gid,files:[],mode:state.mode,fg:active().code,pdf:{back}};state.modal=d;openPdf(d,file);
+}
+function recropSaved(data){
+  if(!data.orig)return;
+  const f=data.orig instanceof File?data.orig:new File([data.orig],'원본.jpg',{type:data.orig.type||'image/jpeg'}),x=newItem(f);
+  const d={type:'photo',stage:'collect',files:[x],mode:data.mode,fg:data.fg};state.modal=d;render();openCrop(d,x);
+}
+
+/* ── PDF: PDF.js를 필요할 때만 불러와 휴대폰 안에서 쪽 나누기·글자 뽑기·그림으로 자르기. 쪽을 고르기 전에는 AI로 아무것도 보내지 않음 ── */
+const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+let pdfjsP=null;
+function loadPdfJs(){
+  if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
+  return pdfjsP||(pdfjsP=new Promise((res,rej)=>{
+    const s=document.createElement('script');s.src=PDFJS+'pdf.min.js';s.crossOrigin='anonymous';
+    s.onload=async()=>{const L=window.pdfjsLib;
+      try{L.GlobalWorkerOptions.workerSrc=URL.createObjectURL(new Blob([await(await fetch(PDFJS+'pdf.worker.min.js')).text()],{type:'text/javascript'}))}
+      catch{L.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js'}
+      res(L)};
+    s.onerror=()=>{pdfjsP=null;s.remove();rej(Error('PDF 도구를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.'))};
+    document.head.appendChild(s);
+  }));
+}
+// "1, 3, 5, 10~20" → [1,3,5,10,…,20] (쪽수 안으로, 중복 없이 오름차순)
+function parsePages(spec,n){
+  const out=new Set();
+  for(const part of String(spec||'').replace(/[，、;\s]+/g,',').split(',')){
+    const t=part.replace(/쪽|페이지|p\.?/gi,'');if(!t)continue;
+    const m=t.match(/^(\d+)[-~–—](\d+)$/);
+    if(m){let a=+m[1],b=+m[2];if(a>b)[a,b]=[b,a];for(let i=Math.max(1,a);i<=Math.min(n,b);i++)out.add(i)}
+    else if(/^\d+$/.test(t)&&+t>=1&&+t<=n)out.add(+t);
+  }
+  return [...out].sort((a,b)=>a-b);
+}
+async function openPdf(data,file){
+  if(file.size>60e6)return notify('PDF가 너무 큽니다 (60MB까지).');
+  stopRefCamera();data.err='';data.stage='load';render();
+  try{
+    const L=await loadPdfJs(),doc=await L.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+    if(state.modal!==data){doc.destroy();return}
+    data.pdf={...(data.pdf||{}),file,doc,name:file.name,n:doc.numPages,spec:'',pages:[],rects:{},kinds:{},res:{},opt:{mode:'auto',side:PH_SIDE,src:''}};
+    setStage(data,'pdf');
+  }catch(e){
+    const msg=e.name==='PasswordException'?'암호가 걸린 PDF는 열 수 없습니다.':'PDF를 열지 못했습니다 · '+e.message;
+    if(state.modal!==data)return;
+    if(data.purpose==='ref'){notify(msg);photoBack(data)}else{data.err=msg;setStage(data,'collect')}
+  }
+}
+async function pdfRender(doc,n,long=2000){ // 쪽 → 캔버스 (영역 선택·스캔 자르기에 같이 씀)
+  const page=await doc.getPage(n),v1=page.getViewport({scale:1}),vp=page.getViewport({scale:Math.min(4,long/Math.max(v1.width,v1.height))});
+  const c=document.createElement('canvas');c.width=Math.round(vp.width);c.height=Math.round(vp.height);
+  await page.render({canvasContext:c.getContext('2d'),viewport:vp}).promise;return {img:c,w:c.width,h:c.height};
+}
+async function pdfTextIn(doc,n,rect){ // 선택 영역 안의 글자만 뽑음 (PDF에 들어 있는 글자 — 무료, AI 없음)
+  const page=await doc.getPage(n),vp=page.getViewport({scale:1}),tc=await page.getTextContent();let out='',prev=null;
+  for(const it of tc.items){
+    if(!it.str)continue;
+    const [px,py]=vp.convertToViewportPoint(it.transform[4],it.transform[5]),h=Math.abs(it.height||it.transform[3]||10),cx=(px+(it.width||0)/2)/vp.width,cy=(py-h/2)/vp.height;
+    if(rect&&!(cx>=rect.x&&cx<=rect.x+rect.w&&cy>=rect.y&&cy<=rect.y+rect.h))continue;
+    if(prev&&!prev.eol&&!/\s$/.test(out)&&!/^\s/.test(it.str)&&px-prev.end>h*0.15)out+=' ';
+    out+=it.str+(it.hasEOL?'\n':'');prev={eol:it.hasEOL,end:px+(it.width||0)};
+  }
+  return out.replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+// 글자가 충분하고 깨지지 않았으면 '글자 PDF' → 글자만 보냄. 아니면 '스캔·그림' → 이미지로 보냄
+const looksText=t=>{const n=t.replace(/\s/g,'').length;return n>=12&&((t.match(/[�-]/g)||[]).length/n)<0.2};
+function drawPdf(body,data,actions){
+  const pd=data.pdf,ref=data.purpose==='ref';
+  node('p','tiny','📄 '+pd.name+' · 전체 '+pd.n+'쪽. 아래에서 AI에 보낼 쪽을 직접 고르세요. 고르기 전에는 아무것도 보내지 않습니다.',body);
+  const inp=node('input','text-field','',body);inp.value=pd.spec;inp.placeholder='예) 1, 3, 5, 12  또는  10~20  또는  1, 4, 8~10';inp.inputMode='text';
+  const apply=()=>{pd.spec=inp.value;pd.pages=parsePages(inp.value,pd.n);render()};
+  inp.onchange=apply;inp.onkeydown=e=>{if(e.key==='Enter')apply()};
+  const row=node('div','row-btns two','',body);
+  button('쪽 적용','action primary',apply,row);
+  button('전체 '+pd.n+'쪽 선택','action',()=>askConfirm('전체 '+pd.n+'쪽을 모두 처리할까요?\n글자 PDF는 글자만, 스캔 쪽은 그림으로 AI에 보내므로 쪽이 많으면 크레딧이 많이 듭니다.','전체 선택',()=>{pd.pages=parsePages('1~'+pd.n,pd.n);pd.spec='1~'+pd.n;render()}),row);
+  button('선택 지우기','action',()=>{pd.pages=[];pd.spec='';render()},row);
+  node('p','tiny',pd.pages.length?'선택한 쪽 '+pd.pages.length+'개 · 쪽 번호를 누르면 필요한 영역만 지정할 수 있어요 (✂ = 영역 지정됨)':'선택한 쪽이 없습니다.',body);
+  const chips=node('div','chips','',body);
+  pd.pages.forEach(n=>{const st=pd.res[n]||{};button(n+'쪽'+(pd.rects[n]?' ✂':'')+(st.rec?' ✓':st.err?' ✕':''),'chip'+(st.rec?' on':''),()=>openPdfPage(data,n),chips)});
+  node('label','field','보내는 방식',body);
+  const mode=node('div','chips','',body);
+  [['auto','자동 (글자 PDF는 글자만)'],['text','글자만'],['image','그림으로']].forEach(([v,t])=>button(t,'chip'+(pd.opt.mode===v?' on':''),()=>{pd.opt.mode=v;render()},mode));
+  node('label','field','그림으로 보낼 때 크기',body);
+  const sz=node('div','chips','',body);PH_SIZES.forEach(([v,t])=>button(t,'chip'+(pd.opt.side===v?' on':''),()=>{pd.opt.side=v;render()},sz));
+  if(!ref){
+    node('label','field','글자 PDF의 원문 언어',body);
+    const sel=node('select','text-field','',body);[['','자동 (한글이면 한국어, 아니면 '+nameOf(data.fg)+')'],...PH_CODES.map(c=>[c,phFlag(c)+' '+nameOf(c)])].forEach(([v,t])=>{const o=node('option','',t,sel);o.value=v});sel.value=pd.opt.src;sel.onchange=()=>pd.opt.src=sel.value;
+  }
+  if(data.err)node('p','tiny',data.err,body);
+  if(data.busy)node('p','tiny','처리하는 중… '+(data.progress||''),body);
+  pd.pages.forEach(n=>{const st=pd.res[n];if(!st||!(st.status||st.err))return;
+    const r=node('div','pdf-row','',body);node('span','','p.'+n+' · '+(st.err?'실패 · '+st.err:st.status),r);
+    if(st.rec&&!ref)button('열기','action',()=>openSavedPhoto(st.rec),r);
+    if(st.err)button('다시 시도','action',()=>runPdf(data,[n]),r).disabled=!!data.busy;
+  });
+  button(ref?'자료로 올리기 ('+pd.pages.length+'쪽)':'선택한 쪽 번역 ('+pd.pages.length+'쪽)','action primary',()=>runPdf(data),actions).disabled=!!data.busy||!pd.pages.length;
+}
+async function openPdfPage(data,n){
+  const pd=data.pdf;pd.cur=n;data.src=null;data.pageNote='';setStage(data,'pdfPage');
+  try{const s=await pdfRender(pd.doc,n,Math.max(1800,pd.opt.side*1.5));if(state.modal!==data||pd.cur!==n)return;data.src=s}catch(e){data.err=e.message;if(state.modal===data)setStage(data,'pdf');return}
+  render();pdfDetect(data);
+}
+let detectTimer=0;
+function pdfDetect(data){ // 지금 영역이 글자 PDF인지 스캔인지 알려 줌 (바로 계산, 무료)
+  clearTimeout(detectTimer);detectTimer=setTimeout(async()=>{
+    const pd=data.pdf,n=pd?.cur,el=document.getElementById('pdfNote');if(!el||state.modal!==data)return;
+    try{const t=await pdfTextIn(pd.doc,n,pd.rects[n]||null);if(state.modal!==data||pd.cur!==n||!el.isConnected)return;
+      const c=t.replace(/\s/g,'').length;el.textContent=looksText(t)?'이 영역은 글자 PDF로 보입니다 (글자 '+c.toLocaleString()+'자) → 글자만 보냅니다.':'이 영역에서 글자를 찾지 못했습니다 → 스캔·그림으로 보고 이미지로 보냅니다.'}catch{}
+  },150);
+}
+function drawPdfPage(body,data,actions){
+  const pd=data.pdf,n=pd.cur,i=pd.pages.indexOf(n);
+  node('p','tiny faint',n+'쪽 · 번역할 부분을 손가락으로 네모로 그리세요 (안 그리면 이 쪽 전체).',body);
+  if(!data.src){node('p','tiny','쪽을 그리는 중…',body);return}
+  const info=node('p','tiny','',body),note=node('p','tiny','',body);note.id='pdfNote';
+  const upd=()=>{info.textContent=rectInfo(data.src,pd.rects[n],pd.opt.side)+' (그림으로 보낼 때)'};
+  const picker=cropPicker(body,data.src,pd.rects[n]||null,r=>{if(r)pd.rects[n]=r;else delete pd.rects[n];upd();pdfDetect(data)});upd();
+  const kinds=node('div','chips','',body);
+  [['','자동'],['text','글자만'],['image','그림으로']].forEach(([v,t])=>button(t,'chip'+((pd.kinds[n]||'')===v?' on':''),()=>{if(v)pd.kinds[n]=v;else delete pd.kinds[n];[...kinds.children].forEach((c,k)=>c.classList.toggle('on',['','text','image'][k]===v))},kinds));
+  const nav=node('div','row-btns two','',body);
+  button('‹ 이전 쪽','action',()=>openPdfPage(data,pd.pages[i-1]),nav).disabled=i<=0;
+  button('다음 쪽 ›','action',()=>openPdfPage(data,pd.pages[i+1]),nav).disabled=i<0||i>=pd.pages.length-1;
+  button('이 영역을 남은 쪽에도','action',()=>{const r=pd.rects[n];pd.pages.filter(p=>p>n).forEach(p=>{if(r)pd.rects[p]={...r};else delete pd.rects[p]});notify('남은 선택 쪽에 같은 영역을 적용했습니다.')},nav);
+  button('영역 저장하고 돌아가기','action primary',()=>setStage(data,'pdf'),actions);
+  button('전체로 되돌리기','action',()=>picker.set(null),actions);
+  if(data.purpose!=='ref')button('이 쪽만 번역','action',()=>{setStage(data,'pdf');runPdf(data,[n])},actions);
+}
+async function pdfUnit(pd,n){ // 한 쪽(의 영역) → {kind:'text',text} 또는 {kind:'image',url}
+  const rect=pd.rects[n]||null,mode=pd.kinds[n]||pd.opt.mode;let text='';
+  if(mode!=='image')text=await pdfTextIn(pd.doc,n,rect);
+  if(mode==='text'||(mode==='auto'&&looksText(text))){
+    if(!text)throw Error('글자가 없습니다. "그림으로" 방식을 고르세요.');
+    return {kind:'text',text,n};
+  }
+  const src=await pdfRender(pd.doc,n,Math.max(2000,pd.opt.side*1.6));
+  return {kind:'image',url:cropJpeg(src,rect,pd.opt.side),n};
+}
+async function pdfThumb(pd,n){const s=await pdfRender(pd.doc,n,500);return cropJpeg(s,pd.rects[n]||null,240,0.7)}
+async function pdfTranslateUnit(data,pd,u){
+  if(u.kind==='image')return translateImage(data,u.url,{pdf:pd.name,page:u.n});
+  const src=pd.opt.src||(hangulRatio(u.text)>0.3?'ko':data.fg),target=src==='ko'?data.fg:'ko';
+  const sig=hashStr('pdf-text|'+src+'|'+target+'|'+currentEntryMode()+'|'+u.text),old=await phFindSig(sig);
+  if(old)return {...old,reused:true};
+  const tr=await translate(u.text,src,target);
+  const rec={id:null,img:await pdfThumb(pd,u.n),blocks:[{lang:src,o:u.text,tr:{[target]:tr}}],fg:data.fg,mode:data.mode,sig,from:{pdf:pd.name,page:u.n}};
+  await savePhoto(rec);return rec;
+}
+async function runPdf(data,only){
+  const pd=data.pdf;if(data.busy||!aiGate())return;
+  const pages=only||pd.pages;if(!pages.length)return;
+  const ref=data.purpose==='ref',units=[];data.busy=true;data.err='';
+  for(const [i,n] of pages.entries()){
+    if(state.modal!==data)break;
+    const st=pd.res[n]||(pd.res[n]={}),key=[n,JSON.stringify(pd.rects[n]||0),pd.kinds[n]||pd.opt.mode,pd.opt.side,pd.opt.src].join('|');
+    data.progress=(i+1)+' / '+pages.length;
+    if(!ref&&st.rec&&st.key===key){continue} // 이미 번역한 쪽(같은 영역·방식)은 다시 보내지 않음
+    st.status='처리 중…';st.err='';render();
+    try{
+      const u=await pdfUnit(pd,n);
+      if(ref){units.push(u);st.status=u.kind==='text'?'글자 '+u.text.length.toLocaleString()+'자':'그림';continue}
+      const rec=await pdfTranslateUnit(data,pd,u);st.rec=rec.id;st.key=key;st.status=(u.kind==='text'?'글자로 번역':'그림으로 번역')+(rec.reused?' · 저장본 사용':'');
+    }catch(e){st.err=e.message;st.status=''}
+  }
+  data.busy=false;if(state.modal!==data)return;
+  if(ref&&units.length&&!pages.some(n=>pd.res[n].err))await pdfSendRef(data,units);
+  else{render();if(!ref)notify('PDF 번역을 마쳤습니다. 쪽마다 [열기]로 결과를 볼 수 있어요.')}
+}
+async function pdfSendRef(data,units){ // 자료로 올리기: 글자는 글자로, 스캔 쪽은 그림으로 한 번에 보냄
+  const pd=data.pdf,imgs=units.filter(u=>u.kind==='image'),texts=units.filter(u=>u.kind==='text');
+  if(imgs.length>12)return notify('그림으로 보낼 쪽은 한 번에 12쪽까지입니다. 쪽을 나눠 올려 주세요.');
+  let text=texts.map(u=>'['+u.n+'쪽]\n'+u.text).join('\n\n').slice(0,40000);
+  const parts=[...(text?[{text:'[PDF에서 뽑은 글자]\n'+text}]:[]),...imgs.map(u=>({inline_data:{mime_type:'image/jpeg',data:u.url.split(',')[1]}}))];
+  data.busy=true;data.progress='AI가 자료를 정리하는 중…';render();
+  try{
+    const ex=await refExtract(parts,false,pd.name);if(!refGroups.some(g=>g.id===data.gid))throw Error('대상 그룹이 삭제되었습니다.');
+    const r=refAdd(data.gid,'PDF',ex);const b=pd.back;
+    if(b){b.files=b.files.filter(x=>x.file!==pd.file);releasePhotoModal(data);state.modal=b;render()}else backToRefs();
+    notify('📚 「'+r.title+'」 저장했습니다. 용어 '+r.terms.length+'개');
+  }catch(e){data.busy=false;data.err=e.message;if(state.modal===data)render()}
+}
+
 /* L13: 사진 통역 — 사진 속 글을 언어별 덩어리로 나눔 (일본어·한국어·중국어·영어가 섞인 책·안내판)
    언어마다 골라 보기·모아 듣기, 덩어리마다 원문 듣기·한국어 듣기·다른 언어로 듣기, 언어가 잘못 잡히면 바꾸기 */
 const PH_CODES=['ko',...LANGS.map(l=>l.code)];
 const phFlag=c=>c==='ko'?'🇰🇷':(langOf(c)?.flag||'🌐');
 async function photoTranslate(dataUrl,fg=active().code){
-  const key=load('ai_key').trim();
   const prompt=`이 사진에 있는 글자를 모두 읽고, 언어별 덩어리로 나누세요. 사진 읽는 순서대로, 같은 언어가 이어지는 문단·줄은 한 덩어리로 묶습니다(메뉴·목록은 항목마다 줄바꿈).
 각 덩어리: lang = 그 글의 언어 코드 (${PH_CODES.join(', ')} 중 하나, 목록에 없으면 가장 가까운 것), o = 사진 속 글자 그대로, ko = 한국어 번역(lang이 ko면 빈 문자열), fg = ${nameOf(fg)} 번역(lang이 ko일 때만, 아니면 빈 문자열).
 한자는 문맥으로 일본어·중국어(간체 zh-CN/번체 zh-TW)·한국어 한자어를 구분하세요. 설명 없이 JSON {"blocks":[...]}만. 글자가 없으면 {"blocks":[]}.`;
   const schema={type:'OBJECT',properties:{blocks:{type:'ARRAY',items:{type:'OBJECT',properties:{lang:{type:'STRING'},o:{type:'STRING'},ko:{type:'STRING'},fg:{type:'STRING'}},required:['lang','o']}}},required:['blocks']};
   const body={contents:[{parts:[{inline_data:{mime_type:'image/jpeg',data:dataUrl.split(',')[1]}},{text:prompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:8192,responseMimeType:'application/json',responseSchema:schema}};
-  let lastErr;
-  for(const m of [...new Set([gemModel(),'gemini-3.8-flash',GEM_FALLBACK].filter(Boolean))]){
-    try{
-      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(key)}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(60000)});
-      const j=await res.json();if(!res.ok)throw Error(j.error?.message||res.status);
-      const out=(j.candidates?.[0]?.content?.parts||[]).filter(x=>!x.thought).map(x=>x.text||'').join('').trim();
-      const v=JSON.parse(out.replace(/^```(?:json)?\s*|\s*```$/g,''));
-      return (v.blocks||[]).map(b=>{const lang=PH_CODES.includes(b.lang)?b.lang:(String(b.lang||'').startsWith('zh')?'zh-CN':'en');const x={lang,o:String(b.o||'').trim(),tr:{}};
-        if(lang!=='ko'&&b.ko)x.tr.ko=String(b.ko).trim();if(lang==='ko'&&b.fg)x.tr[fg]=String(b.fg).trim();return x}).filter(x=>x.o);
-    }catch(e){lastErr=e}
-  }
-  throw lastErr||Error('사진 통역 실패');
+  return gemEach(async m=>{
+    const v=parseJSON(gemText(await gemPost(m,body,{ms:60000,task:'사진·PDF 이미지',dedupe:true})));
+    return (v.blocks||[]).map(b=>{const lang=PH_CODES.includes(b.lang)?b.lang:(String(b.lang||'').startsWith('zh')?'zh-CN':'en');const x={lang,o:String(b.o||'').trim(),tr:{}};
+      if(lang!=='ko'&&b.ko)x.tr.ko=String(b.ko).trim();if(lang==='ko'&&b.fg)x.tr[fg]=String(b.fg).trim();return x}).filter(x=>x.o);
+  });
 }
 // 덩어리 번역이 없으면 만들어서 돌려줌
 async function phTr(x,code){if(code===x.lang)return x.o;if(!x.tr[code])x.tr[code]=await translate(x.o,x.lang,code);return x.tr[code]}
 /* L25: local photo records and cancellable manual speech. */
-let mediaToggle=null,mediaToken=0,photoDatabase=null;
+let mediaToggle=null,mediaToken=0;
 function refreshMediaButtons(){document.querySelectorAll('[data-media-key]').forEach(b=>{const on=b.dataset.mediaKey===mediaToggle;b.classList.toggle('on',on);b.setAttribute('aria-pressed',String(on));b.textContent=(on?'■ 정지':'🔊 '+b.dataset.mediaLabel)})}
 function mediaButton(parent,label,key,sequence){const b=button('🔊 '+label,'action',async ev=>{ev.stopPropagation();if(mediaToggle===key){stopSpeech();return}stopSpeech();const token=mediaToken;mediaToggle=key;refreshMediaButtons();try{const seq=await sequence();if(token!==mediaToken)return;const valid=seq.filter(x=>String(x.text||'').trim());if(!valid.length){stopSpeech();return notify('읽을 글이 없습니다.')}valid.forEach(x=>{const q=outReserve(x.code,null);q.force=true;q.fixed=true;q.ready=true;q.text=x.text});pumpOut()}catch(e){if(token===mediaToken){stopSpeech();notify('읽기 실패 · '+e.message)}}},parent);b.dataset.mediaKey=key;b.dataset.mediaLabel=label;refreshMediaButtons();return b}
-function phDb(){return photoDatabase||(photoDatabase=new Promise((resolve,reject)=>{const r=indexedDB.open('travel_photo_history',1);r.onupgradeneeded=()=>r.result.createObjectStore('photos',{keyPath:'id'});r.onsuccess=()=>resolve(r.result);r.onerror=()=>{photoDatabase=null;reject(r.error)}}))}
-async function phStore(record){const db=await phDb();return new Promise((resolve,reject)=>{const tx=db.transaction('photos','readwrite');tx.objectStore('photos').put(record);tx.oncomplete=()=>resolve();tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||Error('사진 저장 중단'))})}
-async function phGet(id){const db=await phDb();return new Promise((resolve,reject)=>{const q=db.transaction('photos').objectStore('photos').get(id);q.onsuccess=()=>resolve(q.result);q.onerror=()=>reject(q.error)})}
-async function phAll(){const db=await phDb();return new Promise((resolve,reject)=>{const q=db.transaction('photos').objectStore('photos').getAll();q.onsuccess=()=>resolve(q.result.sort((a,b)=>b.at-a.at));q.onerror=()=>reject(q.error)})}
-async function phDelete(id){const db=await phDb();await new Promise((resolve,reject)=>{const tx=db.transaction('photos','readwrite');tx.objectStore('photos').delete(id);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error)});for(const list of [state.items,state.listening])for(let i=list.length-1;i>=0;i--)if(list[i].photoId===id)list.splice(i,1);saveHistory()}
-function photoRecord(data){return {id:data.id,img:data.img,blocks:(data.blocks||[]).map(b=>({lang:b.lang,o:b.o,tr:{...b.tr}})),fg:data.fg||active().code,mode:data.mode||state.mode,at:data.at||Date.now()}}
+
+
+
+
+
+async function phDelete(id){await phTx('readwrite',tx=>tx.objectStore('photos').delete(id));for(const list of [state.items,state.listening])for(let i=list.length-1;i>=0;i--)if(list[i].photoId===id)list.splice(i,1);saveHistory()}
+function photoRecord(data){return {id:data.id,img:data.img,blocks:(data.blocks||[]).map(b=>({lang:b.lang,o:b.o,tr:{...b.tr}})),fg:data.fg||active().code,mode:data.mode||state.mode,at:data.at||Date.now(),sig:data.sig,from:data.from,orig:data.orig}}
 async function savePhoto(data){if(!data.id)data.id='ph-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8);if(!data.at)data.at=Date.now();await phStore(photoRecord(data));data.saved=true}
 function photoEntries(data){return data.blocks.map((b,i)=>({original:b.o,translation:b.tr[b.lang==='ko'?data.fg:'ko']||'',source:b.lang,target:b.lang==='ko'?data.fg:'ko',photoId:data.id,photoBlock:i,createdAt:data.at,trMode:'saved',failed:false})).filter(x=>x.translation)}
 function updatePhotoEntries(data,add=false){const entries=photoEntries(data);for(const list of [state.items,state.listening])for(const e of entries){const old=list.find(x=>x.photoId===e.photoId&&x.photoBlock===e.photoBlock);if(old)Object.assign(old,e)}if(add){const list=data.mode==='listen'?state.listening:state.items;for(const e of entries)if(!list.some(x=>x.photoId===e.photoId&&x.photoBlock===e.photoBlock))list.push(e)}saveHistory()}
@@ -1775,20 +2148,16 @@ function drawPhotoHistory(body,data){
   if(!data.records.length)node('p','tiny','저장한 사진 통역이 없습니다. 사진을 번역하면 여기에 자동으로 저장합니다.',body);
   data.records.forEach(r=>{const row=node('div','ph-history','',body);const im=node('img','','',row);im.src=r.img;im.alt='저장한 사진';im.onclick=()=>openSavedPhoto(r.id);button((r.blocks[0]?.o||'사진 통역').slice(0,35)+' · '+new Date(r.at).toLocaleDateString('ko-KR'),'action',()=>openSavedPhoto(r.id),row);button('삭제','action',()=>askConfirm('이 사진과 연결된 사진 통역 기록을 지울까요?','지우기',async()=>{stopSpeech();try{await phDelete(r.id);data.records=data.records.filter(x=>x.id!==r.id);render();notify('사진 기록을 지웠습니다.')}catch{notify('삭제하지 못했습니다. 다시 시도해 주세요.')}}),row)})
 }
-function drawPhoto(body,data,actions){
-  const ready=provider()==='gemini';data.fg=data.fg||active().code;data.mode=data.mode||state.mode;
-  node('p','tiny faint','번역한 사진과 글은 이 스마트폰에 자동 저장합니다. 사진 통역 기록에서 다시 열 수 있습니다.',body);
+function saveBlobAs(href,name){const a=node('a','','',document.body);a.href=href;a.download=name;a.click();a.remove();notify('파일 저장을 요청했습니다. 다운로드에서 확인하세요.')}
+function drawPhotoResult(body,data,actions){
+  data.fg=data.fg||active().code;data.mode=data.mode||state.mode;
+  node('p','tiny faint','번역한 사진과 글은 이 스마트폰에 자동 저장합니다. 사진 통역 기록에서 다시 열 수 있습니다.'+(data.from?.pdf?' (PDF '+data.from.pdf+' · '+data.from.page+'쪽)':''),body);
   const rb=node('div','row-btns','',body);
-  const pick=capture=>{
-    if(!ready)return notify('Gemini 키·모드가 필요합니다');if(!navigator.onLine)return notify('사진 통역은 인터넷이 필요합니다.');
-    const f=document.createElement('input');f.type='file';f.accept='image/*';if(capture)f.setAttribute('capture','environment');
-    f.onchange=async()=>{const file=f.files[0];if(!file)return;stopSpeech();data.busy=true;data.err='';render();
-      try{const img=await shrinkImage(file);const blocks=await photoTranslate(img,data.fg);Object.assign(data,{img,blocks,id:null,at:Date.now(),saved:false,filter:'all',view:'both'});await savePhoto(data);updatePhotoEntries(data,true);data.busy=false;if(state.modal===data){state.modal=null;state.mode=data.mode;render();scrollEnd();notify('사진과 번역을 저장했습니다. 📷 버튼이나 사진 통역 기록에서 다시 열 수 있습니다.')}}catch(e){data.err='저장 또는 번역 실패 · '+e.message;data.busy=false;if(state.modal===data)render()}
-    };f.click();
-  };
-  const camera=button('📷 사진 찍기','action primary',()=>pick(true),rb),gallery=button('🖼 사진 고르기','action',()=>pick(false),rb);camera.disabled=gallery.disabled=!!data.busy;
+  button('📷 다른 사진·PDF 통역','action primary',openPhoto,rb);
   button('사진 통역 기록','action',openPhotoHistory,rb);
-  if(data.img){const im=node('img','photo-prev','',body);im.src=data.img;im.alt='통역한 사진';button('사진 파일 저장','action',()=>{const a=node('a','','',document.body);a.href=data.img;a.download='통역사진-'+(data.at||Date.now())+'.jpg';a.click();a.remove();notify('사진 파일 저장을 요청했습니다. 다운로드에서 확인하세요.')},body)}
+  if(data.orig)button('✂ 다른 영역 다시 고르기','action',()=>recropSaved(data),rb);
+  if(data.img){const im=node('img','photo-prev','',body);im.src=data.img;im.alt='통역한 사진';button('AI에 보낸 사진 저장','action',()=>saveBlobAs(data.img,'통역사진-'+(data.at||Date.now())+'.jpg'),body);
+    if(data.orig)button('원본 사진 저장','action',()=>saveBlobAs(URL.createObjectURL(data.orig),'원본-'+(data.at||Date.now())+'.jpg'),body)}
   if(data.busy)node('p','tiny','사진 속 글을 읽고 번역하는 중…',body);
   if(data.err)node('p','tiny',data.err,body);
   const bl=data.blocks;if(!bl)return;
@@ -1840,42 +2209,47 @@ async function captureRefFrame(data,single=false){
   try{const canvas=document.createElement('canvas');canvas.width=video.videoWidth;canvas.height=video.videoHeight;canvas.getContext('2d').drawImage(video,0,0);
     const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.9));if(!blob)throw Error('사진을 담지 못했습니다.');
     if(refCamera!==camera||state.modal!==data)return;
-    const file=new File([blob],'자료사진-'+Date.now()+'.jpg',{type:'image/jpeg'});data.files.push({file,url:URL.createObjectURL(file)});
+    const file=new File([blob],'사진-'+Date.now()+'.jpg',{type:'image/jpeg'});data.files.push(newItem(file));
     if(single){data.capturing=false;await submitRefPhotos(data)}else render();
   }catch(e){notify(e.message)}finally{data.capturing=false}
 }
 function openRefPhotos(gid,capture,allowPdf){
-  if(provider()!=='gemini')return notify('Gemini 키·모드가 필요합니다');if(!navigator.onLine)return notify('인터넷이 필요합니다.');
+  if(!aiGate('인터넷이 필요합니다.'))return;
   stopSpeech();state.side=false;const data={type:'refPhotos',gid,files:[],allowPdf};state.modal=data;render();if(capture)startRefCamera(data);
 }
 function pickRefPhotos(data,capture){
-  stopRefCamera();const f=document.createElement('input');f.type='file';f.accept=capture?'image/*':data.allowPdf?'image/*,application/pdf':'image/*';if(capture)f.setAttribute('capture','environment');else f.multiple=true;
-  f.onchange=()=>{if(state.modal!==data)return;for(const file of f.files){if(file.size>18e6){notify(file.name+' · 18MB까지 올릴 수 있습니다.');continue}data.files.push({file,url:file.type.startsWith('image/')?URL.createObjectURL(file):null})}render()};f.click();
+  stopRefCamera();
+  pickFiles(capture?'image/*':data.allowPdf?'image/*,application/pdf':'image/*',!capture,files=>{
+    if(state.modal!==data)return;
+    for(const file of files){if(file.size>40e6){notify(file.name+' · 40MB까지 올릴 수 있습니다.');continue}data.files.push(newItem(file))}
+    render();
+  },capture);
 }
 function releaseRefPhotos(data){if(refCamera?.data===data)stopRefCamera();for(const x of data.files||[])if(x.url)URL.revokeObjectURL(x.url)}
 async function submitRefPhotos(data){
-  if(data.busy||!data.files.length)return;stopRefCamera();data.busy=true;let success=0;const failed=[];
-  for(const [i,x] of data.files.entries()){
-    data.status=(i+1)+' / '+data.files.length+' 정리 중…';if(state.modal===data)render();
-    try{let mime=x.file.type||'',b64;if(mime.startsWith('image/')){mime='image/jpeg';b64=(await shrinkImage(x.file,2000)).split(',')[1]}else{mime='application/pdf';b64=await fileB64(x.file)}
-      const extracted=await refExtract(b64,mime,false,x.file.name);if(!refGroups.some(g=>g.id===data.gid))throw Error('대상 그룹이 삭제되었습니다.');refAdd(data.gid,mime==='application/pdf'?'PDF':'사진',extracted);success++;if(x.url)URL.revokeObjectURL(x.url);
+  const todo=data.files.filter(x=>!isPdf(x.file)); // PDF는 쪽을 고른 뒤에만 보냄
+  if(data.busy||!todo.length)return;stopRefCamera();data.busy=true;let success=0;const failed=[];
+  for(const [i,x] of todo.entries()){
+    data.status=(i+1)+' / '+todo.length+' 정리 중…';if(state.modal===data)render();
+    try{const b64=(await shrinkImage(x.file,REF_SIDE)).split(',')[1];
+      const extracted=await refExtract([{inline_data:{mime_type:'image/jpeg',data:b64}}],false,x.file.name);if(!refGroups.some(g=>g.id===data.gid))throw Error('대상 그룹이 삭제되었습니다.');refAdd(data.gid,'사진',extracted);success++;if(x.url){URL.revokeObjectURL(x.url);x.sent=true}
     }catch(e){x.err=e.message;failed.push(x)}
   }
-  data.files=failed;data.busy=false;if(state.modal===data){if(!failed.length)backToRefs();else render();notify(success+'개 저장했습니다.'+(failed.length?' 실패한 '+failed.length+'개는 다시 올릴 수 있습니다.':''))}
+  data.files=[...failed,...data.files.filter(x=>isPdf(x.file))];data.busy=false;
+  if(state.modal===data){if(!data.files.length)backToRefs();else render();notify(success+'개 저장했습니다.'+(failed.length?' 실패한 '+failed.length+'개는 다시 올릴 수 있습니다.':''))}
 }
 function drawRefPhotos(body,data,actions){
-  node('p','tiny','연속 촬영은 촬영 버튼을 누를 때마다 사진이 쌓입니다. 필요 없는 사진을 빼고 한 번에 올리세요.',body);
+  node('p','tiny','연속 촬영은 촬영 버튼을 누를 때마다 사진이 쌓입니다. 필요 없는 사진을 빼고 한 번에 올리세요. PDF는 통째로 보내지 않고, 쪽을 직접 골라 필요한 부분만 보냅니다.',body);
   const bar=node('div','row-btns','',body);
   button('연속 촬영','action primary',()=>startRefCamera(data),bar).disabled=!!data.busy;
   button('한 장 촬영·선택','action',()=>pickRefPhotos(data,true),bar).disabled=!!data.busy;
   button('사진·파일 선택','action',()=>pickRefPhotos(data,false),bar).disabled=!!data.busy;
-  if(refCamera?.data===data){const camera=refCamera,video=node('video','ref-camera','',body);video.muted=true;video.autoplay=true;video.playsInline=true;camera.video=video;if(camera.stream){video.srcObject=camera.stream;video.play().catch(()=>{})}
-    const row=node('div','row-btns','',body);button('● 촬영','action primary',()=>captureRefFrame(data),row);button('이 한 장 바로 올리기','action',()=>captureRefFrame(data,true),row);button('촬영 마침','action',()=>{stopRefCamera();render()},row);
-  }
-  if(data.cameraError)node('p','tiny',data.cameraError,body);
+  drawCameraBar(body,data,true);
   node('p','tiny',data.busy?data.status:data.files.length+'장 모았습니다.',body);
-  const grid=node('div','ph-grid','',body);data.files.forEach((x,i)=>{const item=node('div','','',grid);if(x.url){const im=node('img','','',item);im.src=x.url;im.alt='모은 사진 '+(i+1)}else node('p','tiny',x.file.name,item);button((i+1)+' · 빼기','action',()=>{if(x.url)URL.revokeObjectURL(x.url);data.files.splice(i,1);render()},item).disabled=!!data.busy;if(x.err)node('p','tiny',x.err,item)});
-  button('한 번에 올리기 ('+data.files.length+'개)','action primary',()=>submitRefPhotos(data),actions).disabled=!!data.busy||!data.files.length;
+  const grid=node('div','ph-grid','',body);data.files.forEach((x,i)=>{if(x.sent)return;const item=node('div','','',grid);if(x.url){const im=node('img','','',item);im.src=x.url;im.alt='모은 사진 '+(i+1)}else node('p','tiny',x.file.name,item);
+    if(isPdf(x.file))button('쪽 고르기','action primary',()=>openRefPdf(data,x.file),item).disabled=!!data.busy;
+    button((i+1)+' · 빼기','action',()=>{if(x.url)URL.revokeObjectURL(x.url);data.files.splice(i,1);render()},item).disabled=!!data.busy;if(x.err)node('p','tiny',x.err,item)});
+  button('사진 한 번에 올리기 ('+data.files.filter(x=>!isPdf(x.file)).length+'개)','action primary',()=>submitRefPhotos(data),actions).disabled=!!data.busy||!data.files.some(x=>!isPdf(x.file));
 }
 
 function drawPhrases(body,data){
@@ -1984,6 +2358,14 @@ function drawSettings(body){
       else if(!had){store('tr_engine','gemini');store('gem_tier','fast')}
       render();notify('저장했습니다.');
     },sec).style.marginTop='8px';
+    sec=node('div','sec','',body);node('h4','','AI 사용량 기록',sec);
+    const rows=Object.entries(aiUsage.t).sort((a,b)=>b[1].i+b[1].o-a[1].i-a[1].o);
+    node('p','tiny',rows.length?new Date(aiUsage.since).toLocaleDateString('ko-KR')+'부터 작업별 호출 수 · 입력 토큰 · 출력 토큰 (Gemini가 알려 준 실제 값, 이 휴대폰에만 기록)':'아직 기록이 없습니다. AI를 쓰면 작업별로 쌓입니다.',sec);
+    rows.forEach(([k,r])=>{const d=node('div','usage-row','',sec);node('b','',k,d);node('span','',r.n+'회 · '+r.i.toLocaleString()+' · '+r.o.toLocaleString(),d)});
+    if(rows.length)button('기록 지우기','action',()=>askConfirm('AI 사용량 기록을 지울까요?','지우기',()=>{aiUsage={since:Date.now(),t:{}};store('ai_usage',JSON.stringify(aiUsage));render()}),sec).style.marginTop='8px';
+    node('h4','','녹음 받아쓰기 전 무음 빼기',sec).style.marginTop='14px';
+    node('p','tiny','켜 두면 📝 받아쓰기 때 긴 무음을 휴대폰에서 빼고 보내 크레딧을 아낍니다. 원본 녹음은 그대로 남습니다. (40분을 넘는 녹음은 원본 그대로 보냅니다)',sec);
+    const trim=node('div','chips','',sec);[['1','켜짐 (권장)'],['0','꺼짐']].forEach(([v,t])=>button(t,'chip'+(load('rec_trim','1')===v?' on':''),()=>{store('rec_trim',v);render()},trim));
     // V3: 받아쓰기 정리 기록 (문제 찾기용)
     sec=node('div','sec','',body);node('h4','','받아쓰기 정리 기록',sec);
     node('p','tiny','같은 말이 쌓이거나 말이 빠질 때, 앱이 받아쓴 말을 버리거나 바꿔 넣은 기록입니다 (최근 80개, 이 휴대폰에만 저장). 문제가 생기면 복사해서 채팅에 붙여 넣어 주세요.',sec);
@@ -2044,13 +2426,50 @@ function finishDictation(d){
 function geminiKey(){const k=load('ai_key').trim();return !!k&&!k.startsWith('sk-')}
 function provider(){return engine()==='gemini'?'gemini':null}
 const aiReady=()=>!!provider();
+/* ── Gemini 공통 호출: 모든 AI 요청이 gemPost를 지남 (주소·키·오류 처리 한 곳) ──
+   task: 사용량 기록용 이름 · dedupe: 똑같은 요청이 진행 중이면 새로 보내지 않고 그 답을 같이 씀 */
+const GEM_BASE='https://generativelanguage.googleapis.com/v1beta/';
+const gemUrl=m=>`${GEM_BASE}models/${m}:generateContent?key=${encodeURIComponent(load('ai_key').trim())}`;
+const gemText=j=>(j.candidates?.[0]?.content?.parts||[]).filter(x=>!x.thought).map(x=>x.text||'').join('').trim();
+const gemModels=()=>[...new Set([gemModel(),'gemini-3.8-flash',GEM_FALLBACK])];
+const parseJSON=raw=>JSON.parse(String(raw).replace(/^```(?:json)?\s*|\s*```$/g,''));
+const hangulRatio=t=>{t=String(t);const L=t.replace(/[\s\d.,!?。、，！？…·:;"'()\[\]~-]/g,'');return L?(t.match(/[가-힣]/g)||[]).length/L.length:0};
+const gemInflight=new Map();
+function gemPost(m,body,{ms=25000,signal,task,entry,dedupe}={}){
+  const run=async()=>{
+    const res=await fetch(gemUrl(m),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),signal:signal||AbortSignal.timeout(ms),_task:task,_entryGemini:entry});
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok)throw Object.assign(Error(j.error?.message||('Gemini 오류 '+res.status)),{status:res.status});
+    return j;
+  };
+  if(!dedupe)return run();
+  const k=m+hashStr(JSON.stringify(body));let pr=gemInflight.get(k);
+  if(!pr){pr=run().finally(()=>gemInflight.delete(k));gemInflight.set(k,pr)}
+  return pr;
+}
+const gemFatal=e=>e.stop||[400,401,403,429].includes(e.status); // 모델을 바꿔도 소용없는 오류 (키·한도·잘못된 요청)
+// 모델을 차례로 시도 (무겁지 않은 요청용). 키·한도·요청 오류는 다른 모델로 다시 보내지 않고 바로 멈춤
+async function gemEach(fn){
+  let err;
+  for(const m of gemModels()){try{return await fn(m)}catch(e){err=e;if(gemFatal(e))break}}
+  throw err||Error('Gemini 요청 실패');
+}
+function hashStr(s){let a=0x811c9dc5,b=0x9e3779b1;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);a=Math.imul(a^c,16777619);b=Math.imul(b+c,2246822519)^(b>>>13)}return (a>>>0).toString(36)+(b>>>0).toString(36)+s.length.toString(36)}
+/* 번역 결과 저장: 같은 글·같은 언어·같은 번역 방식·같은 용어 자료면 AI를 다시 부르지 않고 저장된 번역을 씀 (최근 300개) */
+const TR_CACHE_MAX=300,TR_CACHE_CHARS=300000;
+let trCache=loadJSON('tr_cache_v1',{}),trCacheTimer=0;
+const trKey=(kind,text,src,target,mode)=>kind+hashStr([src,target,mode,hashStr(glossOut()),text].join('\u0001'));
+const trGet=(...a)=>trCache[trKey(...a)]??null;
+function trPut(kind,text,src,target,mode,val){
+  const k=trKey(kind,text,src,target,mode);delete trCache[k];trCache[k]=val;
+  const keys=Object.keys(trCache);while(keys.length>TR_CACHE_MAX)delete trCache[keys.shift()];
+  clearTimeout(trCacheTimer);trCacheTimer=setTimeout(()=>{let s=JSON.stringify(trCache);while(s.length>TR_CACHE_CHARS){delete trCache[Object.keys(trCache)[0]];s=JSON.stringify(trCache)}store('tr_cache_v1',s)},2500);
+}
 async function aiAsk(prompt,opt={}){
   if(!aiReady())throw Error('Gemini 키·모드가 필요합니다');
-  const key=load('ai_key').trim(),m=opt.model||gemModel();
-  const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(key)}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{...gemCfg(m),...(opt.max?{maxOutputTokens:opt.max}:{})}}),signal:AbortSignal.timeout(opt.ms||20000)});
-  const j=await res.json();if(!res.ok)throw Error(j.error?.message||res.status);
-  let out=j.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join('');
-  out=(out||'').trim().replace(/^["“]|["”]$/g,'');
+  const m=opt.model||gemModel();
+  const j=await gemPost(m,{contents:[{parts:[{text:prompt}]}],generationConfig:{...gemCfg(m),...(opt.max?{maxOutputTokens:opt.max}:{})}},{ms:opt.ms||20000,task:opt.task||'교정'});
+  const out=gemText(j).replace(/^["“]|["”]$/g,'');
   if(!out)throw Error('빈 응답');
   return out;
 }
@@ -2133,20 +2552,17 @@ function gemClean(raw,target){
 }
 async function geminiTranslate(text,src,target,ctx){
   // L7: 빠른 모델이 가끔 번역 안 하고 원문 언어로 답함 → 그러면 균형 모델로 다시
-  const models=[...new Set([gemModel(),'gemini-3.8-flash',GEM_FALLBACK])];let err,last='';
-  const hz=t=>{const L=t.replace(/[\s\d.,!?。、，！？…·:;"'()\[\]-]/g,'');return L?(t.match(/[가-힣]/g)||[]).length/L.length:0};
-  const wrong=o=>target!=='ko'?hz(o)>0.3:(src!=='ko'&&hz(o)<0.2);
-  for(const m of models){
+  let err,last='';
+  const wrong=o=>target!=='ko'?hangulRatio(o)>0.3:(src!=='ko'&&hangulRatio(o)<0.2);
+  for(const m of gemModels()){
     try{
-      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(load('ai_key').trim())}`,{method:'POST',headers:{'content-type':'application/json'},
-        body:JSON.stringify({systemInstruction:{parts:[{text:aiTrSys(src,target)}]},contents:[{role:'user',parts:[{text:aiTrPrompt(text,src,target,ctx)}]}],generationConfig:{...gemCfg(m),responseMimeType:'application/json',responseSchema:{type:'OBJECT',properties:{t:{type:'STRING'}},required:['t']}}}),signal:AbortSignal.timeout(/argon/.test(m)?40000:25000)});
-      const j=await res.json().catch(()=>({}));if(!res.ok)throw Error(j.error?.message||('Gemini 오류 '+res.status));
-      const raw=(j.candidates?.[0]?.content?.parts||[]).filter(x=>!x.thought).map(x=>x.text||'').join('').trim();if(!raw)throw Error('Gemini 빈 응답');
+      const j=await gemPost(m,{systemInstruction:{parts:[{text:aiTrSys(src,target)}]},contents:[{role:'user',parts:[{text:aiTrPrompt(text,src,target,ctx)}]}],generationConfig:{...gemCfg(m),responseMimeType:'application/json',responseSchema:{type:'OBJECT',properties:{t:{type:'STRING'}},required:['t']}}},{ms:/argon/.test(m)?40000:25000,task:'번역'});
+      const raw=gemText(j);if(!raw)throw Error('Gemini 빈 응답');
       const {out,noisy}=gemClean(raw,target); // L8: 메모 섞이면 걸러 내고, 걸러 낸 경우엔 다음 모델로 한 번 더
-      if(!out){continue}
+      if(!out)continue;
       if(wrong(out)||noisy){if(!last)last=out;continue}
       return out;
-    }catch(e){err=e}
+    }catch(e){err=e;if(gemFatal(e))break}
   }
   if(last)return last;
   throw err;
@@ -2180,14 +2596,12 @@ async function translate(text,src,target,onProgress,ctx){
   if(!text)throw new Error('번역할 문장이 없습니다');
   if(src===target)return text;
   const c=cached(text,src,target);if(c)return c;
+  const mode=currentEntryMode(),hit=trGet('t',text,src,target,mode);if(hit)return hit;
   if(!navigator.onLine)throw new Error('인터넷이 없습니다. 📚 여행 문구나 받아 둔 자주 쓰는 문장을 써 주세요');
   // AI 엔진은 긴 글을 크게 나눠(앞뒤 뜻을 보며) 번역, 무료 번역기는 380자씩
-  const ai=engine()!=='free';
-  const chunks=splitText(text,ai?2500:380);
-  if(chunks.length===1)return ai?translateAI(chunks[0],src,target,ctx):translateOne(chunks[0],src,target);
-  const out=[];
-  for(let i=0;i<chunks.length;i++){out.push(await(ai?translateAI:translateOne)(chunks[i],src,target));onProgress?.(out.join(' '),i+1,chunks.length)}
-  return out.join(' ');
+  const ai=engine()!=='free',chunks=splitText(text,ai?2500:380),out=[];
+  for(let i=0;i<chunks.length;i++){out.push(await(ai?translateAI(chunks[i],src,target,i?'':ctx):translateOne(chunks[i],src,target)));if(chunks.length>1)onProgress?.(out.join(' '),i+1,chunks.length)}
+  const res=out.join(' ');trPut('t',text,src,target,mode,res);return res;
 }
 function isEmptyText(t){return !String(t||'').replace(/[\s.,!?。、！？…·]/g,'')}
 /* L21: 문장별 실제 처리 방식과 작업 버전. 전역 번역 모드는 변경하지 않음. */
@@ -2212,7 +2626,8 @@ function showEntryModes(anchor,entry){
   entryModeMenu=close;document.addEventListener('pointerdown',outside,true);
 }
 function entryList(entry){return state.listening.includes(entry)?state.listening:state.items.includes(entry)?state.items:null}
-function entryContext(entry){const list=entryList(entry)||[],i=list.indexOf(entry);return list.slice(Math.max(0,i-2),i).filter(x=>x.contextRun===translationRun&&x.contextEpoch===transcriptEpoch).map(x=>x.original).join('\n').slice(-600)}
+function entryContext(entry){if(String(entry.original).length>200)return ''; // 긴 글은 앞 문장 없이 (불필요한 전송 방지)
+  const list=entryList(entry)||[],i=list.indexOf(entry);return list.slice(Math.max(0,i-2),i).filter(x=>x.contextRun===translationRun&&x.contextEpoch===transcriptEpoch).map(x=>x.original).join('\n').slice(-400)}
 function mergeUnspoken(prev,text,source,micId){
   if(!prev||!entryWork.has(prev)||!prev.fromMic||prev.micId!==micId||prev.source!==source||prev.target!==(source==='ko'?active().code:'ko')||prev.spokenAt||prev.speakingNow||outCur===prev||prev.retranslating||Date.now()-prev.createdAt>20000)return null;
   const a=String(prev.original||'').trim(),b=String(text||'').trim();if(!a||!b||a.length+b.length>800)return null;
@@ -2228,16 +2643,19 @@ function mergeUnspoken(prev,text,source,micId){
 async function translateEntryText(entry,mode,timing,signal,options){
   if(!options.retranslate){const saved=cached(entry.original,entry.source,entry.target);if(saved)return {s:entry.original,t:saved,mode:'saved'}}
   if(!navigator.onLine)throw Error('인터넷 연결을 확인해 주세요');
+  const reuse=!options.retranslate; // 다시 번역을 눌렀을 때만 저장된 번역을 건너뜀
   if(mode!=='free'&&geminiKey()){
+    const hit=reuse&&trGet('e',entry.original,entry.source,entry.target,mode);if(hit)return {...hit,mode};
     const r=await geminiCleanTranslate(entry.original,entry.source,entry.target,entryContext(entry),timing,{tier:mode,signal,merged:!!options.merged});
     if(signal.aborted)return null;
-    if(r)return {...r,mode};
+    if(r){trPut('e',entry.original,entry.source,entry.target,mode,{s:r.s,t:r.t});return {...r,mode}}
     latencyMark(timing,'fallback');notify(entryModeName(mode)+' 응답 실패 · 무료 번역기로 이어서 번역합니다.');
   }
+  const hit=reuse&&trGet('e',entry.original,entry.source,entry.target,'free');if(hit)return {...hit,mode:'free'};
   const input=entry.source==='ko'?protectWords(entry.original,entry.target):protectRev(entry.original,entry.source,true),parts=[];
   latencyMark(timing,'fallbackRequest');
   for(const part of splitText(input)){if(signal.aborted)return null;parts.push(await translateOne(part,entry.source,entry.target))}
-  latencyMark(timing,'fallbackResponse');return {s:entry.original,t:parts.join(' '),mode:'free'};
+  latencyMark(timing,'fallbackResponse');const t=parts.join(' ');trPut('e',entry.original,entry.source,entry.target,'free',{s:entry.original,t});return {s:entry.original,t,mode:'free'};
 }
 function scheduleEntry(entry,mode,options={}){
   const epoch=transcriptEpoch;
@@ -2300,9 +2718,9 @@ async function consume(text,source,opt={}){
    그냥 녹음해서 휴대폰(IndexedDB)에 저장. 소리는 15초마다 조각으로 바로 저장 → 앱이 갑자기 꺼져도 그때까지 녹음은 남음.
    나중에 필요할 때 버튼으로 Gemini 받아쓰기 → 번역·요약 (소리는 받아쓰기 때 한 번만 보내고, 번역·요약은 받아쓴 글로 해서 크레딧 절약).
    큰 녹음(14MB 넘음)은 Gemini 파일 올리기로 먼저 올린 뒤 받아씀. 파일로 내보내기(다운로드·다른 앱으로 보내기)도 됨. */
-let recDbP=null,recList=[],recNow=null,recOpen=null;const recUrls={},recBusy={};
-function recDb(){return recDbP||(recDbP=new Promise((res,rej)=>{const r=indexedDB.open('travel_recordings',1);r.onupgradeneeded=()=>{const db=r.result;db.createObjectStore('recs',{keyPath:'id'});db.createObjectStore('chunks',{autoIncrement:true}).createIndex('rec','rec')};r.onsuccess=()=>res(r.result);r.onerror=()=>{recDbP=null;rej(r.error)}}))}
-async function recTx(stores,mode,fn){const db=await recDb();return new Promise((res,rej)=>{const tx=db.transaction(stores,mode),box={};tx.oncomplete=()=>res(box.v);tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error||Error('저장 중단'));fn(tx,box)})}
+let recList=[],recNow=null,recOpen=null;const recUrls={},recBusy={};
+
+
 const recPut=meta=>recTx(['recs'],'readwrite',tx=>tx.objectStore('recs').put({...meta}));
 const recAddChunk=(id,blob)=>recTx(['chunks'],'readwrite',tx=>tx.objectStore('chunks').add({rec:id,blob}));
 async function recBlob(meta){const parts=await recTx(['chunks'],'readonly',(tx,box)=>{const q=tx.objectStore('chunks').index('rec').getAll(meta.id);q.onsuccess=()=>box.v=q.result});return new Blob((parts||[]).map(c=>c.blob),{type:meta.mime.split(';')[0]||'audio/webm'})}
@@ -2347,14 +2765,11 @@ async function recStart(){
 function recStop(){const c=recNow;if(!c)return;clearInterval(c.timer);try{if(c.mr.state!=='inactive')c.mr.stop();else c.mr.onstop()}catch{}}
 /* Gemini — 녹음 기능은 위쪽 번역 방식(무료)과 상관없이 키만 있으면 씀. 모델은 아래 바에서 고른 단계(빠름·균형·정확) */
 function recNeedGem(){if(!geminiKey()){notify('Gemini 키가 필요합니다. 설정 → 고급에서 넣어 주세요.');return false}if(!navigator.onLine){notify('인터넷이 필요합니다.');return false}return true}
-async function gemGen(parts,sys,ms){
-  const m=gemModel();
-  const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(load('ai_key').trim())}`,{method:'POST',_entryGemini:true,headers:{'content-type':'application/json'},
-    body:JSON.stringify({systemInstruction:{parts:[{text:sys}]},contents:[{role:'user',parts}],generationConfig:gemCfg(m)}),signal:AbortSignal.timeout(ms)});
-  const j=await res.json().catch(()=>({}));if(!res.ok)throw Error(j.error?.message||('Gemini 오류 '+res.status));
-  const c=j.candidates?.[0],out=(c?.content?.parts||[]).filter(x=>!x.thought).map(x=>x.text||'').join('').trim();
-  if(!out)throw Error(c?.finishReason==='MAX_TOKENS'?'답이 너무 길어 끊겼습니다':'빈 응답');
-  return {text:out,cut:c?.finishReason==='MAX_TOKENS'};
+async function gemGen(parts,sys,ms,task){
+  const m=gemModel(),j=await gemPost(m,{systemInstruction:{parts:[{text:sys}]},contents:[{role:'user',parts}],generationConfig:gemCfg(m)},{ms,task,entry:true});
+  const c=j.candidates?.[0],out=gemText(j),cut=c?.finishReason==='MAX_TOKENS';
+  if(!out)throw Error(cut?'답이 너무 길어 끊겼습니다':'빈 응답');
+  return {text:out,cut};
 }
 async function gemUpload(blob,mime,name,step){ // 큰 파일: Gemini 파일 올리기 (48시간 뒤 Google에서 저절로 지워짐)
   const k=encodeURIComponent(load('ai_key').trim());
@@ -2367,30 +2782,38 @@ async function gemUpload(blob,mime,name,step){ // 큰 파일: Gemini 파일 올�
   if(f.state!=='ACTIVE')throw Error('Gemini가 녹음 파일을 처리하지 못했습니다');
   return f.uri;
 }
-const hangulRatio=t=>{const L=String(t).replace(/[\s\d.,!?。、，！？…·:;"'()\[\]~-]/g,'');return L?(t.match(/[가-힣]/g)||[]).length/L.length:0};
 const recTarget=meta=>meta.lang==='ko'?active().code:'ko';
 function recSetBusy(meta,t){recBusy[meta.id]=t;const el=document.querySelector('[data-rec-busy="'+meta.id+'"]');if(el)el.textContent='⏳ '+t;else render()}
-async function recTranscribe(meta){
-  const blob=await recBlob(meta);if(!blob.size)throw Error('저장된 소리가 없습니다');
-  const mime=blob.type||'audio/webm';let part;
-  if(blob.size<14e6){recSetBusy(meta,'녹음 보내는 중…');part={inline_data:{mime_type:mime,data:await fileB64(blob)}}}
-  else{recSetBusy(meta,'큰 녹음 올리는 중… ('+fmtMB(blob.size)+')');part={file_data:{mime_type:mime,file_uri:await gemUpload(blob,mime,'녹음 '+recStamp(meta.at),t=>recSetBusy(meta,t))}}}
-  recSetBusy(meta,'Gemini가 받아 적는 중… (녹음 길이에 따라 몇 분 걸릴 수 있어요)');
+async function recGemTranscribe(meta,blob,mime,name,step){ // 소리 한 덩어리 → 받아쓴 글 (작으면 바로 보내고, 크면 파일 올리기)
+  let part;
+  if(blob.size<14e6){step('녹음 보내는 중…');part={inline_data:{mime_type:mime,data:await fileB64(blob)}}}
+  else{step('큰 녹음 올리는 중… ('+fmtMB(blob.size)+')');part={file_data:{mime_type:mime,file_uri:await gemUpload(blob,mime,name,step)}}}
+  step('Gemini가 받아 적는 중… (녹음 길이에 따라 몇 분 걸릴 수 있어요)');
   const sys='녹음을 들리는 그대로 받아 적으세요. 말한 언어 그대로 적고 번역하지 마세요. '+FILLER_RULE+' 문장마다, 그리고 말하는 사람이 바뀔 때 줄을 바꾸세요. 잘 안 들리는 곳은 (안 들림)으로. 설명·제목 없이 받아쓴 글만.'+glossaryHint();
-  const r=await gemGen([part,{text:'이 녹음을 받아 적으세요.'}],sys,900000);
-  meta.transcript=r.text;meta.lang=hangulRatio(r.text)>0.3?'ko':active().code;delete meta.translation;delete meta.trLang;
+  return gemGen([part,{text:'이 녹음을 받아 적으세요.'}],sys,900000,'녹음 받아쓰기');
+}
+async function recTranscribe(meta){
+  let blob=await recBlob(meta);if(!blob.size)throw Error('저장된 소리가 없습니다');
+  let mime=blob.type||'audio/webm';
+  if(load('rec_trim','1')==='1'){ // 휴대폰에서 긴 무음만 빼고 보냄 (원본은 그대로). 실패하면 원본 그대로
+    try{recSetBusy(meta,'무음 빼는 중… (휴대폰에서 처리)');const pcm=await recPcm(meta),plan=await recAnalyze(pcm),kept=segLen(plan.segs);
+      if(plan.segs.length&&kept<plan.dur*0.9){blob=recWav(pcm,plan.segs);mime='audio/wav';notify('무음 '+fmtDur(plan.dur-kept)+'을 빼고 보냅니다.')}
+    }catch(e){if(/넘어/.test(e.message))notify(e.message)}
+  }
+  const r=await recGemTranscribe(meta,blob,mime,'녹음 '+recStamp(meta.at),t=>recSetBusy(meta,t));
+  meta.transcript=r.text;meta.lang=hangulRatio(r.text)>0.3?'ko':active().code;delete meta.translation;delete meta.trLang;delete meta.partData;
   if(r.cut)notify('녹음이 길어 받아쓰기가 중간에 끊겼습니다. 나머지는 빠졌어요.');
 }
 async function recTranslate(meta){
   const tg=recTarget(meta),parts=splitText(meta.transcript,3000),out=[];
   const g=glossOut(),sys=`${nameOf(meta.lang)} 글을 ${nameOf(tg)}로 현지 사람이 바로 알아듣게 자연스럽게 번역하세요. 줄 나눔은 그대로. 설명·주석 없이 번역문만.`+(g?`\n용어는 이렇게: ${g}`:'');
-  for(let i=0;i<parts.length;i++){recSetBusy(meta,'번역하는 중… '+(parts.length>1?(i+1)+' / '+parts.length:''));out.push((await gemGen([{text:parts[i]}],sys,180000)).text)}
+  for(let i=0;i<parts.length;i++){recSetBusy(meta,'번역하는 중… '+(parts.length>1?(i+1)+' / '+parts.length:''));out.push((await gemGen([{text:parts[i]}],sys,180000,'녹음 번역')).text)}
   meta.translation=out.join('\n');meta.trLang=tg;
 }
 async function recSummarize(meta){
   recSetBusy(meta,'요약하는 중…');
   const sys='녹음을 받아쓴 글입니다. 한국어로 요약하세요. 맨 위에 한 줄 요약, 그다음 핵심 내용을 • 목록으로 5~10개. 숫자·이름·정한 일·할 일이 있으면 따로 모아 적으세요. 글에 없는 내용은 만들지 마세요.';
-  meta.summary=(await gemGen([{text:meta.transcript.slice(0,300000)}],sys,240000)).text;
+  meta.summary=(await gemGen([{text:meta.transcript.slice(0,300000)}],sys,240000,'녹음 요약')).text;
 }
 async function recRun(meta,kind){
   if(recBusy[meta.id]||meta.status==='rec'||!recNeedGem())return;
@@ -2421,6 +2844,148 @@ async function recPlay(meta){
   if(!recUrls[meta.id]){const b=await recBlob(meta).catch(()=>null);if(!b?.size){recOpen=null;return notify('저장된 소리가 없습니다.')}recUrls[meta.id]=URL.createObjectURL(b)}
   render();document.querySelector('.rec-audio')?.play().catch(()=>{});
 }
+/* ── 녹음 정리: AI에 보낼 소리만 휴대폰에서 다듬기 (무음 빼기 · 구간 나누기). 원본 녹음은 그대로 보관, 실시간 통역과는 따로 움직임 ──
+   소리를 16kHz 모노로 읽어 조용한 곳을 찾고, 말소리 앞뒤 여유(기본 0.4초)만 남겨 이어 붙인 WAV를 보냄. 오디오 토큰은 소리 길이에 비례하므로 무음을 빼면 그만큼 줄어듦. */
+const REC_SR=16000,REC_PAD=0.4,REC_LOCAL_MAX=40*60,REC_CHUNKS=[[0,'나누지 않음'],[300,'5분'],[600,'10분']];
+const tick=()=>new Promise(r=>setTimeout(r));
+async function recPcm(meta){ // 녹음 → 16kHz 모노 Int16 (메모리를 아끼려 바로 줄여 담음)
+  if(meta.dur>REC_LOCAL_MAX)throw Error('녹음이 '+Math.round(REC_LOCAL_MAX/60)+'분을 넘어 휴대폰에서는 정리하지 않고 원본 그대로 보냅니다');
+  const AC=window.OfflineAudioContext||window.webkitOfflineAudioContext;if(!AC)throw Error('이 브라우저는 소리 정리를 지원하지 않습니다');
+  const buf=await new AC(1,1,REC_SR).decodeAudioData(await(await recBlob(meta)).arrayBuffer()),ch=[];
+  for(let c=0;c<buf.numberOfChannels;c++)ch.push(buf.getChannelData(c));
+  const out=new Int16Array(buf.length);
+  for(let i=0;i<out.length;i++){let v=0;for(const d of ch)v+=d[i];out[i]=Math.max(-1,Math.min(1,v/ch.length))*32767;if(i%2e6===0)await tick()}
+  return out;
+}
+async function recAnalyze(pcm,pad=REC_PAD){ // → {segs:[[시작초,끝초]…] 남길 구간, dur}
+  const F=320,nF=Math.floor(pcm.length/F),rms=new Float32Array(nF);
+  for(let i=0;i<nF;i++){let s=0;const o=i*F;for(let j=0;j<F;j++){const v=pcm[o+j]/32768;s+=v*v}rms[i]=Math.sqrt(s/F);if(i%5000===4999)await tick()}
+  const sorted=Float32Array.from(rms).sort(),p10=sorted[Math.floor(nF*0.1)]||0,p95=sorted[Math.floor(nF*0.95)]||0;
+  const thr=Math.min(Math.max(p10*3,0.006),Math.max(0.006,p95*0.2)); // 배경 소음의 3배, 큰 소리의 20%를 넘지 않게
+  const raw=[];let s=-1,last=-1;
+  for(let i=0;i<nF;i++){if(rms[i]>thr){if(s<0)s=i;last=i}else if(s>=0&&i-last>10){raw.push([s,last+1]);s=-1}} // 0.2초 이하 틈은 말이 이어진 것으로
+  if(s>=0)raw.push([s,last+1]);
+  const dur=pcm.length/REC_SR,segs=[];
+  for(const [a,b] of raw){if(b-a<4)continue;const x=Math.max(0,a*0.02-pad),y=Math.min(dur,b*0.02+pad),L=segs[segs.length-1];if(L&&x<=L[1])L[1]=Math.max(L[1],y);else segs.push([x,y])}
+  return {segs,dur};
+}
+const segLen=segs=>segs.reduce((n,g)=>n+g[1]-g[0],0);
+const segsIn=(segs,s,e)=>segs.map(g=>[Math.max(g[0],s),Math.min(g[1],e)]).filter(g=>g[1]-g[0]>0.05);
+function recWav(pcm,ranges){ // 남길 구간들을 이어 붙인 WAV (16kHz·모노·16비트)
+  const rr=ranges.map(([s,e])=>[Math.max(0,Math.round(s*REC_SR)),Math.min(pcm.length,Math.round(e*REC_SR))]),n=rr.reduce((t,[a,b])=>t+Math.max(0,b-a),0);
+  const buf=new ArrayBuffer(44+n*2),v=new DataView(buf),w=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i))};
+  w(0,'RIFF');v.setUint32(4,36+n*2,true);w(8,'WAVEfmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,REC_SR,true);v.setUint32(28,REC_SR*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*2,true);
+  const out=new Int16Array(buf,44,n);let o=0;for(const [a,b] of rr){out.set(pcm.subarray(a,b),o);o+=Math.max(0,b-a)}
+  return new Blob([buf],{type:'audio/wav'});
+}
+function keptToOrig(segs,k){let acc=0;for(const g of segs){const l=g[1]-g[0];if(acc+l>=k)return g[0]+(k-acc);acc+=l}return segs.length?segs[segs.length-1][1]:0}
+// 정리 후 길이가 목표(초)에 가깝도록, 가장 긴 무음 한가운데에서 나눔 (쉬는 틈이 없으면 목표 지점에서 그냥 자름)
+function recAutoCuts(segs,target){
+  if(!target||!segs.length)return [];
+  const gaps=[];let kept=0;
+  segs.forEach((g,i)=>{kept+=g[1]-g[0];const nx=segs[i+1];if(nx)gaps.push({t:(g[1]+nx[0])/2,kept,gap:nx[0]-g[1]})});
+  const cuts=[];let base=0;
+  while(kept-base>target*1.25){
+    const cand=gaps.filter(c=>c.kept-base>=target*0.7&&c.kept-base<=target*1.25);
+    if(cand.length){const c=cand.reduce((a,b)=>b.gap>a.gap?b:a);cuts.push(c.t);base=c.kept}
+    else{cuts.push(keptToOrig(segs,base+target));base+=target}
+  }
+  return cuts;
+}
+const recDur=meta=>meta.adur||meta.dur;
+function recParts(meta){const d=recDur(meta),pts=[0,...(meta.cuts||[]).filter(c=>c>1&&c<d-1),d];return pts.slice(0,-1).map((s,i)=>({s,e:pts[i+1],key:Math.round(s)+'-'+Math.round(pts[i+1])}))}
+const partInfo=(meta,key)=>(meta.partData||(meta.partData={}))[key]||(meta.partData[key]={});
+// 받아쓴 구간들을 시간순으로 합쳐 meta.transcript로 (구간이 여럿이면 [시간] 주제 머리글을 붙여 구분)
+function recAssemble(meta){
+  const ps=recParts(meta).filter(p=>partInfo(meta,p.key).transcript);if(!ps.length)return;
+  const multi=recParts(meta).length>1;
+  meta.transcript=ps.map(p=>{const d=partInfo(meta,p.key);return (multi?'['+fmtDur(p.s)+'–'+fmtDur(p.e)+']'+(d.topic?' '+d.topic:'')+'\n':'')+d.transcript}).join('\n\n');
+  meta.lang=hangulRatio(meta.transcript)>0.3?'ko':active().code;delete meta.translation;delete meta.trLang;
+}
+function openRecPrep(meta){
+  stopSpeech();recOpen=null;const data={type:'recPrep',id:meta.id,pad:REC_PAD};state.modal=data;render();recPrepLoad(data);
+}
+function releaseRecPrep(data){data.pcm=null;if(data.previewUrl)URL.revokeObjectURL(data.previewUrl);data.previewUrl=null}
+async function recPrepLoad(data,reuse){
+  const meta=recList.find(m=>m.id===data.id);if(!meta)return;
+  try{
+    data.err='';data.busy='소리를 읽는 중…';render();
+    if(!reuse||!data.pcm)data.pcm=await recPcm(meta);
+    if(state.modal!==data)return;
+    data.busy='조용한 곳을 찾는 중…';render();
+    data.plan=await recAnalyze(data.pcm,data.pad);meta.adur=Math.round(data.plan.dur*10)/10;
+    if(meta.cuts===undefined){meta.chunk=meta.dur>420?300:0;meta.cuts=recAutoCuts(data.plan.segs,meta.chunk)}
+    await recPut(meta).catch(()=>{});
+  }catch(e){data.err='정리하지 못했습니다 · '+e.message}
+  data.busy='';if(state.modal===data)render();
+}
+async function recPrepAudio(meta){ // 원본 미리듣기용 주소
+  if(!recUrls[meta.id]){const b=await recBlob(meta);if(!b.size)throw Error('저장된 소리가 없습니다');recUrls[meta.id]=URL.createObjectURL(b)}
+  return recUrls[meta.id];
+}
+function prepPlay(url,from,to){
+  const au=document.getElementById('prepAudio');if(!au)return;
+  const go=()=>{au.currentTime=from;au.play().catch(()=>{});au.ontimeupdate=()=>{if(to&&au.currentTime>=to){au.pause();au.ontimeupdate=null}}};
+  if(au.dataset.src===url)return go();
+  au.dataset.src=url;au.src=url;
+  au.onloadedmetadata=()=>{if(au.duration===Infinity){const back=()=>{au.removeEventListener('durationchange',back);go()};au.addEventListener('durationchange',back);au.currentTime=1e9}else go()};
+}
+function drawRecPrep(body,data,actions){
+  const meta=recList.find(m=>m.id===data.id);if(!meta){node('p','tiny','녹음을 찾을 수 없습니다.',body);return}
+  node('p','tiny faint',recName(meta)+' · 원본 '+fmtDur(meta.dur)+'. 원본 녹음은 그대로 두고, AI에 보낼 소리만 이 휴대폰에서 다듬습니다 (무료). 말소리 앞뒤 '+data.pad+'초는 남기고 긴 무음만 뺍니다.',body);
+  if(data.busy){node('p','tiny',data.busy,body);return}
+  if(data.err){node('p','tiny',data.err,body);node('p','tiny','원본 그대로 보내려면 닫고 ‘📝 받아쓰기’ 버튼을 쓰세요.',body);return}
+  const plan=data.plan;if(!plan)return;
+  const kept=segLen(plan.segs),saved=plan.dur?Math.round((1-kept/plan.dur)*100):0;
+  node('p','','원본 '+fmtDur(plan.dur)+' → 정리 후 '+fmtDur(kept)+' ('+saved+'% 줄임 · 소리 토큰 약 '+Math.round(kept*32).toLocaleString()+'개)',body).style.fontWeight='700';
+  if(!plan.segs.length)node('p','tiny','말소리를 찾지 못했습니다. 마이크 소리가 너무 작거나 무음 녹음일 수 있어요.',body);
+  node('label','field','말소리 앞뒤 여유',body);
+  const pc=node('div','chips','',body);[0.3,0.4,0.5].forEach(v=>button(v+'초','chip'+(data.pad===v?' on':''),()=>{data.pad=v;recPrepLoad(data,true)},pc));
+  node('label','field','긴 녹음 나누기 (정리 후 길이 기준 · 무음 지점에서 나눔)',body);
+  const cc=node('div','chips','',body);REC_CHUNKS.forEach(([v,t])=>button(t,'chip'+((meta.chunk||0)===v?' on':''),()=>{meta.chunk=v;meta.cuts=recAutoCuts(plan.segs,v);recPut(meta).catch(()=>{});render()},cc));
+  node('label','field','미리듣기 (재생 중 원하는 곳에서 직접 나눌 수도 있어요)',body);
+  const au=node('audio','rec-audio','',body);au.id='prepAudio';au.controls=true;au.preload='none';
+  const mr=node('div','row-btns','',body);
+  button('▶ 원본 처음부터','action',async()=>{try{prepPlay(await recPrepAudio(meta),0,0)}catch(e){notify(e.message)}},mr);
+  button('✂ 지금 위치에서 나누기','action',()=>{const t=au.currentTime;if(!(t>1&&t<plan.dur-1))return notify('먼저 원본을 재생하고, 나눌 곳에서 멈춘 뒤 눌러 주세요.');if(au.dataset.src!==recUrls[meta.id])return notify('원본을 재생한 위치에서만 나눌 수 있어요.');meta.cuts=[...new Set([...(meta.cuts||[]),Math.round(t*10)/10])].sort((a,b)=>a-b);recPut(meta).catch(()=>{});render()},mr);
+  const parts=recParts(meta);
+  node('label','field','구간 '+parts.length+'개 · 보낼 구간을 고르세요 (이미 받아쓴 구간은 다시 보내지 않아요)',body);
+  const cnt=node('span','','',null),upd=()=>{cnt.textContent=parts.filter(p=>partInfo(meta,p.key).sel!==false&&!partInfo(meta,p.key).transcript).length};
+  parts.forEach((p,i)=>{
+    const d=partInfo(meta,p.key),ranges=segsIn(plan.segs,p.s,p.e),len=segLen(ranges);if(d.sel===undefined)d.sel=!d.transcript;
+    const box=node('div','rec-part'+(d.sel?' on':''),'',body),h=node('div','rec-head','',box);
+    const sel=button(d.sel?'✓':'','ph-sel static',()=>{d.sel=!d.sel;box.classList.toggle('on',d.sel);sel.textContent=d.sel?'✓':'';upd();recPut(meta).catch(()=>{})},h);
+    node('b','',(i+1)+'구간 '+fmtDur(p.s)+'–'+fmtDur(p.e),h);node('small','','정리 후 '+fmtDur(len)+(d.transcript?' · 받아씀 ✓ '+d.transcript.length.toLocaleString()+'자':''),h);
+    const tp=node('input','text-field','',box);tp.placeholder='주제 (예: 오전 회의, 공장 견학)';tp.value=d.topic||'';tp.onchange=()=>{d.topic=tp.value.trim();if(d.transcript)recAssemble(meta);recPut(meta).catch(()=>{})};
+    const b=node('div','rec-btns','',box);
+    button('▶ 원본','',async()=>{try{prepPlay(await recPrepAudio(meta),p.s,p.e)}catch(e){notify(e.message)}},b);
+    button('▶ 처리본','',()=>{if(data.previewUrl)URL.revokeObjectURL(data.previewUrl);data.previewUrl=URL.createObjectURL(recWav(data.pcm,ranges));prepPlay(data.previewUrl,0,0)},b).disabled=!ranges.length;
+    if(i>0)button('‹ 앞 구간과 합치기','',()=>{meta.cuts=(meta.cuts||[]).filter(c=>Math.round(c)!==Math.round(p.s));recAssemble(meta);recPut(meta).catch(()=>{});render()},b);
+    if(d.transcript)button('↻ 다시 받아쓰기','',()=>askConfirm('이 구간을 다시 받아쓸까요?\n(Gemini 크레딧이 다시 듭니다)','다시 하기',()=>{delete d.transcript;d.sel=true;recPut(meta).catch(()=>{});render()}),b);
+  });
+  const go=button('선택 구간 받아쓰기 (','action primary',()=>recSendParts(meta,data),actions);go.append(cnt,'개)');upd();
+  go.disabled=!plan.segs.length||!!recBusy[meta.id];
+  if(recBusy[meta.id])node('p','tiny','⏳ '+recBusy[meta.id],body);
+}
+async function recSendParts(meta,data){
+  if(recBusy[meta.id]||!recNeedGem())return;
+  const parts=recParts(meta).filter(p=>{const d=partInfo(meta,p.key);return d.sel!==false&&!d.transcript});
+  if(!parts.length)return notify('보낼 구간이 없습니다. 구간을 고르거나 ↻로 다시 받아쓰기를 지정하세요.');
+  let ok=0;
+  try{
+    for(const [i,p] of parts.entries()){
+      if(state.modal!==data)break;
+      const d=partInfo(meta,p.key),ranges=segsIn(data.plan.segs,p.s,p.e),tag=(i+1)+' / '+parts.length+' 구간';
+      if(!ranges.length){d.transcript='(말소리 없음)';continue}
+      recSetBusy(meta,tag+' 보내는 중…');
+      const r=await recGemTranscribe(meta,recWav(data.pcm,ranges),'audio/wav','녹음 '+recStamp(meta.at)+' '+(i+1),t=>recSetBusy(meta,tag+' · '+t));
+      d.transcript=r.text;ok++;recAssemble(meta);await recPut(meta);
+      if(r.cut)notify('구간이 길어 받아쓰기가 중간에 끊겼습니다.');
+    }
+    if(ok)notify('📝 '+ok+'개 구간을 받아썼습니다. 번역·요약은 받아쓴 글로 합니다.');
+  }catch(e){notify('실패 · '+e.message+' (받아쓴 구간은 저장됨 · 남은 구간만 다시 보낼 수 있어요)')}
+  finally{delete recBusy[meta.id];await recPut(meta).catch(()=>{});render()}
+}
 function drawRecord(s){
   const content=node('section','transcript','',s);content.id='transcript';
   if(!recList.length)hint(content,'아래 ● 녹음 시작을 누르면 녹음해서 이 휴대폰에 저장합니다.\n\n나중에 녹음마다 Gemini로\n📝 받아쓰기 · 🌐 번역 · 📋 요약을 할 수 있고,\n💾 파일로 내보낼 수도 있어요.');
@@ -2433,6 +2998,7 @@ function drawRecord(s){
     const b=node('div','rec-btns','',box);
     button(recOpen===meta.id?'■ 닫기':'▶ 듣기','',()=>recPlay(meta),b);
     button('💾 내보내기','',()=>recExport(meta),b);
+    button('✂ 소리 정리·나누기','',()=>openRecPrep(meta),b);
     [['tr','📝 받아쓰기',meta.transcript],['tl','🌐 번역',meta.translation],['sum','📋 요약',meta.summary]].forEach(([k,t,done])=>{const x=button(t+(done?' ✓':''),done?'done':'',()=>recRun(meta,k),b);x.disabled=!!busy});
     button('🗑','',()=>askConfirm('이 녹음을 지울까요?\n'+recName(meta)+' · '+fmtDur(meta.dur)+'\n지운 녹음은 되살릴 수 없습니다.','삭제',()=>recDelete(meta).catch(e=>notify('지우지 못했습니다 · '+e.message))),b).setAttribute('aria-label','녹음 삭제');
     if(recOpen===meta.id&&recUrls[meta.id]){const au=node('audio','rec-audio','',box);au.controls=true;au.preload='auto';
@@ -2517,15 +3083,12 @@ t: s를 현지인이 바로 알아듣게 자연스럽게 번역. 설명·주석�
     const timeout=setTimeout(cancel,(tier==='accurate'?20000:tier==='balanced'?16000:12000)+Math.min(240000,text.length*40)); // V2: 5분·10분 묶음처럼 긴 글은 기다리는 시간도 길게 (최대 4분 더)
     try{
       if(timing)timing.marks.referenceChars=fixed.length;compareMark(timing,sys,user);latencyMark(timing,'request');
-      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${encodeURIComponent(load('ai_key').trim())}`,{method:'POST',_entryGemini:true,headers:{'content-type':'application/json'},
-        body:JSON.stringify({systemInstruction:{parts:[{text:sys}]},contents:[{role:'user',parts:[{text:user}]}],generationConfig:{...gemCfg(m),responseMimeType:'application/json',responseSchema:{type:'OBJECT',properties:{s:{type:'STRING'},t:{type:'STRING'}},required:['s','t']}}}),signal:controller.signal});
-      const j=await res.json().catch(()=>({}));compareFinish(timing);latencyMark(timing,'response');if(!res.ok)throw Error(j.error?.message||('Gemini 오류 '+res.status));
-      const raw=(j.candidates?.[0]?.content?.parts||[]).filter(x=>!x.thought).map(x=>x.text||'').join('').trim();
-      let o;try{o=JSON.parse(raw.replace(/^```(?:json)?\s*|\s*```$/g,''))}catch{continue}
+      const j=await gemPost(m,{systemInstruction:{parts:[{text:sys}]},contents:[{role:'user',parts:[{text:user}]}],generationConfig:{...gemCfg(m),responseMimeType:'application/json',responseSchema:{type:'OBJECT',properties:{s:{type:'STRING'},t:{type:'STRING'}},required:['s','t']}}},{signal:controller.signal,entry:true,task:'실시간 번역'});
+      compareFinish(timing);latencyMark(timing,'response');
+      let o;try{o=parseJSON(gemText(j))}catch{continue}
       const s=String(o.s||'').trim();const {out,noisy}=gemClean(JSON.stringify({t:String(o.t||'')}),target);
       if(!out||noisy)continue;
-      const hz=t=>{const L=t.replace(/[\s\d.,!?。、，！？…·:;"'()\[\]~-]/g,'');return L?(t.match(/[가-힣]/g)||[]).length/L.length:0};
-      if(target!=='ko'&&hz(out)>0.3)continue;
+      if(target!=='ko'&&hangulRatio(out)>0.3)continue;
       // 정리한 원문이 너무 짧아지거나 길어지면(뜻이 바뀐 것) 원래 글 그대로
       // V3: 반복을 지워 많이 짧아진 정리본도, 글자가 모두 원래 글에 있던 것이면 씀 (예전에는 60%보다 짧으면 버렸음)
       const okS=s&&s.length<=text.length*1.3+10&&(s.length>=text.length*(opt.merged?0.25:0.6)||(s.length>=text.length*0.15&&coverRatio(s,text)>=0.85));
