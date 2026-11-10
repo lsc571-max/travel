@@ -572,7 +572,7 @@ function iconButton(icon,cls,label,fn,parent){const b=button('',cls,fn,parent);b
 function smallButton(icon,label,cls,fn,parent,id){const b=button('','sbtn '+cls+(state.flash===id?' flash':''),()=>{state.flash=id;fn()},parent);b.innerHTML=icon+`<span>${label}</span>`;return b}
 function notify(msg){$('.notice')?.remove();const n=node('div','notice',msg,$('#app'));setTimeout(()=>n.remove(),3400)}
 const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-const APP_VERSION='V2 · Claude · 묶음 시간·녹음 모드 · 2026.11.10';
+const APP_VERSION='V3 · Claude · 받아쓰기 반복·빠짐 고침 · 2026.11.10';
 /* L18: 개발자 도구 window.L18_TIMINGS / console 표: 마지막 인식 갱신부터 TTS 시작까지(ms).
    브라우저 speechend가 있으면 실제 발화 종료 신호도 별도로 기록. 키·문장 내용은 기록하지 않음. */
 window.L21_TIMINGS=[];window.L20_TIMINGS=window.L18_TIMINGS=window.L21_TIMINGS;
@@ -1984,6 +1984,12 @@ function drawSettings(body){
       else if(!had){store('tr_engine','gemini');store('gem_tier','fast')}
       render();notify('저장했습니다.');
     },sec).style.marginTop='8px';
+    // V3: 받아쓰기 정리 기록 (문제 찾기용)
+    sec=node('div','sec','',body);node('h4','','받아쓰기 정리 기록',sec);
+    node('p','tiny','같은 말이 쌓이거나 말이 빠질 때, 앱이 받아쓴 말을 버리거나 바꿔 넣은 기록입니다 (최근 80개, 이 휴대폰에만 저장). 문제가 생기면 복사해서 채팅에 붙여 넣어 주세요.',sec);
+    const lb=node('div','row-btns','',sec);
+    button('📋 기록 복사 ('+recogLog.length+'개)','action',async()=>{const t=recogLog.map(e=>`${e.t} [${e.k}]\n  앞: ${e.a}\n  새: ${e.b}`).join('\n')||'기록 없음';try{await navigator.clipboard.writeText(APP_VERSION+'\n'+t);notify('복사했습니다. 채팅에 붙여 넣어 주세요.')}catch{notify('복사가 막혀 있습니다.')}},lb);
+    button('지우기','action',()=>{recogLog.length=0;store('recog_log','[]');render()},lb);
   }
   // 버전 글씨 — 빠르게 5번 누르면 관리자 메뉴
   const ver=node('div','version',APP_VERSION,body);
@@ -2491,6 +2497,8 @@ function stripFillers(t){
 }
 // 같은 말이 바로 붙어 두 번 나오면 하나만 ("독단적으로 독단적으로" → "독단적으로")
 function auDedupWords(t){let p;do{p=t;t=t.replace(/(^|\s)(\S{2,}(?:\s+\S+){0,3})\s+\2(?=[\s.,?!。]|$)/g,'$1$2')}while(t!==p);return t}
+// 정리본의 두 글자씩 짝이 원래 글에 얼마나 들어 있는지 (1이면 모두 원래 글에 있던 말)
+function coverRatio(s,t){const a=nrm(s),b=nrm(t);if(a.length<2)return 1;const set=new Set();for(let i=0;i<b.length-1;i++)set.add(b.slice(i,i+2));let n=0;for(let i=0;i<a.length-1;i++)if(set.has(a.slice(i,i+2)))n++;return n/(a.length-1)}
 // 완성된 문장을 "정리한 원문 + 번역" 한 번에 받음 (실패하면 null → 무료 번역 한 번)
 async function geminiCleanTranslate(text,src,target,ctx,timing,opt={}){
   const tier=opt.tier||gemTier();
@@ -2519,7 +2527,9 @@ t: s를 현지인이 바로 알아듣게 자연스럽게 번역. 설명·주석�
       const hz=t=>{const L=t.replace(/[\s\d.,!?。、，！？…·:;"'()\[\]~-]/g,'');return L?(t.match(/[가-힣]/g)||[]).length/L.length:0};
       if(target!=='ko'&&hz(out)>0.3)continue;
       // 정리한 원문이 너무 짧아지거나 길어지면(뜻이 바뀐 것) 원래 글 그대로
-      const okS=s&&s.length>=text.length*(opt.merged?0.25:0.6)&&s.length<=text.length*1.3+10;
+      // V3: 반복을 지워 많이 짧아진 정리본도, 글자가 모두 원래 글에 있던 것이면 씀 (예전에는 60%보다 짧으면 버렸음)
+      const okS=s&&s.length<=text.length*1.3+10&&(s.length>=text.length*(opt.merged?0.25:0.6)||(s.length>=text.length*0.15&&coverRatio(s,text)>=0.85));
+      if(s&&!okS)rlog('Gemini 정리본 안 씀 (뜻이 바뀐 듯)',text,s);
       return {s:okS?s:text,t:out,mode:tier};
     }catch(e){if(timing&&timing.compareStarted!=null&&!timing.compareComplete){compareFinish(timing)}latencyMark(timing,'response');if(timing)timing.marks.requestFailed=1}
     finally{clearTimeout(timeout);opt.signal?.removeEventListener('abort',cancel)}
@@ -2535,7 +2545,6 @@ function killAllMics(){stopRefCamera();
 }
 /* ── 실시간 음성 인식 ── */
 let lastFinal={text:'',at:0};
-const nzs=x=>String(x).replace(/[\s.,!?。、，！？…]+/g,'');
 function dropChars(txt,n){let k=0,i=0;while(i<txt.length&&k<n){if(!/[\s.,!?。、，！？…]/.test(txt[i]))k++;i++}return txt.slice(i).trim()}
 function pauseRecognizer(){const r=state.recognizer;state.recognizer=null;try{r?._flush?.()}catch(e){console.warn("flush",e)}try{r?.abort()}catch{}if(state.interim){state.interim='';updateLive()}}
 function resumeRecognizer(){if(isConv()&&(outBusy||state.speaking))return;if(state.mic&&!state.recognizer&&!state.modal&&!dict&&state.page==='main'&&!document.hidden)startRecognition()}
@@ -2589,11 +2598,11 @@ function finishManualTurn(turn){
 /* V0: 받아쓴 말을 이어 붙일 때 바로 앞 말과만 비교 — 똑같이 다시 온 말은 버리고, 앞 말을 고쳐·늘려 다시 보낸 건 바꿔 넣고, 겹친 앞부분만 잘라 냄.
    (예전처럼 지난 문장들과 비교해 버리지 않으므로 나중에 같은 말을 다시 해도 빠지지 않음) */
 function addTurnPart(turn,text){
-  const prev=turn.parts[turn.parts.length-1]??turn.prevPart,np=nzs(prev||''),nt=nzs(text);
+  const prev=turn.parts[turn.parts.length-1]??turn.prevPart,np=nrm(prev||''),nt=nrm(text);
   if(np&&nt){
-    if(nt.length>=4&&np.endsWith(nt))return;
+    if(nt.length>=4&&np.endsWith(nt)){rlog('앞 말과 같음 → 버림',prev,text);return}
     if(turn.parts.length&&np.length>=4&&nt.startsWith(np)){turn.parts[turn.parts.length-1]=text;return}
-    for(let k=Math.min(np.length,nt.length);k>=4;k--)if(np.endsWith(nt.slice(0,k))){text=dropChars(text,k);break}
+    for(let k=Math.min(np.length,nt.length);k>=4;k--)if(np.endsWith(nt.slice(0,k))){rlog('앞 말과 겹친 부분 잘라 냄',prev,text);text=dropChars(text,k);break}
   }
   if(!isEmptyText(text))turn.parts.push(text);
 }
@@ -2686,25 +2695,54 @@ function toggleMic(){
   if(!state.recognizer)startRecognition();
   if(!state.recognizer&&state.mic)scheduleMicRetry('음성 인식 시작을 다시 시도합니다.');
 }
-/* L26: 같은 인식 결과의 갱신을 추가 발화와 구분. 번역 프롬프트는 L24 그대로. */
-function createSpeechBuffer(seed=''){
-  const norm=t=>String(t||'').replace(/[\s.,!?。、，！？…]+/g,'');
-  const drop=(text,n)=>{let i=0,k=0;while(i<text.length&&k<n){if(norm(text[i]))k++;i++}return text.slice(i).replace(/^[\s.,!?。、，！？…]+/,'').trim()};
-  let current='',consumed=norm(seed);
-  function join(a,b){
-    if(!a)return b;const na=norm(a),nb=norm(b);if(!nb)return a;
-    if(nb.startsWith(na))return b;if(na.startsWith(nb))return a;
-    for(let n=Math.min(na.length,nb.length);n>=4;n--)if(na.endsWith(nb.slice(0,n)))return a+' '+drop(b,n);
-    return a+' '+b;
+/* V3: 받아쓰기 정리 기록 — 앱이 받아쓴 말을 버리거나 바꿔 넣을 때만 남김 (휴대폰 안에만, 최근 80개).
+   설정 → 고급 → "받아쓰기 정리 기록"에서 복사해 보내 주면 원인을 찾을 수 있음. Gemini로는 보내지 않음 */
+const recogLog=loadJSON('recog_log',[]);let recogLogT=null;
+function rlog(kind,a,b=''){
+  const cut=x=>{x=String(x||'').replace(/\s+/g,' ').trim();return x.length>70?'…'+x.slice(-70):x};
+  const e={t:new Date().toTimeString().slice(0,8),k:kind,a:cut(a),b:cut(b)},last=recogLog[recogLog.length-1];
+  if(last&&last.k===e.k&&last.a===e.a&&last.b===e.b)return; // 같은 내용이 계속 오면 한 번만
+  recogLog.push(e);if(recogLog.length>80)recogLog.splice(0,recogLog.length-80);
+  clearTimeout(recogLogT);recogLogT=setTimeout(()=>store('recog_log',JSON.stringify(recogLog)),2000);
+}
+/* V3: 크롬 받아쓰기 결과 이어 붙이기
+   ① 크롬이 같은 말을 고쳐서 처음부터 다시 보내면(앞부분이 절반 넘게 같으면) 뒤에 또 붙이지 않고 바꿔 넣음 → 같은 말이 쌓이지 않게
+   ② 안드로이드 크롬은 문장 하나가 확정되면 결과 목록을 비우고 새로 시작함 → 그 전에 확정된 말을 따로 모아 둠 → 새로 한 말이 빠지지 않게
+      (확정 안 된 중간 결과만 바뀐 것은 고쳐 보낸 말이므로 모아 두지 않음) */
+const nrm=t=>String(t||'').replace(/[\s.,!?。、，！？…]+/g,'');
+function keepChars(text,n){let i=0,k=0;while(i<text.length&&k<n){if(nrm(text[i]))k++;i++}return text.slice(0,i).trim()}
+function mergeHeard(a,b,log=true){
+  a=String(a||'').trim();b=String(b||'').trim();
+  const na=nrm(a),nb=nrm(b);if(!na)return b;if(!nb)return a;
+  if(nb.startsWith(na)||(na.length>=4&&nb.includes(na)))return b; // 늘어난 말
+  if(na.startsWith(nb))return a; // 앞부분만 다시 옴
+  if(nb.length>=4&&na.slice(-(nb.length+10)).includes(nb)){if(log)rlog('같은 말 다시 옴 → 버림',a,b);return a}
+  const head=nb.slice(0,Math.min(6,nb.length));
+  if(head.length>=4)for(let p=na.indexOf(head);p>=0;p=na.indexOf(head,p+1)){ // 고쳐 보낸 말
+    const rest=na.slice(p);let cp=0;while(cp<rest.length&&cp<nb.length&&rest[cp]===nb[cp])cp++;
+    if(cp>=Math.max(6,rest.length*0.5)){if(log)rlog('고쳐 보낸 말 → 바꿔 넣음',a,b);return (keepChars(a,p)+' '+b).trim()}
   }
-  function pending(){const n=norm(current);if(!consumed)return current;if(n.startsWith(consumed))return drop(current,consumed.length);if(consumed.startsWith(n))return '';
+  for(let n=Math.min(na.length,nb.length);n>=4;n--)if(na.endsWith(nb.slice(0,n))){if(log)rlog('겹친 앞부분 잘라 붙임',a,b);return a+' '+dropChars(b,n)}
+  return a+' '+b;
+}
+function createSpeechBuffer(seed=''){
+  const drop=(text,n)=>dropChars(text,n).replace(/^[\s.,!?。、，！？…]+/,'').trim();
+  let current='',base='',prev=null,consumed=nrm(seed);
+  function pending(){const n=nrm(current);if(!consumed)return current;if(n.startsWith(consumed))return drop(current,consumed.length);if(consumed.startsWith(n))return '';
     let same=0;while(same<n.length&&same<consumed.length&&n[same]===consumed[same])same++;
-    // 이미 보낸 동일 결과의 철자 수정은 새 문장으로 보내지 않음.
+    // 이미 보낸 말의 철자만 고친 것은 새 말로 보내지 않음
     if(same>=Math.max(3,consumed.length*.65))return n.length>consumed.length?drop(current,consumed.length):'';
     for(let k=Math.min(consumed.length,n.length);k>=4;k--)if(consumed.endsWith(n.slice(0,k)))return drop(current,k);
     return current;
   }
-  return {update(results){current='';for(let i=0;i<results.length;i++)current=join(current,auDedupWords(String(results[i][0]?.transcript||'').trim()));return pending()},peek:pending,take(){const text=pending();consumed=norm(current);return text}};
+  return {update(results){
+    let all='',fin='';
+    for(let i=0;i<results.length;i++){const t=auDedupWords(String(results[i][0]?.transcript||'').trim());if(!t)continue;all=mergeHeard(all,t);if(results[i].isFinal)fin=mergeHeard(fin,t,false)}
+    if(prev){const na=nrm(prev.all),nb=nrm(all);let cp=0;while(cp<na.length&&cp<nb.length&&na[cp]===nb[cp])cp++;
+      const goesOn=!na||cp>=Math.min(na.length,4)||nb.includes(na.slice(0,Math.min(na.length,8)));
+      if(!goesOn&&prev.fin){rlog('결과 목록 새로 시작 → 확정된 말 모아 둠',prev.fin,all);base=mergeHeard(base,prev.fin)}}
+    prev={all,fin};current=mergeHeard(base,all,false);return pending()},
+    peek:pending,take(){const text=pending();consumed=nrm(current);return text}};
 }
 function startRecognition(){
   if(!state.mic||state.modal||state.page!=='main')return;if(!SR)return;
