@@ -10,6 +10,7 @@ const fetched: { cal: string; min: number; max: number; at: number }[] = [];
 const inflight = new Map<string, Promise<void>>();
 const listeners: (() => void)[] = [];
 const FRESH_MS = 5 * 60 * 1000;
+let generation = 0; // invalidate() 이전에 시작된 응답은 버린다
 
 export let lastError: string | null = null;
 export let holidayError = false;
@@ -42,7 +43,9 @@ function covered(cal: string, a: number, b: number): boolean {
 }
 
 async function fetchOne(cal: string, readOnly: boolean, min: Date, max: Date) {
+  const gen = generation;
   const items = await api.listEvents(cal, min, max);
+  if (gen !== generation) return; // 그 사이 저장 등으로 무효화됨 → 오래된 결과로 덮어쓰지 않음
   const a = min.getTime(), b = max.getTime();
   const removed: string[] = [];
   for (const [k, e] of events) {
@@ -60,7 +63,7 @@ export async function ensure(min: Date, max: Date, force = false): Promise<void>
   const jobs: Promise<void>[] = [];
   for (const c of calendars()) {
     if (!force && covered(c.id, min.getTime(), max.getTime())) continue;
-    const key = `${c.id}|${min.getTime()}|${max.getTime()}`;
+    const key = `${generation}|${c.id}|${min.getTime()}|${max.getTime()}`;
     let p = inflight.get(key);
     if (!p) {
       p = fetchOne(c.id, c.readOnly, min, max)
@@ -104,9 +107,10 @@ export async function removeLocal(pred: (e: CalEvent) => boolean) {
 }
 
 /** 다음 ensure에서 다시 받도록 기록 무효화 */
-export function invalidate() { fetched.length = 0; }
+export function invalidate() { fetched.length = 0; generation++; }
 
 export async function clearAll() {
+  generation++;
   events.clear();
   fetched.length = 0;
   await cache.clearAll();

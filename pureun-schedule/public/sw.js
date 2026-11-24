@@ -26,8 +26,10 @@ self.addEventListener('fetch', (e) => {
     // 화면: 네트워크 우선, 오프라인이면 저장본
     e.respondWith(
       fetch(req).then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put('./index.html', copy));
+        if (res.ok && res.type === 'basic' && !res.redirected) { // 오류 페이지는 저장하지 않음
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put('./index.html', copy));
+        }
         return res;
       }).catch(() => caches.match('./index.html').then((r) => r || caches.match('./'))),
     );

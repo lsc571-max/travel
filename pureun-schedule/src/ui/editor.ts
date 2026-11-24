@@ -2,7 +2,7 @@
 import { isConnected } from '../lib/auth';
 import * as api from '../lib/calendarApi';
 import { CATEGORIES, GOOGLE_COLORS, DEFAULT_EVENT_COLOR } from '../lib/colors';
-import { localTimeZone, toDateStr, WEEKDAY_CODES, WEEKDAY_KO } from '../lib/dates';
+import { localTimeZone, toDateStr, weekdayCode, WEEKDAY_CODES, WEEKDAY_KO } from '../lib/dates';
 import {
   applyForm, blankForm, eventToForm, fromGoogle, reminderLabel, validateForm,
   type CalEvent, type EventForm, type GEvent, type Importance, type ReminderChoice, type RepeatFreq,
@@ -70,6 +70,7 @@ export function initEditor(opts: { onChange: () => void; requireConnect: () => v
   $<HTMLInputElement>('fStartDate').onchange = () => {
     const s = $<HTMLInputElement>('fStartDate'), e = $<HTMLInputElement>('fEndDate');
     if (e.value < s.value) e.value = s.value;
+    if (s.value && byDay.length <= 1) { byDay = [weekdayCode(s.value)]; renderByDay(); }
   };
   $<HTMLInputElement>('fStartTime').onchange = () => {
     const sd = $<HTMLInputElement>('fStartDate').value, ed = $<HTMLInputElement>('fEndDate').value;
@@ -204,9 +205,17 @@ export async function openEdit(ev: CalEvent) {
   if (ev.recurringEventId && !ev.readOnly && isConnected()) {
     try {
       const master = await api.getEvent(ev.calendarId, ev.recurringEventId);
-      if (mode.kind === 'edit' && mode.ev.key === ev.key) {
+      if (mode.kind === 'edit' && mode.ev.key === ev.key && $<HTMLDialogElement>('editor').open) {
         mode.master = master;
-        fill(eventToForm(ev, master.recurrence), false, true);
+        // 입력 중인 다른 칸은 건드리지 않고 반복 칸만 채운다
+        const r = eventToForm(ev, master.recurrence);
+        initial = { ...initial, repeat: r.repeat, byDay: r.byDay, repeatEnd: r.repeatEnd, until: r.until, count: r.count, customRule: r.customRule };
+        $<HTMLSelectElement>('fRepeat').value = r.repeat;
+        $<HTMLSelectElement>('fRepeatEnd').value = r.repeatEnd;
+        $<HTMLInputElement>('fUntil').value = r.until;
+        $<HTMLInputElement>('fCount').value = String(r.count);
+        byDay = [...r.byDay]; customRule = r.customRule;
+        renderRepeat();
       }
     } catch { /* 반복 정보 없이도 '이 일정만' 수정은 가능 */ }
   }
@@ -291,8 +300,14 @@ async function save() {
         scope = c;
       }
       if (scope === 'all') {
+        if (!mode.master) return showError('반복 정보를 아직 불러오지 못했습니다. 잠시 후 다시 저장해 주세요.');
         if (f.repeat === 'none') return showError('반복을 없애려면 "전체 반복 일정"을 삭제한 뒤 새로 만들어 주세요.');
         const master = await api.getEvent(ev.calendarId, ev.recurringEventId!);
+        const timeChanged = f.allDay !== initial.allDay || f.startDate !== initial.startDate || f.endDate !== initial.endDate
+          || (!f.allDay && (f.startTime !== initial.startTime || f.endTime !== initial.endTime));
+        if (timeChanged && (master.recurrence ?? []).some((l) => !l.startsWith('RRULE:'))) {
+          return showError('이 반복 일정은 일부 회차가 삭제·변경되어 있어 날짜·시간을 한꺼번에 바꾸면 지운 회차가 되살아날 수 있습니다.\n날짜·시간은 "이 일정만"으로 바꾸거나, 전체를 삭제 후 새로 만들어 주세요.');
+        }
         const body = applyForm(master, f, { tz, includeRecurrence: true, series: { masterStartDate: masterStart(master), instanceOldStartDate: initial.startDate } });
         await api.updateEvent(ev.calendarId, master.id, body, master.etag);
         store.invalidate();

@@ -86,3 +86,9 @@ export async function testConnection(): Promise<void> {
   const now = new Date();
   await call('GET', '/calendars/primary/events', { params: { maxResults: '1', timeMin: now.toISOString() } });
 }
+
+/** 기본 캘린더 이름(보통 계정 이메일) — 기기 주인 계정 확인용. 원문은 저장하지 않고 해시만 비교한다. */
+export async function primaryCalendarName(): Promise<string> {
+  const r = await call<{ summary?: string }>('GET', '/calendars/primary/events', { params: { maxResults: '1', timeMin: new Date().toISOString() } });
+  return (r.summary ?? '').trim().toLowerCase();
+}

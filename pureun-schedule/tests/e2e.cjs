@@ -13,8 +13,9 @@ fs.mkdirSync(OUT, { recursive: true });
 let passed = 0;
 const failures = [];
 async function step(name, fn) {
+  const t0 = Date.now();
   try { await fn(); passed++; console.log(`  ✓ ${name}`); }
-  catch (e) { failures.push(name); console.log(`  ✗ ${name}\n      ${String(e.message || e).split('\n')[0]}`); }
+  catch (e) { failures.push(name); console.log(`  ✗ ${name}\n      ${String(e.message || e).split('\n').slice(0,6).join(' / ')}`); }
 }
 function assert(c, msg) { if (!c) throw new Error(msg); }
 
@@ -23,6 +24,7 @@ function makeFakeCalendar() {
   let seq = 1, etagSeq = 1;
   const cals = { primary: new Map(), 'ko.south_korea#holiday@group.v.calendar.google.com': new Map() };
   const overrides = new Map(); // instanceId -> event | {status:'cancelled'}
+  const state = { owner: 'owner@example.com' };
   const newEtag = () => `"e${etagSeq++}"`;
   const hol = cals['ko.south_korea#holiday@group.v.calendar.google.com'];
   hol.set('h1', { id: 'h1', etag: newEtag(), summary: '성탄절', start: { date: '2026-12-25' }, end: { date: '2026-12-26' } });
@@ -82,7 +84,7 @@ function makeFakeCalendar() {
     if (method === 'GET' && !id) {
       const a = Date.parse(url.searchParams.get('timeMin')), b = Date.parse(url.searchParams.get('timeMax'));
       const items = all(cal).filter((e) => (Number.isNaN(b) || startMs(e) < b) && endMs(e) > a).map(norm);
-      return json(200, { items });
+      return json(200, { summary: cal === 'primary' ? state.owner : '대한민국의 휴일', items });
     }
     if (method === 'GET') { const e = findAny(cal, id); return e ? json(200, norm(e)) : json(404, { error: { message: 'nf' } }); }
     if (method === 'POST') {
@@ -108,7 +110,7 @@ function makeFakeCalendar() {
     }
     return json(400, {});
   }
-  return { handle, cals, overrides, all, bump: (id) => { const e = cals.primary.get(id); e.summary += ' (다른 기기)'; e.etag = newEtag(); } };
+  return { handle, cals, overrides, all, state, bump: (id) => { const e = cals.primary.get(id); e.summary += ' (다른 기기)'; e.etag = newEtag(); } };
 }
 
 const FAKE_GIS = `window.google = { accounts: { oauth2: {
@@ -258,6 +260,31 @@ const FAKE_GIS = `window.google = { accounts: { oauth2: {
     assert(master.start.dateTime.startsWith('2026-11-24T09:00'), `시작일 이동 오류 ${master.start.dateTime}`);
   });
 
+  await step('지운 회차가 있는 반복 일정은 시간 전체 변경 차단', async () => {
+    const master = [...fake.cals.primary.values()].find((e) => e.summary === '전공 수업');
+    master.recurrence = [master.recurrence[0], 'EXDATE;TZID=Asia/Seoul:20261203T090000'];
+    await page.locator('.fc-event:has-text("전공 수업")').first().click();
+    await page.waitForFunction(() => document.querySelector('#fRepeat').value === 'WEEKLY');
+    await page.fill('#fStartTime', '10:00');
+    await page.fill('#fEndTime', '12:30');
+    await page.click('#edSave');
+    await page.click('#cfBtns >> text=전체 반복 일정');
+    await page.waitForSelector('#edError:has-text("되살아날")');
+    assert(master.start.dateTime.startsWith('2026-11-24T09:00'), '차단되지 않고 저장됨');
+    await page.click('#editor [data-close] >> nth=0');
+    master.recurrence = [master.recurrence[0]];
+  });
+
+  await step('반복 정보가 늦게 와도 입력 중인 제목 유지', async () => {
+    await page.route('https://www.googleapis.com/calendar/v3/**', async (r) => { if (/events\/ev\d+$/.test(new URL(r.request().url()).pathname) && r.request().method() === 'GET') await new Promise((x) => setTimeout(x, 800)); return r.fallback(); });
+    await page.locator('.fc-event:has-text("전공 수업")').first().click();
+    await page.fill('#fTitle', '입력 중인 제목');
+    await page.waitForFunction(() => document.querySelector('#fRepeat').value === 'WEEKLY');
+    assert((await page.inputValue('#fTitle')) === '입력 중인 제목', '입력 내용이 지워짐');
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+    await page.click('#editor [data-close] >> nth=0');
+  });
+
   await step('반복 일정 한 회차 삭제', async () => {
     const before = await page.locator('.fc-event:has-text("전공 수업")').count();
     await page.locator('.fc-event:has-text("전공 수업")').last().click();
@@ -349,6 +376,23 @@ const FAKE_GIS = `window.google = { accounts: { oauth2: {
     await page.click('#aaOk');
     await dialogOpen('admin').waitFor();
     await page.click('#admin [data-close]');
+  });
+
+  await step('비밀번호 재설정: 다른 Google 계정이면 거부', async () => {
+    if (!(await dialogOpen('settings').count())) await page.click('#btnSettings');
+    await ctx.clock.runFor(3500);
+    await tapGear(5);
+    await dialogOpen('adminAuth').waitFor();
+    fake.state.owner = 'stranger@example.com';
+    await page.click('#aaForgot');
+    await page.click('#cfBtns >> text=Google로 확인');
+    await page.waitForSelector('#aaError:has-text("처음 이 기기에 연결한 Google 계정과 다릅니다")');
+    assert(await page.evaluate(() => !!localStorage.getItem('pc.admin.pw')), '비밀번호가 지워짐');
+    fake.state.owner = 'owner@example.com';
+    await page.click('#adminAuth [data-close] >> nth=0');
+    await page.click('#settings [data-close]');
+    await page.click('#banner:not([hidden]) #bannerBtn');
+    await page.waitForSelector('#banner[hidden]', { state: 'attached' });
   });
 
   await step('어두운 모드 적용', async () => {

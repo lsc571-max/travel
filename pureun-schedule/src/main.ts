@@ -12,6 +12,7 @@ import { CATEGORIES, GOOGLE_COLORS, HOLIDAY_COLOR, categoryLabel, resolveColor, 
 import { addDays, formatKoDate, parseDateStr, toDateStr, toTimeStr } from './lib/dates';
 import { importanceMark, type CalEvent } from './lib/eventModel';
 import { getSettings, onSettings, updateSettings, type Settings, type ViewName } from './lib/settings';
+import { checkOwner } from './lib/owner';
 import * as store from './lib/store';
 import { initAdmin, startAuth } from './ui/admin';
 import { $, el, openDialog, toast, wireDialogs } from './ui/dom';
@@ -187,7 +188,10 @@ function refreshAfterChange() {
 async function doConnect() {
   try {
     await auth.connect('');
-    toast('Google 캘린더에 연결했습니다.');
+    if ((await checkOwner()) === 'different') {
+      await store.clearAll(); // 이전 계정의 일정 사본이 섞이지 않게
+      toast('처음 연결한 계정과 다른 Google 계정입니다. 이 기기의 일정 사본을 새로 받습니다.', 5000);
+    } else toast('Google 캘린더에 연결했습니다.');
     await sync(true);
   } catch (e) {
     toast(e instanceof Error ? e.message : '연결하지 못했습니다.', 5000);

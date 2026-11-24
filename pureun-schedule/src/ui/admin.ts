@@ -4,6 +4,7 @@ import { AdminPassword, MIN_PW_LEN, TapCounter } from '../lib/adminCore';
 import * as auth from '../lib/auth';
 import { testConnection } from '../lib/calendarApi';
 import { isValidClientId, safeStorage, getStoredClientId, setStoredClientId, todayApiCalls } from '../lib/settings';
+import { checkOwner, clearOwner } from '../lib/owner';
 import * as store from '../lib/store';
 import { $, choose, el, openDialog, toast } from './dom';
 
@@ -11,6 +12,7 @@ const pw = new AdminPassword(safeStorage);
 const taps = new TapCounter(5, 3000);
 const IDLE_MS = 10 * 60 * 1000;
 let idleTimer = 0;
+let lockTimer = 0;
 type AuthMode = 'verify' | 'register' | 'change';
 let authMode: AuthMode = 'verify';
 let onStatusChange: () => void = () => {};
@@ -51,6 +53,8 @@ function authError(msg: string) { const e = $('aaError'); e.textContent = msg; e
 function showLock(): boolean {
   const until = authMode === 'verify' ? pw.lockedUntil() : 0;
   $<HTMLButtonElement>('aaOk').disabled = !!until;
+  clearTimeout(lockTimer);
+  if (until) lockTimer = window.setTimeout(() => { if (!showLock()) $('aaError').hidden = true; }, until - Date.now() + 200);
   if (until) authError(`비밀번호를 여러 번 틀려 잠겼습니다. ${new Date(until).toLocaleTimeString('ko-KR')} 이후 다시 시도해 주세요.`);
   return !!until;
 }
@@ -95,6 +99,14 @@ async function forgot() {
   if (!c) return;
   try {
     await auth.connect('select_account');
+    const who = await checkOwner();
+    if (who === 'different') {
+      await auth.disconnect();
+      await store.clearAll();
+      authError('처음 이 기기에 연결한 Google 계정과 다릅니다. 본인 계정으로 다시 시도해 주세요.');
+      return;
+    }
+    if (who === 'unknown') return authError('Google 계정을 확인하지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.');
     pw.clear();
     startAuth('register');
   } catch (e) {
@@ -147,6 +159,7 @@ function render() {
     try {
       if (!auth.isConnected()) await auth.connect('');
       await testConnection();
+      if ((await checkOwner()) === 'different') await store.clearAll();
       setStatus('연결 성공: Google 캘린더 일정을 읽을 수 있습니다.', true);
       onStatusChange();
     } catch (e) {
@@ -158,6 +171,7 @@ function render() {
     const c = await choose('저장된 클라이언트 ID를 삭제하고 Google 연결을 끊을까요? (구글 캘린더의 일정은 지워지지 않습니다)', [{ label: '삭제', value: 'yes', kind: 'danger' }]);
     if (!c) return;
     await auth.disconnect();
+    clearOwner();
     setStoredClientId('');
     auth.resetClient();
     await store.clearAll();
