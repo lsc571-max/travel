@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#2b5fb4" />
+  <meta name="description" content="푸른 교수 개인 일정관리 — 구글 캘린더 연동" />
+  <title>푸른 교수 일정관리</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icon-192.png" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <script src="./theme.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="nav">
+      <button id="btnToday" class="btn">오늘</button>
+      <button id="btnPrev" class="icon-btn" aria-label="이전">‹</button>
+      <button id="btnNext" class="icon-btn" aria-label="다음">›</button>
+      <button id="title" class="title" aria-label="날짜 이동">&nbsp;</button>
+      <input id="datePicker" type="date" class="sr-only" tabindex="-1" aria-hidden="true" />
+    </div>
+    <div class="views" role="tablist" aria-label="보기 선택">
+      <button data-view="dayGridMonth" role="tab">월</button>
+      <button data-view="timeGridWeek" role="tab">주</button>
+      <button data-view="timeGridDay" role="tab">일</button>
+      <button data-view="listWeek" role="tab">목록</button>
+    </div>
+    <div class="actions">
+      <button id="btnSync" class="icon-btn" aria-label="새로고침" title="새로고침">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M17.6 6.4A8 8 0 1 0 19.7 14h-2.1a6 6 0 1 1-1.4-6.2L13 11h7V4z"/></svg>
+      </button>
+      <button id="btnShare" class="icon-btn" aria-label="공유" title="공유">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M18 16a3 3 0 0 0-2.4 1.2l-6.7-3.4a3 3 0 0 0 0-1.6l6.7-3.4A3 3 0 1 0 15 7l-6.7 3.4a3 3 0 1 0 0 3.2L15 17a3 3 0 1 0 3-1z"/></svg>
+      </button>
+      <button id="btnSettings" class="icon-btn" aria-label="설정" title="설정">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.7 7.7 0 0 0-1.7-1L15 3h-4l-.4 2.7a7.7 7.7 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.7 7.7 0 0 0 1.7 1L11 21h4l.4-2.7a7.7 7.7 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div id="banner" class="banner" hidden>
+    <span id="bannerText"></span>
+    <button id="bannerBtn" class="btn primary" hidden></button>
+  </div>
+
+  <main class="layout">
+    <section class="cal-pane" aria-label="달력"><div id="calendar"></div></section>
+    <aside class="day-pane" aria-label="선택한 날짜 일정">
+      <div class="day-head">
+        <h2 id="dayTitle">오늘</h2>
+        <button id="btnAddDay" class="btn small">+ 추가</button>
+      </div>
+      <ul id="dayList" class="ev-list"></ul>
+      <h3 class="sub-head">다가오는 일정 (7일)</h3>
+      <ul id="upcoming" class="ev-list compact"></ul>
+    </aside>
+  </main>
+
+  <button id="fab" class="fab" aria-label="새 일정 추가">＋ 일정</button>
+  <footer class="ver"><button id="verBtn" class="ver-btn">V1</button></footer>
+
+  <!-- 일정 편집 -->
+  <dialog id="editor" class="sheet">
+    <form id="evForm" method="dialog" novalidate>
+      <div class="sheet-head">
+        <h2 id="edTitle">새 일정</h2>
+        <button type="button" class="icon-btn" data-close aria-label="닫기">✕</button>
+      </div>
+      <div class="sheet-body">
+        <label class="field"><span>제목</span><input id="fTitle" maxlength="1000" autocomplete="off" placeholder="일정 제목" /></label>
+        <label class="check"><input type="checkbox" id="fAllDay" /> 종일</label>
+        <div class="row2">
+          <label class="field"><span>시작</span><input type="date" id="fStartDate" /></label>
+          <label class="field time"><span>&nbsp;</span><input type="time" id="fStartTime" step="300" /></label>
+        </div>
+        <div class="row2">
+          <label class="field"><span>종료</span><input type="date" id="fEndDate" /></label>
+          <label class="field time"><span>&nbsp;</span><input type="time" id="fEndTime" step="300" /></label>
+        </div>
+
+        <fieldset class="field">
+          <legend>카테고리</legend>
+          <div id="fCategory" class="chips"></div>
+        </fieldset>
+        <fieldset class="field">
+          <legend>색상</legend>
+          <div id="fColor" class="swatches"></div>
+        </fieldset>
+        <fieldset class="field">
+          <legend>중요도</legend>
+          <div id="fImportance" class="seg">
+            <button type="button" data-v="0">보통</button>
+            <button type="button" data-v="1">★ 중요</button>
+            <button type="button" data-v="2">★★ 매우 중요</button>
+          </div>
+        </fieldset>
+
+        <fieldset class="field" id="repeatBox">
+          <legend>반복</legend>
+          <select id="fRepeat">
+            <option value="none">반복 안 함</option>
+            <option value="DAILY">매일</option>
+            <option value="WEEKLY">매주</option>
+            <option value="MONTHLY">매월</option>
+            <option value="YEARLY">매년</option>
+            <option value="custom" hidden>사용자 지정 (구글 캘린더에서 설정)</option>
+          </select>
+          <div id="fByDay" class="weekdays" hidden></div>
+          <div id="repeatEndBox" class="repeat-end" hidden>
+            <select id="fRepeatEnd">
+              <option value="never">계속 반복</option>
+              <option value="until">종료 날짜까지</option>
+              <option value="count">횟수만큼</option>
+            </select>
+            <input type="date" id="fUntil" hidden />
+            <input type="number" id="fCount" min="1" max="999" hidden aria-label="반복 횟수" />
+          </div>
+          <p id="repeatNote" class="note" hidden></p>
+        </fieldset>
+
+        <label class="field"><span>알림</span>
+          <select id="fReminder"></select>
+        </label>
+        <label class="field"><span>장소</span><input id="fLocation" maxlength="500" autocomplete="off" /></label>
+        <label class="field"><span>메모</span><textarea id="fDesc" rows="3" maxlength="8000"></textarea></label>
+        <p id="edError" class="error" role="alert" hidden></p>
+        <p id="edReadonly" class="note" hidden>공휴일 캘린더 일정은 볼 수만 있습니다.</p>
+      </div>
+      <div class="sheet-foot">
+        <button type="button" id="edDelete" class="btn danger">삭제</button>
+        <span class="grow"></span>
+        <button type="button" class="btn" data-close>취소</button>
+        <button type="submit" id="edSave" class="btn primary">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 일반 설정 -->
+  <dialog id="settings" class="sheet">
+    <div class="sheet-head">
+      <h2><button id="settingsGear" class="gear-tap" type="button" aria-label="설정">⚙</button> 설정</h2>
+      <button type="button" class="icon-btn" data-close aria-label="닫기">✕</button>
+    </div>
+    <div class="sheet-body">
+      <section class="set-group">
+        <h3>Google 계정</h3>
+        <p id="sAccount" class="note"></p>
+        <div class="row-btns"><button id="sConnect" class="btn primary">구글 연결</button><button id="sLogout" class="btn">연결 끊기</button></div>
+      </section>
+      <section class="set-group">
+        <h3>화면</h3>
+        <label class="field"><span>테마</span>
+          <select id="sTheme"><option value="system">시스템 따라가기</option><option value="light">밝은 모드</option><option value="dark">어두운 모드</option></select></label>
+        <label class="field"><span>글자 크기</span>
+          <select id="sFont"><option value="normal">보통</option><option value="large">크게</option><option value="xlarge">아주 크게</option></select></label>
+        <label class="field"><span>기본 보기</span>
+          <select id="sView"><option value="dayGridMonth">월간</option><option value="timeGridWeek">주간</option><option value="timeGridDay">일간</option><option value="listWeek">목록</option></select></label>
+        <label class="field"><span>주 시작 요일</span>
+          <select id="sWeek"><option value="0">일요일</option><option value="1">월요일</option></select></label>
+        <label class="check"><input type="checkbox" id="sHoliday" /> 대한민국 공휴일 표시</label>
+      </section>
+      <section class="set-group">
+        <h3>카테고리 색상</h3>
+        <div id="sCatColors"></div>
+      </section>
+      <section class="set-group">
+        <h3>기본 알림</h3>
+        <select id="sReminder"></select>
+      </section>
+      <section class="set-group">
+        <h3>공유 · 버전</h3>
+        <div class="row-btns"><button id="sShare" class="btn">공유 · QR코드</button><button id="sVersion" class="btn">버전 정보 · 업그레이드</button></div>
+      </section>
+      <p class="admin-link"><button id="adminLink" class="link-btn" type="button">관리자</button></p>
+    </div>
+  </dialog>
+
+  <!-- 관리자 비밀번호 -->
+  <dialog id="adminAuth" class="sheet small">
+    <form id="adminAuthForm" method="dialog" novalidate>
+      <div class="sheet-head"><h2 id="aaTitle">관리자 확인</h2><button type="button" class="icon-btn" data-close aria-label="닫기">✕</button></div>
+      <div class="sheet-body">
+        <p id="aaDesc" class="note"></p>
+        <label class="field"><span>비밀번호</span><input type="password" id="aaPw" autocomplete="current-password" /></label>
+        <label class="field" id="aaPw2Box" hidden><span>비밀번호 확인</span><input type="password" id="aaPw2" autocomplete="new-password" /></label>
+        <p id="aaError" class="error" role="alert" hidden></p>
+        <p class="note"><button type="button" id="aaForgot" class="link-btn">비밀번호를 잊었어요</button></p>
+      </div>
+      <div class="sheet-foot"><span class="grow"></span><button type="button" class="btn" data-close>취소</button><button type="submit" id="aaOk" class="btn primary">확인</button></div>
+    </form>
+  </dialog>
+
+  <!-- 관리자 설정 -->
+  <dialog id="admin" class="sheet">
+    <div class="sheet-head"><h2>관리자 설정</h2><button type="button" class="icon-btn" data-close aria-label="닫기">✕</button></div>
+    <div class="sheet-body" id="adminBody"></div>
+  </dialog>
+
+  <!-- 공유 -->
+  <dialog id="share" class="sheet">
+    <div class="sheet-head"><h2>앱 공유</h2><button type="button" class="icon-btn" data-close aria-label="닫기">✕</button></div>
+    <div class="sheet-body center">
+      <canvas id="qr" class="qr" width="360" height="360" aria-label="앱 주소 QR코드"></canvas>
+      <p id="shareUrl" class="url"></p>
+      <p id="shareWarn" class="note warn" hidden></p>
+      <p class="note">링크에는 앱 주소만 들어 있습니다. 일정은 본인 Google 계정으로 로그인해야 보입니다.</p>
+      <div class="row-btns"><button id="shCopy" class="btn">링크 복사</button><button id="shNative" class="btn" hidden>공유하기</button><button id="shSave" class="btn">QR 이미지 저장</button></div>
+    </div>
+  </dialog>
+
+  <!-- 버전 -->
+  <dialog id="version" class="sheet">
+    <div class="sheet-head"><h2>버전 정보</h2><button type="button" class="icon-btn" data-close aria-label="닫기">✕</button></div>
+    <div class="sheet-body" id="versionBody"></div>
+  </dialog>
+
+  <!-- 확인 창 -->
+  <dialog id="confirm" class="sheet small">
+    <div class="sheet-body"><p id="cfText"></p></div>
+    <div class="sheet-foot" id="cfBtns"></div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
