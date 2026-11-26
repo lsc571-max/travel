@@ -1,7 +1,7 @@
 // 실제 브라우저 기능 테스트 (Playwright). Google 로그인·캘린더 서버는 가짜로 대체해 외부 요청 없이 실행한다.
 // 사용: npm run build && npm run e2e   (스크린샷: test-results/)
 const { chromium, devices } = require('playwright');
-const { spawn } = require('node:child_process');
+const { spawn, execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -120,7 +120,13 @@ const FAKE_GIS = `window.google = { accounts: { oauth2: {
 } } };`;
 
 (async () => {
-  const server = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--strictPort'], { cwd: path.join(__dirname, '..'), stdio: 'ignore' });
+  // 시험은 "클라이언트 ID 없는 첫 실행"부터 확인하므로, ID를 비운 시험 전용 빌드를 따로 만든다 (배포용 dist/는 건드리지 않음).
+  // npx 대신 node로 vite를 직접 실행한다 (Windows에서 npx.cmd 실행·종료 문제 방지).
+  const root = path.join(__dirname, '..');
+  const vite = path.join(root, 'node_modules', 'vite', 'bin', 'vite.js');
+  const E2E_DIST = path.join('test-results', 'dist');
+  execFileSync(process.execPath, [vite, 'build', '--outDir', E2E_DIST, '--emptyOutDir'], { cwd: root, stdio: 'ignore', env: { ...process.env, VITE_GOOGLE_CLIENT_ID: '' } });
+  const server = spawn(process.execPath, [vite, 'preview', '--outDir', E2E_DIST, '--port', String(PORT), '--strictPort'], { cwd: root, stdio: 'ignore' });
   for (let i = 0; i < 50; i++) { try { await fetch(BASE); break; } catch { await new Promise((r) => setTimeout(r, 200)); } }
   const browser = await chromium.launch();
   const fake = makeFakeCalendar();
@@ -150,7 +156,7 @@ const FAKE_GIS = `window.google = { accounts: { oauth2: {
   await step('첫 실행: 처음 설정 안내 표시', async () => {
     await page.waitForSelector('#banner:not([hidden])');
     assert((await page.textContent('#bannerText')).includes('처음 설정'), '안내 문구 없음');
-    assert((await page.textContent('#verBtn')) === 'V1', '버전 표시 없음');
+    assert((await page.textContent('#verBtn')) === 'V1.1', '버전 표시 없음');
   });
 
   await step('관리자 비밀번호 최초 등록 → 관리자 설정 열림', async () => {
@@ -432,7 +438,7 @@ const FAKE_GIS = `window.google = { accounts: { oauth2: {
 
   await step('버전 정보 화면', async () => {
     await page.click('#verBtn');
-    await page.waitForSelector('#versionBody:has-text("V1 (2026-11-24)")');
+    await page.waitForSelector('#versionBody:has-text("V1.1 (2026-11-27)")');
     assert(await page.isVisible('#versionBody >> text=최신 버전입니다'), '최신 버전 표시 오류');
     await page.click('#version [data-close]');
   });

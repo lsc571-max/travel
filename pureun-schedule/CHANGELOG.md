@@ -1,5 +1,21 @@
 # 변경 기록 — 푸른 교수 일정관리
 
+## V1.1 — 2026-11-27 (클라이언트 ID 포함·배포 준비)
+**변경 사항**
+- Google Cloud 프로젝트 `pureun-schedule` 생성, Calendar API 사용, 동의 화면(외부·테스트, 권한 `calendar.events` 하나), 웹 클라이언트 「일정관리 웹앱」
+- `.env.production` 에 OAuth 클라이언트 ID 기본 포함 (공개 식별자. 클라이언트 보안 비밀번호는 저장하지 않음)
+- 버전 표시 V1.1 (`config.ts`, `version.json`, `sw.js`, `package.json`)
+- 브라우저 시험: ID를 비운 시험 전용 빌드를 `test-results/dist` 에 따로 만들어 실행 (배포용 `dist/` 는 그대로), Windows에서도 실행되도록 vite를 node로 직접 실행
+
+**검증 결과 (배포 전)**
+- 단위 테스트 20개 통과, TypeScript 검사·배포용 빌드 성공, 브라우저 기능 테스트 30개 통과(가짜 Google 서버)
+- npm audit 취약점 0건, 저장소·빌드 결과에 클라이언트 보안 비밀번호 패턴 없음
+- 생략: 로컬(`localhost:4173`) 실계정 시험 — 조작하던 크롬이 빌드한 PC에 접속할 수 없어 배포 주소에서 시험
+
+**요금**: 새 프로젝트가 결제 계정에 자동 연결되어 있어, 사용자 결정으로 연결을 유지함 (Firebase Blaze 종량제. 개인 사용은 무료 한도 안 예상)
+
+**복원 기준**: V1 소스는 커밋 `5f8db88` (V1 앱 코드는 `76d7fa0`). 배포 후 문제는 Firebase Hosting 콘솔에서 이전 배포로 롤백.
+
 ## V1 — 2026-11-24 (1단계 첫 실행 버전)
 **변경 사항**
 - 구글 계정 로그인(Google Identity Services, 토큰은 메모리에만 보관)

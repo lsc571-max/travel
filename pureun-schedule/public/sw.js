@@ -1,5 +1,5 @@
 // 푸른 교수 일정관리 서비스워커 — 앱 화면만 저장한다. Google 로그인·캘린더 요청은 절대 저장하지 않는다.
-const VERSION = 'V1';
+const VERSION = 'V1.1';
 const CACHE = `pureun-schedule-${VERSION}`;
 const SHELL = ['./', './index.html', './theme.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 

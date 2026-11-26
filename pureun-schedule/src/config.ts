@@ -1,7 +1,7 @@
 // 앱 전역 상수. 비밀정보는 여기에 두지 않는다 (OAuth 클라이언트 ID는 공개 식별자).
 export const APP_NAME = '푸른 교수 일정관리';
-export const APP_VERSION = 'V1';
-export const APP_BUILD_DATE = '2026-11-24';
+export const APP_VERSION = 'V1.1';
+export const APP_BUILD_DATE = '2026-11-27';
 
 // 최소 권한: 일정 읽기·쓰기만 요청 (캘린더 목록·Drive 권한은 1단계에서 요청하지 않음)
 export const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
