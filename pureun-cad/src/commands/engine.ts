@@ -6,6 +6,8 @@ import { fmtNum } from '../core/format';
 import { angleOf, bboxInside, bboxOverlap, DEG, dist, normDeg, segStart, v } from '../core/geom';
 import { segIntersect } from '../core/intersect';
 import { findSnap, type SnapResult } from '../core/snap';
+import { gripEdit, gripPoints, type Grip } from '../core/grips';
+import { stripId } from '../core/edit';
 import type { BBox, Entity, Vec2 } from '../core/types';
 import { View } from '../render/view';
 import { BUILTIN, findCommand } from './registry';
@@ -40,6 +42,14 @@ export class Engine {
   /** dist 요청에서 첫 번째 점 */
   distFirst: Vec2 | null = null;
   dirty = { base: true, sel: true, over: true };
+  /** 확인용 표시점 */
+  marks: Vec2[] = [];
+  /** 명령창에 입력 중인 글자 (동적 입력 툴팁 표시용) */
+  typing = '';
+  /** 극좌표 추적 상태 (기준점, 각도°) */
+  track: { base: Vec2; ang: number } | null = null;
+  /** 그립을 표시할 최대 선택 개수 */
+  readonly maxGripSel = 100;
   uiHandler: (a: UiAction, arg?: unknown) => void = () => {};
   /** 다른 화면 요소(React) 갱신용 */
   ver = 0;
@@ -86,6 +96,10 @@ export class Engine {
       setSelection: (ids) => this.setSelection(ids),
       editable: (ids) => this.editable(ids),
       ui: (a, arg) => this.ui(a, arg),
+      setMarks: (pts) => {
+        this.marks = pts;
+        this.dirty.over = true;
+      },
     };
   }
 
@@ -226,14 +240,81 @@ export class Engine {
       return;
     }
     this.lastCmdName = def.name;
+    this.marks = [];
     this.log(`명령: ${def.name}`);
     this.preselection = def.usesSelection ? this.editable([...this.sel]) : [];
     if (!def.usesSelection && this.sel.size) this.setSelection([]);
-    this.doc.beginGroup(def.name);
+    this.startGen(def.name, def.fn(this.ctx));
+  }
+  private startGen(name: string, gen: Generator<Req, void, Resp>) {
+    this.doc.beginGroup(name);
     this.win = null;
-    const gen = def.fn(this.ctx);
-    this.cmd = { name: def.name, gen, req: null };
+    this.cmd = { name, gen, req: null };
     this.step(() => gen.next(undefined as unknown as Resp));
+  }
+
+  // ───────── 그립 ─────────
+  /** 현재 선택의 그립 (명령 대기 상태에서만) */
+  grips(): Grip[] {
+    if (this.cmd || !this.sel.size || this.sel.size > this.maxGripSel) return [];
+    const out: Grip[] = [];
+    for (const id of this.sel) {
+      const e = this.doc.get(id);
+      if (!e || !this.doc.isEditable(e)) continue;
+      gripPoints(e).forEach((p, idx) => out.push({ id, idx, p }));
+    }
+    return out;
+  }
+  gripAt(s: Vec2): Grip | null {
+    let best: Grip | null = null, bd = 7;
+    for (const g of this.grips()) {
+      const q = this.view.toScreen(g.p);
+      const d = Math.max(Math.abs(q.x - s.x), Math.abs(q.y - s.y));
+      if (d <= bd) {
+        bd = d;
+        best = g;
+      }
+    }
+    return best;
+  }
+  /** 그립을 눌렀을 때: 그 점을 끌어 옮기는 편집 (좌표 입력·스냅·직교 사용 가능) */
+  private startGrip(g: Grip) {
+    const e = this.doc.get(g.id);
+    if (!e) return;
+    const keep = [...this.sel];
+    const doc = this.doc;
+    const reselect = () => this.setSelection(keep.filter((id) => doc.get(id)));
+    this.log('그립 편집: 새 위치를 지정하십시오. (@ 상대좌표는 그립 기준, Esc 취소)');
+    this.lastPoint = g.p;
+    this.startGen('그립 편집', (function* () {
+      const r = yield { kind: 'point', prompt: '신축점 지정', base: g.p, preview: (p: Vec2) => [stripId(gripEdit(e, g.idx, p))] };
+      if (r.t !== 'point') return;
+      const tx = doc.tx('그립 편집');
+      tx.update(gripEdit(e, g.idx, r.p));
+      tx.commit();
+      reselect();
+    })());
+  }
+
+  /** 두 번 클릭: 문자·치수 문자 편집 */
+  doubleClick(s: Vec2) {
+    if (this.cmd) return;
+    const id = this.pickAt(s);
+    if (id === null) return;
+    const e = this.doc.get(id)!;
+    if (!this.doc.isEditable(e) || (e.type !== 'text' && e.type !== 'dimension')) return;
+    this.setSelection([id]);
+    const doc = this.doc;
+    const cur = e.type === 'text' ? e.text : (e.textOverride ?? '');
+    this.log(`문자 편집 — 현재: "${cur}"${e.type === 'dimension' ? ' (치수: <> = 측정값, 비우면 측정값)' : ''}`);
+    this.startGen('문자 편집', (function* () {
+      const r = yield { kind: 'string', prompt: '새 문자 입력 (빈 Enter: 변경 없음)', def: cur };
+      if (r.t !== 'str' || r.s === '' || r.s === cur) return;
+      const tx = doc.tx('문자 편집');
+      if (e.type === 'text') tx.update({ ...e, text: r.s });
+      else if (e.type === 'dimension') tx.update({ ...e, textOverride: r.s === '<>' ? undefined : r.s });
+      tx.commit();
+    })());
   }
 
   private step(fn: () => IteratorResult<Req, void>) {
@@ -283,6 +364,7 @@ export class Engine {
       if (!silent) this.log('*취소*');
     } else {
       this.win = null;
+      this.marks = [];
       if (this.sel.size) this.setSelection([]);
     }
     this.dirty.over = true;
@@ -409,15 +491,39 @@ export class Engine {
     if (this.settings.ortho && b) {
       return Math.abs(p.x - b.x) >= Math.abs(p.y - b.y) ? { x: p.x, y: b.y } : { x: b.x, y: p.y };
     }
+    if (this.track) {
+      // 극좌표 추적: 추적 각도의 선 위로 투영 (0/90/180/270°는 정확한 값)
+      const t = this.track;
+      const a = t.ang * DEG;
+      const ux = t.ang % 180 === 90 ? 0 : Math.cos(a), uy = t.ang % 180 === 0 ? 0 : Math.sin(a);
+      const L = (p.x - t.base.x) * ux + (p.y - t.base.y) * uy;
+      return { x: t.base.x + ux * L, y: t.base.y + uy * L };
+    }
     return p;
+  }
+  /** 극좌표 추적 각도 계산 (커서가 증분 각도 선에서 10px 이내) */
+  private computeTrack() {
+    this.track = null;
+    const b = this.reqBase();
+    if (!b || !this.settings.polar || this.settings.ortho || this.snap) return;
+    const p = this.cursorW;
+    const L = dist(b, p);
+    if (L * this.view.scale < 15) return;
+    const inc = this.settings.polarInc > 0 ? this.settings.polarInc : 90;
+    const ang = normDeg(angleOf(b, p) / DEG);
+    const near = normDeg(Math.round(ang / inc) * inc);
+    const off = Math.abs(Math.sin((ang - near) * DEG)) * L * this.view.scale;
+    if (off <= 10) this.track = { base: b, ang: near };
   }
   refreshCursor() {
     if (!this.cursorS) return;
     this.cursorW = this.view.toWorld(this.cursorS);
     this.snap = null;
     this.hover = null;
+    this.track = null;
     if (this.needsPoint()) {
       if (this.settings.osnap) this.snap = findSnap(this.doc, this.cursorW, this.settings.aperture / this.view.scale, this.settings.snapModes);
+      this.computeTrack();
     } else if (!this.win) {
       const r = this.req;
       const filter = r?.kind === 'entity' && r.filter ? (e: Entity) => r.filter!(e.id) : undefined;
@@ -452,9 +558,9 @@ export class Engine {
       return;
     }
     if (button === 2) {
-      // 오른쪽 클릭 = Enter
+      // 명령 중 오른쪽 클릭 = Enter, 대기 중 = 바로가기 메뉴
       if (this.cmd) this.submit('');
-      else if (this.lastCmdName) this.run(this.lastCmdName);
+      else this.uiHandler('contextmenu', s);
       return;
     }
     this.cursorS = s;
@@ -478,6 +584,14 @@ export class Engine {
       return;
     }
     if (req?.kind === 'string') return;
+    // 그립 (명령 대기 상태에서 선택된 객체의 조절점)
+    if (!req && !shift) {
+      const g = this.gripAt(s);
+      if (g) {
+        this.startGrip(g);
+        return;
+      }
+    }
     // 선택 (명령 대기 상태 또는 객체 선택 요청)
     if (this.win) {
       this.finishWindow(s, shift);
@@ -542,7 +656,22 @@ export class Engine {
         return true;
       case 'F8':
         this.settings.ortho = !this.settings.ortho;
+        if (this.settings.ortho) this.settings.polar = false;
         this.log(`직교 ${this.settings.ortho ? '켜기' : '끄기'}`);
+        this.refreshCursor();
+        this.notify();
+        return true;
+      case 'F10':
+        this.settings.polar = !this.settings.polar;
+        if (this.settings.polar) this.settings.ortho = false;
+        this.log(`극좌표 추적 ${this.settings.polar ? `켜기 (${this.settings.polarInc}° 간격)` : '끄기'}`);
+        this.refreshCursor();
+        this.notify();
+        return true;
+      case 'F12':
+        this.settings.dyn = !this.settings.dyn;
+        this.log(`동적 입력 ${this.settings.dyn ? '켜기' : '끄기'}`);
+        this.dirty.over = true;
         this.notify();
         return true;
       case 'F7':

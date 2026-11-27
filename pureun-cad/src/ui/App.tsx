@@ -12,6 +12,7 @@ import { aciColor } from '../render/aci';
 import { idbGet, idbSet } from '../storage/idb';
 import { APP_NAME, APP_VERSION } from '../version';
 import { CanvasView } from './CanvasView';
+import { suggestCommands } from '../commands/registry';
 import { HelpDialog, HoleDialog, LayerDialog, MessageDialog, SaveDialog, type SaveChoice } from './dialogs';
 import { clearSaveHandle, pickOpenFile, saveText } from './files';
 import { Icon } from './icons';
@@ -90,6 +91,15 @@ const TOOLS: (string | [string, string, string])[] = [
   ['trim', 'TRIM', '자르기 (TR)'],
   ['offset', 'OFFSET', '간격띄우기 (O)'],
   ['erase', 'ERASE', '지우기 (E)'],
+  ['mirror', 'MIRROR', '대칭 (MI)'],
+  ['scale', 'SCALE', '축척 (SC)'],
+  ['extend', 'EXTEND', '연장 (EX)'],
+  ['fillet', 'FILLET', '모깎기 (F)'],
+  ['chamfer', 'CHAMFER', '모따기 (CHA)'],
+  ['break', 'BREAK', '끊기 (BR)'],
+  ['join', 'JOIN', '결합 (J)'],
+  ['explode', 'EXPLODE', '분해 (X)'],
+  ['array', 'ARRAY', '배열 — 원형(볼트 구멍)/직사각형 (AR)'],
   '|',
   ['dimlinear', 'DIMLINEAR', '선형 치수 (DLI)'],
   ['dimaligned', 'DIMALIGNED', '정렬 치수 (DAL)'],
@@ -98,6 +108,8 @@ const TOOLS: (string | [string, string, string])[] = [
   ['dist', 'DIST', '거리 측정 (DI)'],
   '|',
   ['hole', 'HOLEDIA', '동일 지름 원 일괄 변경 (HD)'],
+  ['overkill', 'OVERKILL', '중복 객체 정리 (OV)'],
+  ['camcheck', 'CAMCHECK', '가공 검사: 열린 윤곽·중복 (CC)'],
   ['layer', 'LAYER', '레이어 (LA)'],
   ['zoomext', 'ZOOMEXT', '전체 보기 (Z → E)'],
 ];
@@ -144,6 +156,16 @@ const MENUS: { label: string; items: ([string, string, string?] | '-')[] }[] = [
       ['자르기', 'TRIM', 'TR'],
       ['간격띄우기', 'OFFSET', 'O'],
       ['지우기', 'ERASE', 'E'],
+      '-',
+      ['대칭', 'MIRROR', 'MI'],
+      ['축척', 'SCALE', 'SC'],
+      ['연장', 'EXTEND', 'EX'],
+      ['모깎기', 'FILLET', 'F'],
+      ['모따기', 'CHAMFER', 'CHA'],
+      ['끊기', 'BREAK', 'BR'],
+      ['결합', 'JOIN', 'J'],
+      ['분해', 'EXPLODE', 'X'],
+      ['배열', 'ARRAY', 'AR'],
     ],
   },
   {
@@ -163,6 +185,9 @@ const MENUS: { label: string; items: ([string, string, string?] | '-')[] }[] = [
       ['객체 정보(길이·면적)', 'LIST', 'LI'],
       '-',
       ['동일 지름 원 일괄 변경', 'HOLEDIA', 'HD'],
+      ['원형 배열(볼트 구멍 PCD)', 'ARRAY', 'AR'],
+      ['중복 객체 정리', 'OVERKILL', 'OV'],
+      ['가공 검사(열린 윤곽·중복)', 'CAMCHECK', 'CC'],
       ['레이어 관리', 'LAYER', 'LA'],
       '-',
       ['설정', 'OPTIONS', 'OP'],
@@ -195,6 +220,8 @@ export function App() {
   const [menu, setMenu] = useState<string | null>(null);
   const [cmdText, setCmdText] = useState('');
   const [toast, setToast] = useState('');
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+  const [sugIdx, setSugIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const histRef = useRef<HTMLDivElement>(null);
   const recall = useRef<{ list: string[]; i: number }>({ list: [], i: -1 });
@@ -257,8 +284,14 @@ export function App() {
   const needsSaveDialog = () => eng.doc.preserved.length > 0 || [...eng.doc.entities.values()].some((e) => e.type === 'dimension');
 
   useEffect(() => {
-    eng.uiHandler = (a) => {
+    eng.uiHandler = (a, arg) => {
       switch (a) {
+        case 'contextmenu': {
+          const s = arg as { x: number; y: number };
+          const r = document.querySelector('[data-testid=cad-canvas]')?.getBoundingClientRect();
+          setCtxMenu({ x: (r?.left ?? 0) + s.x, y: (r?.top ?? 0) + s.y });
+          break;
+        }
         case 'layer':
         case 'hole':
         case 'settings':
@@ -363,19 +396,52 @@ export function App() {
     inputRef.current?.focus();
   };
 
+  // 문자 입력 요청에 기본값이 있으면 입력칸에 미리 채움 (예: 두 번 클릭 문자 편집)
+  const curReq = eng.req;
+  const lastReq = useRef<unknown>(null);
+  useEffect(() => {
+    if (curReq === lastReq.current) return;
+    lastReq.current = curReq;
+    if (curReq?.kind === 'string' && curReq.def) {
+      setCmdText(curReq.def);
+      inputRef.current?.focus();
+      setTimeout(() => inputRef.current?.select(), 0);
+    }
+  }, [curReq]);
+  const suggestions = !eng.cmd && cmdText.trim() ? suggestCommands(cmdText) : [];
+  const setTyping = (t: string) => {
+    setCmdText(t);
+    setSugIdx(0);
+    eng.typing = t;
+    eng.dirty.over = true;
+  };
   const onCmdKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const req = eng.req;
+    // 자동완성 목록: ↑↓ 선택, Tab/Enter 실행 (입력한 글자가 정확한 명령이면 그대로 실행)
+    if (suggestions.length && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+      e.preventDefault();
+      setSugIdx((i) => (i + (e.key === 'ArrowDown' ? 1 : suggestions.length - 1)) % suggestions.length);
+      return;
+    }
+    if (suggestions.length && (e.key === 'Tab' || ((e.key === 'Enter' || e.key === ' ') && sugIdx > 0))) {
+      e.preventDefault();
+      const c = suggestions[sugIdx];
+      setTyping('');
+      recall.current = { list: [...recall.current.list.slice(-30), c.name], i: -1 };
+      eng.run(c.name);
+      return;
+    }
     if (e.key === 'Enter' || (e.key === ' ' && req?.kind !== 'string')) {
       e.preventDefault();
       const t = cmdText;
       if (t.trim()) recall.current = { list: [...recall.current.list.slice(-30), t], i: -1 };
-      setCmdText('');
+      setTyping('');
       eng.submit(t);
       return;
     }
     if (e.key === 'Escape') {
       e.preventDefault();
-      setCmdText('');
+      setTyping('');
       eng.cancel();
       return;
     }
@@ -385,7 +451,7 @@ export function App() {
       e.preventDefault();
       r.i = e.key === 'ArrowUp' ? (r.i < 0 ? r.list.length - 1 : Math.max(0, r.i - 1)) : r.i < 0 ? -1 : r.i + 1;
       if (r.i >= r.list.length) r.i = -1;
-      setCmdText(r.i < 0 ? '' : r.list[r.i]);
+      setTyping(r.i < 0 ? '' : r.list[r.i]);
       return;
     }
     if (e.key.startsWith('F') && e.key.length <= 3) {
@@ -481,6 +547,30 @@ export function App() {
         <div className="cmd-history" ref={histRef} aria-live="polite" data-testid="cmd-history">
           {eng.history.slice(-60).join('\n')}
         </div>
+        {suggestions.length > 0 && (
+          <div className="suggest" role="listbox" aria-label="명령 자동완성">
+            {suggestions.map((c, i) => (
+              <div
+                key={c.name}
+                role="option"
+                aria-selected={i === sugIdx}
+                className={'sug' + (i === sugIdx ? ' on' : '')}
+                onMouseDown={(ev) => {
+                  ev.preventDefault();
+                  setTyping('');
+                  eng.run(c.name);
+                }}
+              >
+                <b>{c.name}</b>
+                <span className="small">{c.aliases.join(', ')}</span>
+                <span>{c.label}</span>
+              </div>
+            ))}
+            <div className="small" style={{ padding: '2px 8px' }}>
+              ↑↓ 선택 · Tab 실행 · Enter 입력한 명령 실행
+            </div>
+          </div>
+        )}
         <div className="cmd-input">
           <span className="cmd-prompt" data-testid="cmd-prompt">
             {promptHead}
@@ -503,7 +593,7 @@ export function App() {
           <input
             ref={inputRef}
             value={cmdText}
-            onChange={(e) => setCmdText(e.target.value)}
+            onChange={(e) => setTyping(e.target.value)}
             onKeyDown={onCmdKey}
             placeholder={req ? '' : '명령 입력 (예: L, C, PL, TR, O, DLI, HD)'}
             aria-label="명령 입력"
@@ -527,6 +617,12 @@ export function App() {
         </button>
         <button className={'tog' + (eng.settings.grid ? ' on' : '')} onClick={() => eng.key({ key: 'F7', ctrlKey: false, metaKey: false, shiftKey: false })} title="그리드 (F7)">
           그리드 F7
+        </button>
+        <button className={'tog' + (eng.settings.polar ? ' on' : '')} onClick={() => eng.key({ key: 'F10', ctrlKey: false, metaKey: false, shiftKey: false })} title={`극좌표 추적 (F10, ${eng.settings.polarInc}° 간격)`}>
+          극좌표 F10
+        </button>
+        <button className={'tog' + (eng.settings.dyn ? ' on' : '')} onClick={() => eng.key({ key: 'F12', ctrlKey: false, metaKey: false, shiftKey: false })} title="동적 입력 (F12)">
+          동적입력 F12
         </button>
         <span className="spacer" />
         <span className="small">{eng.sel.size ? `${eng.sel.size}개 선택` : ''}</span>
@@ -587,8 +683,78 @@ export function App() {
           </p>
         </Modal>
       )}
+      {ctxMenu && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          items={
+            eng.sel.size
+              ? [
+                  ['이동', 'MOVE'],
+                  ['복사', 'COPY'],
+                  ['회전', 'ROTATE'],
+                  ['대칭', 'MIRROR'],
+                  ['축척', 'SCALE'],
+                  ['배열', 'ARRAY'],
+                  '-',
+                  ['결합', 'JOIN'],
+                  ['분해', 'EXPLODE'],
+                  ['지우기', 'ERASE'],
+                  '-',
+                  ['객체 정보', 'LIST'],
+                  ['선택 해제', '#deselect'],
+                ]
+              : [
+                  ...(eng.lastCmdName ? [[`반복: ${eng.lastCmdName}`, eng.lastCmdName] as [string, string]] : []),
+                  ['실행취소', 'U'],
+                  ['다시실행', 'REDO'],
+                  '-',
+                  ['전체 보기', 'ZOOMEXT'],
+                  ['전체 선택', '#selectall'],
+                  '-',
+                  ['가공 검사', 'CAMCHECK'],
+                ]
+          }
+          onPick={(c) => {
+            setCtxMenu(null);
+            if (c === '#deselect') eng.setSelection([]);
+            else run(c);
+          }}
+          onClose={() => setCtxMenu(null)}
+        />
+      )}
       {toast && <div className="toast">{toast}</div>}
     </div>
   );
 }
 
+
+/** 오른쪽 클릭 바로가기 메뉴 */
+function ContextMenu({ x, y, items, onPick, onClose }: { x: number; y: number; items: ([string, string] | '-')[]; onPick: (c: string) => void; onClose: () => void }) {
+  useEffect(() => {
+    const k = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const d = () => onClose();
+    window.addEventListener('keydown', k);
+    // 메뉴를 연 바로 그 클릭이 창까지 전달되어 곧바로 닫히지 않도록 다음 틱에 등록
+    const t = setTimeout(() => window.addEventListener('pointerdown', d), 0);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('keydown', k);
+      window.removeEventListener('pointerdown', d);
+    };
+  }, [onClose]);
+  const left = Math.min(x, window.innerWidth - 210), top = Math.min(y, window.innerHeight - items.length * 30 - 20);
+  return (
+    <div className="menu-list ctx-menu" style={{ position: 'fixed', left, top, zIndex: 50 }} role="menu" onPointerDown={(e) => e.stopPropagation()}>
+      {items.map((it, i) =>
+        it === '-' ? (
+          <hr key={i} />
+        ) : (
+          <button key={i} role="menuitem" onClick={() => onPick(it[1])}>
+            <span>{it[0]}</span>
+          </button>
+        ),
+      )}
+    </div>
+  );
+}

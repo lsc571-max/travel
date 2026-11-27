@@ -448,6 +448,158 @@ async function waitServer() {
       eq((await ents()).length, n0, '객체 수 유지');
     });
 
+
+    // ───── V1 사용성 기능 ─────
+    await test('V1 명령 자동완성: "FI" 입력 → 목록에 FILLET, Tab으로 실행', async () => {
+      await reset();
+      await page.click('[data-testid=cmd-input]');
+      await page.keyboard.type('FI');
+      await page.getByRole('listbox', { name: '명령 자동완성' }).waitFor();
+      const t = await page.getByRole('listbox').innerText();
+      if (!t.includes('FILLET')) throw new Error('자동완성에 FILLET 없음: ' + t);
+      await page.keyboard.press('Tab');
+      eq(await ev(() => window.__pureunCad.eng.cmd?.name), 'FILLET');
+      await page.keyboard.press('Escape');
+      await cmd('모깎기');
+      eq(await ev(() => window.__pureunCad.eng.cmd?.name), 'FILLET', '한글 명령 이름');
+      await page.keyboard.press('Escape');
+    });
+
+    await test('V1 그립 편집: 선 끝점 그립을 끌어 @10,0 입력', async () => {
+      await reset();
+      await cmd('L');
+      await cmd('0,0');
+      await cmd('50,0');
+      await cmd('');
+      await click(25, 0); // 선 선택
+      const g = await scr(50, 0);
+      await page.mouse.move(g.x, g.y);
+      await page.mouse.click(g.x, g.y); // 끝점 그립
+      eq(await ev(() => window.__pureunCad.eng.cmd?.name), '그립 편집');
+      await cmd('@10,0');
+      const l = (await ents())[0];
+      eq(l.p2, { x: 60, y: 0 });
+      await cmd('U');
+      eq((await ents())[0].p2, { x: 50, y: 0 }, '그립 편집 실행취소');
+      await page.keyboard.press('Escape');
+    });
+
+    await test('V1 모깎기 R5 (선택 클릭) / 원형 배열 8개 / 대칭', async () => {
+      await reset();
+      await cmd('L');
+      await cmd('0,0');
+      await cmd('40,0');
+      await cmd('');
+      await cmd('L');
+      await cmd('0,0');
+      await cmd('0,40');
+      await cmd('');
+      await cmd('F');
+      await cmd('R');
+      await cmd('5');
+      await click(30, 0);
+      await click(0, 30);
+      const es = await ents();
+      const arc = es.find((e) => e.type === 'arc');
+      if (!arc) throw new Error('모깎기 호 없음');
+      near(arc.r, 5);
+      near(arc.c.x, 5, 1e-9);
+      near(arc.c.y, 5, 1e-9);
+      await cmd('C');
+      await cmd('75,0');
+      await cmd('7');
+      await click(82, 0);
+      await cmd('AR');
+      await cmd('P');
+      await cmd('0,0');
+      await cmd('8');
+      await cmd('360');
+      await cmd('');
+      const holes = (await ents()).filter((e) => e.type === 'circle');
+      eq(holes.length, 8, '원형 배열');
+      await ev(() => window.__pureunCad.eng.setSelection([]));
+      await cmd('MI');
+      await click(20, 0);
+      await cmd('');
+      await cmd('0,0');
+      await cmd('0,10');
+      await cmd('N');
+      eq((await ents()).filter((e) => e.type === 'line').length, 3, '대칭 복사');
+    });
+
+    await test('V1 극좌표 추적(F10): 30° 근처로 커서 → 정확히 30° 선 위의 점', async () => {
+      await reset();
+      await ev(() => {
+        const e = window.__pureunCad.eng;
+        e.settings.polar = true;
+        e.settings.ortho = false;
+        e.settings.osnap = false;
+      });
+      await cmd('L');
+      await cmd('0,0');
+      const a = (30.6 * Math.PI) / 180;
+      const s = await scr(60 * Math.cos(a), 60 * Math.sin(a));
+      await page.mouse.move(s.x, s.y);
+      await page.waitForTimeout(50);
+      await page.mouse.click(s.x, s.y);
+      await page.keyboard.press('Escape');
+      await ev(() => (window.__pureunCad.eng.settings.osnap = true));
+      const l = (await ents())[0];
+      near(Math.atan2(l.p2.y, l.p2.x) * (180 / Math.PI), 30, 1e-9, '각도');
+      await page.screenshot({ path: path.join(OUT, 'polar.png') });
+    });
+
+    await test('V1 동적 입력 툴팁·오른쪽 클릭 메뉴·두 번 클릭 문자 편집', async () => {
+      await reset();
+      await cmd('DT');
+      await cmd('10,10');
+      await cmd('5');
+      await cmd('0');
+      await cmd('ABC');
+      await cmd('');
+      const s = await scr(13, 12);
+      await page.mouse.dblclick(s.x, s.y);
+      await page.waitForTimeout(100);
+      eq(await page.inputValue('[data-testid=cmd-input]'), 'ABC', '기존 문자 미리 채움');
+      await page.fill('[data-testid=cmd-input]', '구멍 4-%%c10');
+      await page.press('[data-testid=cmd-input]', 'Enter');
+      eq((await ents())[0].text, '구멍 4-%%c10');
+      await page.keyboard.press('Escape');
+      await click(13, 12);
+      await page.mouse.click(s.x + 80, s.y + 80, { button: 'right' });
+      await page.getByRole('menu').waitFor();
+      const m = await page.getByRole('menu').innerText();
+      if (!m.includes('대칭') || !m.includes('분해')) throw new Error('바로가기 메뉴 항목 누락');
+      await page.screenshot({ path: path.join(OUT, 'contextmenu.png') });
+      await page.keyboard.press('Escape');
+      await cmd('L');
+      await cmd('0,0');
+      const t = await scr(30, 20);
+      await page.mouse.move(t.x, t.y);
+      await page.waitForTimeout(60);
+      await page.screenshot({ path: path.join(OUT, 'dyninput.png') });
+      await page.keyboard.press('Escape');
+    });
+
+    await test('V1 가공 검사·중복 정리', async () => {
+      await reset();
+      await cmd('L');
+      await cmd('0,0');
+      await cmd('10,0');
+      await cmd('');
+      await cmd('L');
+      await cmd('10,0');
+      await cmd('0,0');
+      await cmd('');
+      await cmd('CC');
+      const h = await page.getByTestId('cmd-history').innerText();
+      if (!/중복 1개/.test(h)) throw new Error('가공 검사 결과: ' + h.split('\n').pop());
+      await cmd('OV');
+      await cmd('ALL');
+      await cmd('');
+      eq((await ents()).length, 1, '중복 정리 후');
+    });
+
     await ev(() => window.__pureunCad.eng.zoomExtents());
     await page.waitForTimeout(100);
     await page.screenshot({ path: path.join(OUT, 'final.png') });

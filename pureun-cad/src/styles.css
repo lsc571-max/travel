@@ -522,3 +522,37 @@ button:focus-visible {
     min-width: 0;
   }
 }
+
+/* 명령 자동완성 */
+.cmdline {
+  position: relative;
+}
+.suggest {
+  position: absolute;
+  left: 8px;
+  bottom: 34px;
+  min-width: 320px;
+  max-width: 90vw;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  padding: 4px;
+  z-index: 30;
+  font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
+}
+.sug {
+  display: grid;
+  grid-template-columns: 110px 70px 1fr;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.sug.on,
+.sug:hover {
+  background: var(--hover);
+}
+.ctx-menu {
+  min-width: 190px;
+}

@@ -1,6 +1,7 @@
 // 명령어 목록과 별칭 (AutoCAD 기본 별칭과 같게 유지)
 import { DIMALIGNED, DIMDIAMETER, DIMLINEAR, DIMRADIUS, DIST, ID, LIST } from './dim';
 import { ARC, CIRCLE, LINE, PLINE, RECTANG, TEXT } from './draw';
+import { ARRAY, BREAK, CAMCHECK, CHAMFER, EXPLODE, EXTEND, FILLET, JOIN, MIRROR, OVERKILL, SCALE } from './edit';
 import { COPY, ERASE, MOVE, OFFSET, ROTATE, TRIM } from './modify';
 import type { CommandDef, CommandFn, UiAction } from './types';
 
@@ -56,6 +57,17 @@ export const COMMANDS: CommandDef[] = [
   { name: 'TRIM', aliases: ['TR'], label: '자르기', fn: TRIM },
   { name: 'OFFSET', aliases: ['O'], label: '간격띄우기', fn: OFFSET },
   { name: 'ERASE', aliases: ['E'], label: '지우기', fn: ERASE, usesSelection: true },
+  { name: 'MIRROR', aliases: ['MI'], label: '대칭', fn: MIRROR, usesSelection: true },
+  { name: 'SCALE', aliases: ['SC'], label: '축척', fn: SCALE, usesSelection: true },
+  { name: 'EXTEND', aliases: ['EX'], label: '연장', fn: EXTEND },
+  { name: 'FILLET', aliases: ['F'], label: '모깎기', fn: FILLET },
+  { name: 'CHAMFER', aliases: ['CHA'], label: '모따기', fn: CHAMFER },
+  { name: 'BREAK', aliases: ['BR'], label: '끊기', fn: BREAK },
+  { name: 'JOIN', aliases: ['J'], label: '결합', fn: JOIN, usesSelection: true },
+  { name: 'EXPLODE', aliases: ['X'], label: '분해', fn: EXPLODE, usesSelection: true },
+  { name: 'ARRAY', aliases: ['AR'], label: '배열(원형·직사각형)', fn: ARRAY, usesSelection: true },
+  { name: 'OVERKILL', aliases: ['OV'], label: '중복 객체 정리', fn: OVERKILL, usesSelection: true },
+  { name: 'CAMCHECK', aliases: ['CC'], label: '가공 검사(열린 윤곽·중복)', fn: CAMCHECK },
   { name: 'DIMLINEAR', aliases: ['DLI'], label: '선형 치수', fn: DIMLINEAR },
   { name: 'DIMALIGNED', aliases: ['DAL'], label: '정렬 치수', fn: DIMALIGNED },
   { name: 'DIMDIAMETER', aliases: ['DDI'], label: '지름 치수', fn: DIMDIAMETER },
@@ -84,5 +96,25 @@ const byName = new Map<string, CommandDef>();
 for (const c of COMMANDS) {
   byName.set(c.name, c);
   for (const a of c.aliases) byName.set(a, c);
+}
+// 한글 이름으로도 실행 (예: "원", "모깎기")
+for (const c of COMMANDS) if (!byName.has(c.label.toUpperCase())) byName.set(c.label.toUpperCase(), c);
+
+/** 입력 중인 글자로 시작하는 명령 (자동완성) */
+export function suggestCommands(prefix: string, limit = 8): CommandDef[] {
+  const p = prefix.trim().toUpperCase();
+  if (!p) return [];
+  const score = (c: CommandDef) => {
+    if (c.aliases.includes(p) || c.name === p) return 0;
+    if (c.aliases.some((a) => a.startsWith(p))) return 1;
+    if (c.name.startsWith(p)) return 2;
+    if (c.label.toUpperCase().includes(p)) return 3;
+    return 9;
+  };
+  return COMMANDS.map((c) => [c, score(c)] as const)
+    .filter(([, s]) => s < 9)
+    .sort((a, b) => a[1] - b[1])
+    .slice(0, limit)
+    .map(([c]) => c);
 }
 export const findCommand = (s: string) => byName.get(s.trim().toUpperCase());

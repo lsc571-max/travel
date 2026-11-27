@@ -142,6 +142,74 @@ export const ICONS: Record<string, JSX.Element> = {
       <rect x="8" y="8" width="8" height="8" />
     </svg>
   ),
+  mirror: (
+    <svg viewBox="0 0 24 24" {...P}>
+      <path d="M12 3v18" strokeDasharray="2 2" />
+      <path d="M9 7L4 17h5z M15 7l5 10h-5z" />
+    </svg>
+  ),
+  scale: (
+    <svg viewBox="0 0 24 24" {...P}>
+      <rect x="3" y="11" width="10" height="10" />
+      <path d="M9 3h12v12 M13 11l8-8" />
+    </svg>
+  ),
+  extend: (
+    <svg viewBox="0 0 24 24" {...P}>
+      <path d="M20 3v18 M3 12h9" />
+      <path d="M12 12h7" strokeDasharray="2 2" />
+      <path d="M16 9l3 3-3 3" />
+    </svg>
+  ),
+  fillet: (
+    <svg viewBox="0 0 24 24" {...P}>
+      <path d="M4 20V11a7 7 0 0 1 7-7h9" />
+    </svg>
+  ),
+  chamfer: (
+    <svg viewBox="0 0 24 24" {...P}>
+      <path d="M4 20V10l6-6h10" />
+    </svg>
+  ),
+  join: (
+    <svg viewBox="0 0 24 24" {...P}>
+      <path d="M3 17l6-8 6 8 6-8" />
+      <circle cx="9" cy="9" r="1.6" />
+      <circle cx="15" cy="17" r="1.6" />
+    </svg>
+  ),
+  explode: (
+    <svg viewBox="0 0 24 24" {...P}>
+      <path d="M4 9l5-5 M15 4l5 5 M20 15l-5 5 M9 20l-5-5" />
+    </svg>
+  ),
+  break: (
+    <svg viewBox="0 0 24 24" {...P}>
+      <path d="M3 12h6 M15 12h6 M10 8l4 8" />
+    </svg>
+  ),
+  array: (
+    <svg viewBox="0 0 24 24" {...P}>
+      <circle cx="12" cy="12" r="8" strokeDasharray="2 3" />
+      <circle cx="12" cy="4" r="2" />
+      <circle cx="20" cy="12" r="2" />
+      <circle cx="12" cy="20" r="2" />
+      <circle cx="4" cy="12" r="2" />
+    </svg>
+  ),
+  overkill: (
+    <svg viewBox="0 0 24 24" {...P}>
+      <path d="M3 8h12 M3 12h12" />
+      <path d="M17 15l4 4 M21 15l-4 4" />
+    </svg>
+  ),
+  camcheck: (
+    <svg viewBox="0 0 24 24" {...P}>
+      <path d="M4 18V6h10l4 4v3" />
+      <circle cx="17" cy="17" r="3.5" />
+      <path d="M19.5 19.5L22 22" />
+    </svg>
+  ),
   settings: (
     <svg viewBox="0 0 24 24" {...P}>
       <circle cx="12" cy="12" r="3" />

@@ -82,6 +82,11 @@ export interface Settings {
   /** 동일 지름 판정 허용오차(mm) */
   holeTol: number;
   autosave: boolean;
+  /** 극좌표 추적(F10)과 증분 각도 */
+  polar: boolean;
+  polarInc: number;
+  /** 동적 입력 툴팁(F12) */
+  dyn: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -99,6 +104,9 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: 'dark',
   holeTol: 0.0001,
   autosave: true,
+  polar: true,
+  polarInc: 15,
+  dyn: true,
 };
 
 export interface Ctx {
@@ -115,9 +123,11 @@ export interface Ctx {
   /** 잠긴/숨겨진 레이어 객체를 걸러냄 */
   editable(ids: number[]): number[];
   ui(action: UiAction, arg?: unknown): void;
+  /** 화면에 표시할 확인용 점(가공 검사의 열린 끝점 등). 다음 명령·Esc에서 지워짐 */
+  setMarks(pts: Vec2[]): void;
 }
 
-export type UiAction = 'layer' | 'settings' | 'hole' | 'open' | 'save' | 'saveas' | 'new' | 'help' | 'zoomExtents' | 'zoomWindow' | 'share' | 'version';
+export type UiAction = 'layer' | 'settings' | 'hole' | 'open' | 'save' | 'saveas' | 'new' | 'help' | 'zoomExtents' | 'zoomWindow' | 'share' | 'version' | 'contextmenu';
 
 export type CommandFn = (ctx: Ctx) => Generator<Req, void, Resp>;
 

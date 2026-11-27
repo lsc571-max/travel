@@ -129,6 +129,8 @@ export function CanvasView({ eng }: { eng: Engine }) {
     top.addEventListener('wheel', wheel, { passive: false });
     top.addEventListener('contextmenu', ctxmenu);
     top.addEventListener('auxclick', aux);
+    const dbl = (e: MouseEvent) => eng.doubleClick(pos(e));
+    top.addEventListener('dblclick', dbl);
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
@@ -139,6 +141,7 @@ export function CanvasView({ eng }: { eng: Engine }) {
       top.removeEventListener('wheel', wheel);
       top.removeEventListener('contextmenu', ctxmenu);
       top.removeEventListener('auxclick', aux);
+      top.removeEventListener('dblclick', dbl);
     };
   }, [eng]);
 

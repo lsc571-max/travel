@@ -1,6 +1,6 @@
 // 앱 버전 정보 (프로젝트 버전 체계: V0 → V1 → V2 …)
 export const APP_NAME = '푸른캐드';
-export const APP_VERSION = 'V0';
+export const APP_VERSION = 'V1';
 export const BUILD_DATE = '2026-11-27';
 export const CHANGES: { v: string; date: string; items: string[] }[] = [
   {

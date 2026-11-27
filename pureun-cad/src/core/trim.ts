@@ -183,3 +183,35 @@ function buildPiece(target: Entity, u0: number, u1: number, base: ReturnType<typ
       return null;
   }
 }
+
+/**
+ * 끊기(BREAK): 두 점 사이 부분 제거. 원은 첫 점에서 두 번째 점까지 반시계 방향 부분을 제거(AutoCAD와 같음).
+ * pA와 pB가 같으면 그 점에서 둘로 나눔(열린 객체만).
+ */
+export function breakEntity(original: Entity, pA: { x: number; y: number }, pB: { x: number; y: number }): TrimResult {
+  if (original.type === 'text' || original.type === 'dimension') return { ok: false, pieces: [], message: '문자·치수는 끊을 수 없습니다.' };
+  const target: Entity = original.type === 'polyline' ? { ...original, pts: cleanPolyPts(original.pts, original.closed) } : original;
+  const segs = entitySegs(target);
+  const n = segs.length;
+  if (!n) return { ok: false, pieces: [], message: '끊을 수 없는 객체입니다.' };
+  const base = baseProps(target);
+  const cyclic = target.type === 'circle' || (target.type === 'polyline' && target.closed);
+  const ua = pickParam(segs, pA), ub = pickParam(segs, pB);
+  if (!cyclic) {
+    const u0 = Math.min(ua, ub), u1 = Math.max(ua, ub);
+    const pieces = [buildPiece(target, 0, u0, base), buildPiece(target, u1, n, base)].filter((x): x is NewEntity => !!x);
+    if (!pieces.length) return { ok: false, pieces: [], message: '남는 부분이 없습니다. (지우려면 ERASE)' };
+    return { ok: true, pieces };
+  }
+  if (Math.abs(ua - ub) < UTOL) return { ok: false, pieces: [], message: '닫힌 객체는 서로 다른 두 점이 필요합니다.' };
+  // 제거: ua → ub (진행 방향), 남김: ub → ua(+n)
+  const keep0 = ub, keep1 = ua <= ub ? ua + n : ua;
+  if (target.type === 'circle') {
+    const s = segs[0];
+    const a0 = normDeg(angleOf(target.c, segPoint(s, keep0 % 1)) / DEG);
+    const a1 = normDeg(angleOf(target.c, segPoint(s, keep1 % 1)) / DEG);
+    return { ok: true, pieces: [{ type: 'arc', ...base, c: { ...target.c }, r: target.r, a0, a1 }] };
+  }
+  const piece = buildPiece(target, keep0, keep1, base);
+  return piece ? { ok: true, pieces: [piece] } : { ok: false, pieces: [], message: '남는 부분이 없습니다.' };
+}
