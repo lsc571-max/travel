@@ -264,6 +264,15 @@ function serve() {
     await p2.click('#bottomTabs button[data-tab=code]'); await sleep(100);
     await p2.click('#bottomBody button:has-text("복사")', { force: true }); await sleep(150);
     ok('[검증 9] 차단 상태 G코드 복사 거부', (await p2.evaluate(() => window.__copied)) === null);
+    // [V0.3 검증 1] 되돌리기 후 간편 입력 공정을 현재 장비 기준으로 다시 구성 (오래된 공구로 출력 금지)
+    await p2.click('#bottomBody button:has-text("다시 생성")'); await sleep(100);
+    await p2.click('#mnav button[data-m=right]').catch(() => { });
+    await p2.click('#rightBody button:has-text("+ 구멍 그룹")'); await sleep(150);
+    const dep = p2.locator('#rightBody .wiz input[type=number]').nth(1); await dep.fill('12'); await dep.press('Tab'); await sleep(150);
+    await p2.evaluate(() => { const U = window.__PCAM_UI__, m = U.DB.machines[0]; m.tools.find(t => t.no === 7).dia = 9; m.tools.find(t => t.no === 8).dia = 6.6; });
+    await p2.click('#btnUndo'); await sleep(200);
+    const st3 = await p2.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[U.P.groups.length - 1]; return { ops: g.ops.map(o => o.toolNo), ds: U.downloadState(), errs: U.S.V.issues.filter(i => i.level === 'error').length }; });
+    ok('[V0.3] 되돌리기 후 간편 입력 공정 재구성 (Ø6.6 = T08)', st3.ops[1] === 8 && st3.errs === 0, JSON.stringify(st3));
     ok('V0.2 안전 수정 화면 오류 없음', e2.length === 0, e2.join('|'));
     await c2.close();
   }

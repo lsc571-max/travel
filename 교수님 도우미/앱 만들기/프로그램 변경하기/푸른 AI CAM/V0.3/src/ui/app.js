@@ -76,8 +76,8 @@
   }
   // 간편 입력 그룹은 소재·장비·입력이 바뀔 때마다 공정을 다시 구성
   function regenSpecs() { const m = machine(); P.groups.forEach(g => { if (g.spec) C.applyHoleSpec(g, m, P.stock); }); }
-  function undo() { if (!S.undo.length) return; S.redo.push(JSON.stringify(P)); P = C.normalizeProject(JSON.parse(S.undo.pop())); saveDB(); renderAll(); toast('되돌렸습니다.'); }
-  function redo() { if (!S.redo.length) return; S.undo.push(JSON.stringify(P)); P = C.normalizeProject(JSON.parse(S.redo.pop())); saveDB(); renderAll(); toast('다시 실행했습니다.'); }
+  function undo() { if (!S.undo.length) return; S.redo.push(JSON.stringify(P)); P = C.normalizeProject(JSON.parse(S.undo.pop())); regenSpecs(); saveDB(); renderAll(); toast('되돌렸습니다.'); }
+  function redo() { if (!S.redo.length) return; S.undo.push(JSON.stringify(P)); P = C.normalizeProject(JSON.parse(S.redo.pop())); regenSpecs(); saveDB(); renderAll(); toast('다시 실행했습니다.'); }
   function dbChange(fn) { fn(); regenSpecs(); saveDB(); renderAll(); }
 
   /* ---------------- 알림 ---------------- */
@@ -444,8 +444,8 @@
       if (!opts.some(o => o[0] === cur)) opts.unshift([cur, 'M' + sp.tapD + '×' + sp.tapP + ' (사용자)']);
       const rec = C.tapDrill(sp.tapD, sp.tapP);
       h += '<div class="grid2">' + u.fld('나사 규격', u.select(cur, opts, v => mutate(() => { const a = v.split('|'); sp.tapD = parseFloat(a[0]); sp.tapP = parseFloat(a[1]); }))) +
-        u.fld(sp.thru ? '탭 깊이 (관통)' : '탭 깊이 (mm)', u.num(sp.tapDepth, set(v => { sp.tapDepth = v; }), sp.thru ? 'disabled' : '')) + '</div>';
-      h += '<div class="opinfo">피치 <b>' + sp.tapP + '</b> · 기초 드릴 추천 <b>Ø' + (rec ? rec.dia : '-') + '</b> · 탭 이송 F = S × ' + sp.tapP + ' (자동)</div>';
+        u.fld(sp.thru ? '탭 깊이 (관통)' : '탭 끝 깊이 (mm)', u.num(sp.tapDepth, set(v => { sp.tapDepth = v; }), sp.thru ? 'disabled' : '')) + '</div>';
+      h += '<div class="opinfo">피치 <b>' + sp.tapP + '</b> · 기초 드릴 추천 <b>Ø' + (rec ? rec.dia : '-') + '</b> · 탭 이송 F = S × ' + sp.tapP + ' (자동)' + (sp.thru ? '' : '<br>탭 끝 기준 깊이입니다. 도면의 완전 나사 깊이가 기준이면 2~3피치(' + C.r3(2 * sp.tapP) + '~' + C.r3(3 * sp.tapP) + 'mm)를 더해 입력하세요.') + '</div>';
       h += '<div class="row">' + u.check(sp.thru, set(v => { sp.thru = v; }), '관통') + u.check(sp.center, set(v => { sp.center = v; }), '센터 드릴') +
         u.select(sp.tapMode, [['auto', '탭 방식: 자동' + (m.rigidTap ? '(리지드)' : '(일반)')], ['rigid', '리지드 탭 (M29)'], ['tap', '일반 탭 (홀더)']], set(v => { sp.tapMode = v; })) + '</div>';
     } else {
@@ -792,6 +792,8 @@
   function switchProject(id) {
     saveDB(true);
     P = DB.projects[id]; DB.currentProjectId = id;
+    if (!DB.machines.find(m => m.id === P.machineId)) P.machineId = DB.machines[0].id;
+    regenSpecs(); // 다른 프로젝트에서 장비·공구가 바뀌었을 수 있음
     S.undo = []; S.redo = []; S.sel = { gid: null, hid: null }; S.view.fitted = false; S.pathStep = 0;
     S.nc.edited = false; S.nc.editText = ''; S.nc.editVerify = null;
     saveDB(true); renderAll();
@@ -865,7 +867,7 @@
     if (!Object.keys(nd.projects).length) { const n = C.newProject(nd.machines[0]); nd.projects[n.id] = n; }
     Object.values(nd.projects).forEach(p => { if (!nd.machines.find(m => m.id === p.machineId)) p.machineId = nd.machines[0].id; });
     nd.currentProjectId = nd.projects[d.db.currentProjectId] ? d.db.currentProjectId : Object.keys(nd.projects)[0];
-    DB = nd; P = DB.projects[DB.currentProjectId];
+    DB = nd; P = DB.projects[DB.currentProjectId]; regenSpecs();
     S.undo = []; S.redo = []; S.view.fitted = false; S.nc.edited = false;
     saveDB(true); closeDlg(); applyTheme(); renderAll();
     toast('복원했습니다. 장비 실가공 검증 상태는 관리자 재승인이 필요합니다.', 'warn');
@@ -1013,6 +1015,7 @@
     P = DB.projects[DB.currentProjectId] || Object.values(DB.projects)[0];
     if (!P) { const n = C.newProject(DB.machines[0]); DB.projects[n.id] = n; P = n; }
     if (!DB.machines.find(m => m.id === P.machineId)) P.machineId = DB.machines[0].id;
+    regenSpecs(); // 저장된 간편 입력 그룹을 현재 장비·소재 기준으로 다시 구성
     applyTheme();
     if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { applyTheme(); drawView(); });
     $('#projName').addEventListener('change', e => mutate(() => { P.name = e.target.value.slice(0, 60) || '프로젝트'; }));

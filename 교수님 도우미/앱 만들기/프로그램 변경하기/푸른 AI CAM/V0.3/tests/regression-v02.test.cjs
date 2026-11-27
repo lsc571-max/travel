@@ -35,7 +35,10 @@ test('V0.2 → V0.3 동일 결과 (탭 안내 주석만 차이): 1,000건', { sk
     if (R() < 0.3) p.clamps.push({ id: 'c', x: r.x0 - 15, y: r.y0 + 5, w: 12, h: 20, height: 10 + Math.round(R() * 50) });
     const pa = JSON.parse(JSON.stringify(p)), pb = JSON.parse(JSON.stringify(p));
     const va = OLD.validateProject(pa, m), vb = NEW.validateProject(pb, m);
-    const key = v => v.issues.map(i => i.level + '|' + i.cat + '|' + i.msg + '|' + JSON.stringify(i.ref)).sort();
+    // [V0.3] 의도한 안전 강화(관통 여유 0.5mm, 기초 드릴 하한 D1, 관통 탭 출구 경고)는 비교에서 제외하되 완화는 금지
+    const v3new = i => /관통 여유는 0\.5mm|최소 내경 D1|불완전 나사부/.test(i.msg), v3old = i => /기초 드릴 Ø[\d.]+ 가 (너무 작습니다|추천값 Ø)/.test(i.msg);
+    assert.ok(va.issues.filter(v3old).length <= vb.issues.filter(i => /최소 내경 D1/.test(i.msg)).length, '기초 드릴 하한 완화 금지 #' + n);
+    const key = v => v.issues.filter(i => !v3new(i) && !v3old(i)).map(i => i.level + '|' + i.cat + '|' + i.msg + '|' + JSON.stringify(i.ref)).sort();
     assert.deepEqual(key(vb), key(va), '검증 결과 #' + n);
     const ga = OLD.generateNC(pa, m, va.plan, { date: DATE }), gb = NEW.generateNC(pb, m, vb.plan, { date: DATE });
     assert.equal(!!gb.blocked, !!ga.blocked);

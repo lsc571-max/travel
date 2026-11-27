@@ -21,13 +21,13 @@
     if (!prev.length) add('error', 5, on + ': 탭 앞에 기초 드릴 공정이 없습니다.');
     else {
       // 직경이 허용 범위인 드릴 중 가장 깊은 것 (단차 드릴 대응). 없으면 마지막 드릴로 판정
-      const okDia = o => { const t2 = tm.get(o.toolNo); return t2.dia >= tool.dia - 1.25 * tool.pitch - EPS && t2.dia < tool.dia - 0.5 * tool.pitch - EPS; };
+      const okDia = o => { const t2 = tm.get(o.toolNo); return t2.dia >= P.minorD1(tool.dia, tool.pitch) - EPS && t2.dia < tool.dia - 0.5 * tool.pitch - EPS; };
       const cands = prev.filter(okDia);
       const depthOf = o => o.thru ? Infinity : P.opDepth(o, tm.get(o.toolNo), st).full;
       const dop = cands.length ? cands.reduce((a, o) => depthOf(o) >= depthOf(a) ? o : a) : prev[prev.length - 1];
       const dt = tm.get(dop.toolNo), dd = P.opDepth(dop, dt, st);
       const rec = P.tapDrill(tool.dia, tool.pitch);
-      if (dt.dia < tool.dia - 1.25 * tool.pitch - EPS) add('error', 5, on + ': 기초 드릴 Ø' + dt.dia + ' 가 너무 작습니다 (탭 파손 위험, 추천 Ø' + (rec ? rec.dia : '-') + ').');
+      if (dt.dia < P.minorD1(tool.dia, tool.pitch) - EPS) add('error', 5, on + ': 기초 드릴 Ø' + dt.dia + ' 가 나사 최소 내경 D1(Ø' + r3(P.minorD1(tool.dia, tool.pitch)) + ')보다 작습니다 (탭 파손 위험, 추천 Ø' + (rec ? rec.dia : '-') + ').');
       else if (dt.dia >= tool.dia - 0.5 * tool.pitch - EPS) add('error', 5, on + ': 기초 드릴 Ø' + dt.dia + ' 가 너무 커서 나사산이 형성되지 않습니다 (추천 Ø' + (rec ? rec.dia : '-') + ').');
       else if (rec && Math.abs(dt.dia - rec.dia) > 0.1 + EPS) add('warn', 5, on + ': 기초 드릴 Ø' + dt.dia + ' 가 추천값 Ø' + rec.dia + ' 와 다릅니다.');
       if (op.thru && !dop.thru) add('error', 8, on + ': 탭은 관통인데 기초 드릴은 관통이 아닙니다.');
@@ -36,6 +36,7 @@
         else if (dd.full < d.depth + 2 * tool.pitch - EPS) add('warn', 8, on + ': 기초 드릴 직경부 깊이 ' + dd.full + ' 가 탭 깊이 + 2피치(' + r3(d.depth + 2 * tool.pitch) + ')보다 얕습니다.');
       }
     }
+    if (op.thru && toNum(op.brk, 0) < 2 * tool.pitch - EPS) add('warn', 8, on + ': 관통 탭이 소재 아래로 ' + toNum(op.brk, 0) + 'mm 만 나갑니다. 탭 앞 불완전 나사부(2~3피치)가 출구에 남을 수 있습니다 (권장 ' + r3(3 * tool.pitch) + 'mm 이상, 하부 여유 확인).');
     if (toNum(op.r, 0) < 3 * tool.pitch - EPS) add('warn', 10, on + ': 탭 R점은 3피치(' + r3(3 * tool.pitch) + 'mm) 이상 띄우는 것을 권장합니다.');
   }
   P.TAP = Object.freeze({ validatePitch, validatePilot });

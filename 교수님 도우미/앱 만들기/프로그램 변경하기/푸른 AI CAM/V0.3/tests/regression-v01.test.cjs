@@ -77,7 +77,10 @@ test('모듈화 전후 동일 결과: 정상·비정상 입력 1,200건', { skip
     const va = OLD.validateProject(pa, m), vb = NEW.validateProject(pb, m);
     // [2차 검증 7] V0.2 는 소재 범위·클램프를 가장 큰 공구(스팟 포함) 반경으로 검사 → 더 엄격해질 수만 있음
     const geo = i => (i.cat === 2) || (i.cat === 10 && /클램프 \d+ 영역과 겹칩니다/.test(i.msg));
-    const strip = v => ({ issues: v.issues.filter(i => !geo(i)) });
+    // [V0.3] 의도한 안전 강화: 관통 여유 0.5mm 이상, 기초 드릴 하한 = 최소 내경 D1, 관통 탭 출구 경고 (완화는 금지)
+    const v3new = i => /관통 여유는 0\.5mm|최소 내경 D1|불완전 나사부/.test(i.msg), v3old = i => /기초 드릴 Ø[\d.]+ 가 (너무 작습니다|추천값 Ø)/.test(i.msg);
+    assert.ok(va.issues.filter(v3old).length <= vb.issues.filter(i => /최소 내경 D1/.test(i.msg)).length, '기초 드릴 하한 완화 금지 #' + n);
+    const strip = v => ({ issues: v.issues.filter(i => !geo(i) && !v3new(i) && !v3old(i)) });
     assert.deepEqual(sortIssues(strip(vb)), sortIssues(strip(va)), '검증 결과 차이 #' + n);
     const geoErrRefs = v => new Set(v.issues.filter(i => geo(i) && i.level === 'error').map(i => JSON.stringify(i.ref)));
     const oldGeo = geoErrRefs(va), newGeo = geoErrRefs(vb);

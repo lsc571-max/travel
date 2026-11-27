@@ -105,6 +105,8 @@
     const fine = METRIC_FINE.find(r => Math.abs(r[0] - d) < 1e-9 && Math.abs(r[1] - p) < 1e-9);
     return { dia: r3(Math.round((d - p) * 20) / 20), pitch: p, kind: fine ? '가는 나사' : '비표준 피치', name: 'M' + d + '×' + p };
   }
+  // ISO 미터 암나사 최소 내경 D1 = D − 1.0825·P (기초 드릴이 이보다 작으면 나사산 물림 100% 초과 → 탭 파손)
+  const minorD1 = (d, p) => d - 1.0825 * p;
   function standardPitch(d, p) {
     return METRIC_COARSE.some(r => Math.abs(r[0] - d) < 1e-9 && Math.abs(r[1] - p) < 1e-9) ||
       METRIC_FINE.some(r => Math.abs(r[0] - d) < 1e-9 && Math.abs(r[1] - p) < 1e-9);
@@ -193,7 +195,7 @@
     VERSION, BUILD_DATE, EPS, CLAMP_MARGIN, MAX_HOLES, FANUC_MAX,
     TOOL_TYPES, MATERIALS, METRIC_COARSE, METRIC_FINE, ORIGIN_LABEL, ORIGIN_NC, GROUP_COLORS,
     uid, isNum, r3, deg, toNum, clone, fmt, fmtF, ncText, pad,
-    stockRect, tipLength, spotDiameter, tapDrill, standardPitch,
+    stockRect, tipLength, spotDiameter, tapDrill, standardPitch, minorD1,
     toolMap, toolLabel, defaultMachine, newGroup, newProject, normalizeTool, normalizeMachine,
     segRectHit, clampRect, inRect
   });

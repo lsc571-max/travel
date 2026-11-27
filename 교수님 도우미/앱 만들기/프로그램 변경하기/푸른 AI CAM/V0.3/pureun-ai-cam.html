@@ -2685,6 +2685,8 @@ var qrcode = function() {
     const fine = METRIC_FINE.find(r => Math.abs(r[0] - d) < 1e-9 && Math.abs(r[1] - p) < 1e-9);
     return { dia: r3(Math.round((d - p) * 20) / 20), pitch: p, kind: fine ? '가는 나사' : '비표준 피치', name: 'M' + d + '×' + p };
   }
+  // ISO 미터 암나사 최소 내경 D1 = D − 1.0825·P (기초 드릴이 이보다 작으면 나사산 물림 100% 초과 → 탭 파손)
+  const minorD1 = (d, p) => d - 1.0825 * p;
   function standardPitch(d, p) {
     return METRIC_COARSE.some(r => Math.abs(r[0] - d) < 1e-9 && Math.abs(r[1] - p) < 1e-9) ||
       METRIC_FINE.some(r => Math.abs(r[0] - d) < 1e-9 && Math.abs(r[1] - p) < 1e-9);
@@ -2773,7 +2775,7 @@ var qrcode = function() {
     VERSION, BUILD_DATE, EPS, CLAMP_MARGIN, MAX_HOLES, FANUC_MAX,
     TOOL_TYPES, MATERIALS, METRIC_COARSE, METRIC_FINE, ORIGIN_LABEL, ORIGIN_NC, GROUP_COLORS,
     uid, isNum, r3, deg, toNum, clone, fmt, fmtF, ncText, pad,
-    stockRect, tipLength, spotDiameter, tapDrill, standardPitch,
+    stockRect, tipLength, spotDiameter, tapDrill, standardPitch, minorD1,
     toolMap, toolLabel, defaultMachine, newGroup, newProject, normalizeTool, normalizeMachine,
     segRectHit, clampRect, inRect
   });
@@ -2958,6 +2960,7 @@ var qrcode = function() {
   function validateDepth(ctx) {
     const { op, tool, d, st, under, on, add } = ctx;
     if (!(d.depth > 0)) add('error', 8, on + ': 가공 깊이가 0 이하입니다.');
+    if (op.thru && !(toNum(op.brk, NaN) >= 0.5)) add('error', 8, on + ': 관통 여유는 0.5mm 이상이어야 합니다 (현재 ' + op.brk + ').');
     if (tool.flute > 0 && d.depth > tool.flute + EPS) add('error', 8, on + ': 깊이 ' + d.depth + ' 가 공구 유효 날 길이 ' + tool.flute + ' 을 초과합니다.');
     if (d.z < -(st.sz + under) - EPS) add('error', 8, on + ': 공구 끝 Z' + fmt(d.z) + ' 이(가) 소재 바닥 아래 허용 범위(하부 여유 ' + under + 'mm)를 넘습니다. 테이블/지그 충돌 위험 → 하부 여유(패럴렐 틈)를 확인하세요.');
     else if (!op.thru && d.depth > st.sz + EPS) add('warn', 8, on + ': 깊이가 소재 두께를 넘습니다. 관통이면 "관통" 옵션을 사용하세요.');
@@ -3122,13 +3125,13 @@ var qrcode = function() {
     if (!prev.length) add('error', 5, on + ': 탭 앞에 기초 드릴 공정이 없습니다.');
     else {
       // 직경이 허용 범위인 드릴 중 가장 깊은 것 (단차 드릴 대응). 없으면 마지막 드릴로 판정
-      const okDia = o => { const t2 = tm.get(o.toolNo); return t2.dia >= tool.dia - 1.25 * tool.pitch - EPS && t2.dia < tool.dia - 0.5 * tool.pitch - EPS; };
+      const okDia = o => { const t2 = tm.get(o.toolNo); return t2.dia >= P.minorD1(tool.dia, tool.pitch) - EPS && t2.dia < tool.dia - 0.5 * tool.pitch - EPS; };
       const cands = prev.filter(okDia);
       const depthOf = o => o.thru ? Infinity : P.opDepth(o, tm.get(o.toolNo), st).full;
       const dop = cands.length ? cands.reduce((a, o) => depthOf(o) >= depthOf(a) ? o : a) : prev[prev.length - 1];
       const dt = tm.get(dop.toolNo), dd = P.opDepth(dop, dt, st);
       const rec = P.tapDrill(tool.dia, tool.pitch);
-      if (dt.dia < tool.dia - 1.25 * tool.pitch - EPS) add('error', 5, on + ': 기초 드릴 Ø' + dt.dia + ' 가 너무 작습니다 (탭 파손 위험, 추천 Ø' + (rec ? rec.dia : '-') + ').');
+      if (dt.dia < P.minorD1(tool.dia, tool.pitch) - EPS) add('error', 5, on + ': 기초 드릴 Ø' + dt.dia + ' 가 나사 최소 내경 D1(Ø' + r3(P.minorD1(tool.dia, tool.pitch)) + ')보다 작습니다 (탭 파손 위험, 추천 Ø' + (rec ? rec.dia : '-') + ').');
       else if (dt.dia >= tool.dia - 0.5 * tool.pitch - EPS) add('error', 5, on + ': 기초 드릴 Ø' + dt.dia + ' 가 너무 커서 나사산이 형성되지 않습니다 (추천 Ø' + (rec ? rec.dia : '-') + ').');
       else if (rec && Math.abs(dt.dia - rec.dia) > 0.1 + EPS) add('warn', 5, on + ': 기초 드릴 Ø' + dt.dia + ' 가 추천값 Ø' + rec.dia + ' 와 다릅니다.');
       if (op.thru && !dop.thru) add('error', 8, on + ': 탭은 관통인데 기초 드릴은 관통이 아닙니다.');
@@ -3137,6 +3140,7 @@ var qrcode = function() {
         else if (dd.full < d.depth + 2 * tool.pitch - EPS) add('warn', 8, on + ': 기초 드릴 직경부 깊이 ' + dd.full + ' 가 탭 깊이 + 2피치(' + r3(d.depth + 2 * tool.pitch) + ')보다 얕습니다.');
       }
     }
+    if (op.thru && toNum(op.brk, 0) < 2 * tool.pitch - EPS) add('warn', 8, on + ': 관통 탭이 소재 아래로 ' + toNum(op.brk, 0) + 'mm 만 나갑니다. 탭 앞 불완전 나사부(2~3피치)가 출구에 남을 수 있습니다 (권장 ' + r3(3 * tool.pitch) + 'mm 이상, 하부 여유 확인).');
     if (toNum(op.r, 0) < 3 * tool.pitch - EPS) add('warn', 10, on + ': 탭 R점은 3피치(' + r3(3 * tool.pitch) + 'mm) 이상 띄우는 것을 권장합니다.');
   }
   P.TAP = Object.freeze({ validatePitch, validatePilot });
@@ -3481,10 +3485,12 @@ var qrcode = function() {
  *       센터 → 드릴(사이클 자동) → 탭 공정을 계산 규칙으로 구성한다.
  *       결과는 일반 공정(ops)이므로 계획·포스트·검증 모듈은 그대로 쓴다.
  * 규칙 (모두 결정적 계산, AI 미사용)
- *   - 기초 드릴: 미터 나사 표 추천값. 없으면 허용 범위(D−1.25P ~ D−0.5P) 안에서 가장 가까운 보유 드릴
+ *   - 기초 드릴: 미터 나사 표 추천값. 없으면 허용 범위(최소 내경 D1 = D−1.0825P ~ D−0.5P) 안에서
+ *     가장 가까운 보유 드릴 (같은 거리면 큰 드릴)
  *   - 막힌 탭의 드릴 직경부 깊이 = 탭 깊이 + max(3P, 2mm) → 0.5mm 단위 올림
  *   - 드릴 사이클 자동: 직경부 깊이/직경 ≤ 3 → G81, ≤ 5 → G73, 그 이상 → G83
- *   - 펙 Q = 공구 직경 (0.5mm 단위, 최소 0.5)
+ *   - 펙 Q = 드릴 직경 × 1.0 (스테인리스·Ø3 미만은 × 0.5), 0.1mm 단위 내림, Q ≤ 직경
+ *   - 관통 탭: 소재 아래로 max(관통 여유, 3P) 나가게 하되 하부 여유를 넘지 않음
  *   - 센터 드릴: 모따기 직경 = 구멍(또는 나사) 직경 + 0.4, 공구 직경의 90% 이내
  *   - 탭 R점 = max(5, 3P) (올림), 드릴 R점 = 3
  * 의존: engine/*, ops/*
@@ -3495,7 +3501,6 @@ var qrcode = function() {
   const { toNum, r3, toolMap, tapDrill } = P;
   const EPSD = 1e-3;
   const ceilTo = (v, s) => Math.ceil(v / s - 1e-9) * s;
-  const roundTo = (v, s) => Math.round(v / s) * s;
 
   // 간편 입력 기본값
   function newHoleSpec(kind, extra) {
@@ -3546,9 +3551,10 @@ var qrcode = function() {
       drillDia = rec ? rec.dia : r3(spec.tapD - spec.tapP);
       let dt = findDrill(machine, drillDia);
       if (!dt) {
-        const lo = spec.tapD - 1.25 * spec.tapP, hi = spec.tapD - 0.5 * spec.tapP;
+        const lo = P.minorD1(spec.tapD, spec.tapP), hi = spec.tapD - 0.5 * spec.tapP;
+        const dist = t => Math.round(Math.abs(t.dia - drillDia) * 1e6);
         const alt = (machine.tools || []).filter(t => t.type === 'drill' && t.dia >= lo - EPSD && t.dia < hi - EPSD)
-          .sort((a, b) => Math.abs(a.dia - drillDia) - Math.abs(b.dia - drillDia) || a.no - b.no)[0];
+          .sort((a, b) => dist(a) - dist(b) || b.dia - a.dia || a.no - b.no)[0];
         if (alt) { notes.push({ level: 'warn', msg: '추천 기초 드릴 Ø' + drillDia + ' 이(가) 없어 보유 드릴 T' + alt.no + ' Ø' + alt.dia + ' 을(를) 사용합니다.' }); dt = alt; drillDia = alt.dia; }
         else missing.push({ type: 'drill', dia: drillDia, why: 'M' + spec.tapD + ' 기초 드릴' });
       }
@@ -3577,13 +3583,15 @@ var qrcode = function() {
         const chamfer = Math.min(holeDia + 0.4, ct.dia * 0.9);
         const depth = Math.max(0.1, Math.floor((chamfer / 2) / Math.tan(ang / 2 * Math.PI / 180) * 10) / 10);
         ops.push(P.newOp('center', ct.no, { depth, r: 3 }));
+        if (chamfer < (spec.kind === 'tap' ? drillDia : holeDia) - 1e-6) notes.push({ level: 'info', msg: '센터 공구(Ø' + ct.dia + ')가 작아 위치 표시용으로만 찍습니다 (모따기 Ø' + r3(chamfer) + '). 구멍 입구 모따기가 필요하면 더 큰 스팟·모따기 공구를 쓰세요.' });
       }
     }
     // 2. 드릴 (사이클 자동)
     if (dt) {
       const full = drillThru ? sz + toNum(spec.brk, 1) : drillFull;
       let cyc = spec.cycle === 'auto' ? autoCycle(full, dt.dia) : spec.cycle;
-      const q = Math.max(0.5, roundTo(dt.dia, 0.5));
+      const qf = (stock && stock.material === 'SUS304') || dt.dia < 3 ? 0.5 : 1.0;
+      const q = Math.max(0.1, Math.floor(dt.dia * qf * 10 + 1e-6) / 10);
       const extra = { r: 3, q, auto: true };
       if (drillThru) Object.assign(extra, { thru: true, brk: toNum(spec.brk, 1), depth: 10 });
       else if (spec.kind === 'drill' && spec.depthMode === 'tip') Object.assign(extra, { depth: drillFull, depthMode: 'tip' });
@@ -3591,6 +3599,9 @@ var qrcode = function() {
       ops.push(P.newOp(cyc, dt.no, extra));
       // 바로 고칠 수 있게 깊이 문제를 미리 안내 (최종 판단은 검증 모듈)
       const tip = P.tipLength(dt), under = toNum(stock && stock.under, 0);
+      const tipDepth = drillThru ? sz + toNum(spec.brk, 1) + tip : (extra.depthMode === 'tip' ? drillFull : drillFull + tip);
+      if (dt.flute > 0 && tipDepth > dt.flute + 1e-6) notes.push({ level: 'error', msg: 'T' + dt.no + ' 드릴 날 길이 ' + dt.flute + 'mm 보다 깊습니다 (필요 ' + r3(tipDepth) + 'mm). 긴 드릴을 쓰거나 [장비·공구]에서 날 길이를 확인하세요.' });
+      if (dt.dia >= 13) notes.push({ level: 'info', msg: 'Ø' + dt.dia + ' 대경 드릴입니다. 필요하면 작은 드릴로 먼저 뚫는(파일럿) 공정을 직접 구성하세요.' });
       if (drillThru) {
         const need = r3(toNum(spec.brk, 1) + tip);
         if (under < need - 1e-6) notes.push({ level: 'error', msg: '관통 가공에는 소재 아래 여유(패럴렐 틈)가 최소 ' + need + 'mm 필요합니다 (현재 ' + under + 'mm, 드릴 끝각 ' + r3(tip) + ' + 관통 여유 ' + toNum(spec.brk, 1) + '). [소재·가공]에서 하부 여유를 확인하세요.' });
@@ -3606,8 +3617,16 @@ var qrcode = function() {
       const type = spec.tapMode === 'auto' ? (machine.rigidTap ? 'rigid' : 'tap') : spec.tapMode;
       const r = Math.max(5, ceilTo(3 * spec.tapP, 0.5));
       const extra = { r, auto: true };
-      if (spec.thru) Object.assign(extra, { thru: true, brk: toNum(spec.brk, 1), depth: 10 });
-      else Object.assign(extra, { depth: toNum(spec.tapDepth, 0) });
+      if (spec.thru) {
+        // 탭 앞 불완전 나사부가 소재 밖으로 나가도록 max(관통 여유, 3P). 단 하부 여유 안으로 제한
+        const want = Math.max(toNum(spec.brk, 1), ceilTo(3 * spec.tapP, 0.5));
+        const under = toNum(stock && stock.under, 0);
+        const brk = Math.max(toNum(spec.brk, 1), Math.min(want, Math.floor(under * 2) / 2));
+        if (brk < want - 1e-6) notes.push({ level: 'warn', msg: '관통 탭이 소재 아래로 ' + brk + 'mm 만 나갑니다 (권장 ' + want + 'mm). 하부 여유를 늘리면 출구까지 완전한 나사가 됩니다.' });
+        Object.assign(extra, { thru: true, brk, depth: 10 });
+      } else Object.assign(extra, { depth: toNum(spec.tapDepth, 0) });
+      const tapDepthAbs = spec.thru ? sz + extra.brk : extra.depth;
+      if (tapTool.flute > 0 && tapDepthAbs > tapTool.flute + 1e-6) notes.push({ level: 'error', msg: 'T' + tapTool.no + ' 탭 날 길이 ' + tapTool.flute + 'mm 보다 깊습니다 (필요 ' + r3(tapDepthAbs) + 'mm).' });
       ops.push(P.newOp(type, tapTool.no, extra));
       if (type === 'tap') notes.push({ level: 'info', msg: '일반 탭(G84): 텐션·컴프레션 탭 홀더가 필요합니다.' });
     }
@@ -3873,8 +3892,10 @@ var qrcode = function() {
       // 간편 입력 그룹: 필요한 공구가 없어 공정이 빠졌으면 차단 (예: 탭 지정인데 센터 드릴만 생성되는 경우)
       if (g.spec && P.planHoleSpec) {
         const plan0 = P.planHoleSpec(g.spec, machine, st);
-        plan0.missing.forEach(mm => add('error', 4, gname + ' ' + (g.spec.kind === 'tap' ? '탭' : '구멍') + ' 가공에 필요한 ' + (mm.type === 'tap' ? '탭 M' + mm.dia + '×' + mm.pitch : mm.type === 'center' ? '센터 드릴' : '드릴 Ø' + mm.dia) + ' 이(가) 장비에 없어 공정이 완성되지 않았습니다.', { gid: g.id }));
-        if (g.holes.length && g.ops.length !== plan0.ops.length) add('error', 11, gname + ' 간편 입력과 공정 목록이 일치하지 않습니다. 가공 방법을 다시 선택하세요.', { gid: g.id });
+        if (g.holes.length) plan0.missing.forEach(mm => add('error', 4, gname + ' ' + (g.spec.kind === 'tap' ? '탭' : '구멍') + ' 가공에 필요한 ' + (mm.type === 'tap' ? '탭 M' + mm.dia + '×' + mm.pitch : mm.type === 'center' ? '센터 드릴' : '드릴 Ø' + mm.dia) + ' 이(가) 장비에 없어 공정이 완성되지 않았습니다.', { gid: g.id }));
+        // 공정 내용까지 비교 (되돌리기·장비 변경 뒤 오래된 공정이 남는 것 방지)
+        const sig = o => [o.type, o.toolNo, P.r3(+o.depth), o.depthMode, !!o.thru, P.r3(+o.brk), P.r3(+o.q), P.r3(+o.r), P.r3(+o.dwell), !!o.auto].join('|');
+        if (g.holes.length && (g.ops.length !== plan0.ops.length || g.ops.some((o, k) => sig(o) !== sig(plan0.ops[k])))) add('error', 11, gname + ' 간편 입력과 공정 목록이 일치하지 않습니다 (설정 변경 후 갱신되지 않음). 가공 방법을 다시 선택하거나 값을 다시 입력하세요.', { gid: g.id });
       }
       if (!g.holes.length && g.ops.length) add('info', 4, gname + ' 공정은 있지만 홀이 없습니다.', { gid: g.id });
 
@@ -4038,7 +4059,7 @@ var qrcode = function() {
         drilled.get(key).push({ dia: tool.dia, fullZ: s.cz + tipLength(tool) });
       }
       if (s.cycle === 84 && tool.type === 'tap' && tool.pitch > 0) {
-        const lo = tool.dia - 1.25 * tool.pitch, hi = tool.dia - 0.5 * tool.pitch;
+        const lo = P.minorD1(tool.dia, tool.pitch), hi = tool.dia - 0.5 * tool.pitch;
         const good = (drilled.get(key) || []).filter(d => d.dia >= lo - EPS && d.dia < hi - EPS);
         if (!good.length) E(ln, 'X' + fmt(x) + ' Y' + fmt(y) + ' 탭 위치에 맞는 기초 드릴 구멍(Ø' + r3(lo) + '~' + r3(hi) + ')이 앞에서 가공되지 않았습니다.');
         else if (!good.some(d => d.fullZ <= s.cz + 1e-3 || d.fullZ <= -stock.sz + 1e-3)) E(ln, 'X' + fmt(x) + ' Y' + fmt(y) + ' 탭 깊이 Z' + fmt(s.cz) + ' 이(가) 기초 드릴 직경부 깊이보다 깊습니다 (탭 파손).');
@@ -4564,8 +4585,8 @@ var qrcode = function() {
   }
   // 간편 입력 그룹은 소재·장비·입력이 바뀔 때마다 공정을 다시 구성
   function regenSpecs() { const m = machine(); P.groups.forEach(g => { if (g.spec) C.applyHoleSpec(g, m, P.stock); }); }
-  function undo() { if (!S.undo.length) return; S.redo.push(JSON.stringify(P)); P = C.normalizeProject(JSON.parse(S.undo.pop())); saveDB(); renderAll(); toast('되돌렸습니다.'); }
-  function redo() { if (!S.redo.length) return; S.undo.push(JSON.stringify(P)); P = C.normalizeProject(JSON.parse(S.redo.pop())); saveDB(); renderAll(); toast('다시 실행했습니다.'); }
+  function undo() { if (!S.undo.length) return; S.redo.push(JSON.stringify(P)); P = C.normalizeProject(JSON.parse(S.undo.pop())); regenSpecs(); saveDB(); renderAll(); toast('되돌렸습니다.'); }
+  function redo() { if (!S.redo.length) return; S.undo.push(JSON.stringify(P)); P = C.normalizeProject(JSON.parse(S.redo.pop())); regenSpecs(); saveDB(); renderAll(); toast('다시 실행했습니다.'); }
   function dbChange(fn) { fn(); regenSpecs(); saveDB(); renderAll(); }
 
   /* ---------------- 알림 ---------------- */
@@ -4932,8 +4953,8 @@ var qrcode = function() {
       if (!opts.some(o => o[0] === cur)) opts.unshift([cur, 'M' + sp.tapD + '×' + sp.tapP + ' (사용자)']);
       const rec = C.tapDrill(sp.tapD, sp.tapP);
       h += '<div class="grid2">' + u.fld('나사 규격', u.select(cur, opts, v => mutate(() => { const a = v.split('|'); sp.tapD = parseFloat(a[0]); sp.tapP = parseFloat(a[1]); }))) +
-        u.fld(sp.thru ? '탭 깊이 (관통)' : '탭 깊이 (mm)', u.num(sp.tapDepth, set(v => { sp.tapDepth = v; }), sp.thru ? 'disabled' : '')) + '</div>';
-      h += '<div class="opinfo">피치 <b>' + sp.tapP + '</b> · 기초 드릴 추천 <b>Ø' + (rec ? rec.dia : '-') + '</b> · 탭 이송 F = S × ' + sp.tapP + ' (자동)</div>';
+        u.fld(sp.thru ? '탭 깊이 (관통)' : '탭 끝 깊이 (mm)', u.num(sp.tapDepth, set(v => { sp.tapDepth = v; }), sp.thru ? 'disabled' : '')) + '</div>';
+      h += '<div class="opinfo">피치 <b>' + sp.tapP + '</b> · 기초 드릴 추천 <b>Ø' + (rec ? rec.dia : '-') + '</b> · 탭 이송 F = S × ' + sp.tapP + ' (자동)' + (sp.thru ? '' : '<br>탭 끝 기준 깊이입니다. 도면의 완전 나사 깊이가 기준이면 2~3피치(' + C.r3(2 * sp.tapP) + '~' + C.r3(3 * sp.tapP) + 'mm)를 더해 입력하세요.') + '</div>';
       h += '<div class="row">' + u.check(sp.thru, set(v => { sp.thru = v; }), '관통') + u.check(sp.center, set(v => { sp.center = v; }), '센터 드릴') +
         u.select(sp.tapMode, [['auto', '탭 방식: 자동' + (m.rigidTap ? '(리지드)' : '(일반)')], ['rigid', '리지드 탭 (M29)'], ['tap', '일반 탭 (홀더)']], set(v => { sp.tapMode = v; })) + '</div>';
     } else {
@@ -5280,6 +5301,8 @@ var qrcode = function() {
   function switchProject(id) {
     saveDB(true);
     P = DB.projects[id]; DB.currentProjectId = id;
+    if (!DB.machines.find(m => m.id === P.machineId)) P.machineId = DB.machines[0].id;
+    regenSpecs(); // 다른 프로젝트에서 장비·공구가 바뀌었을 수 있음
     S.undo = []; S.redo = []; S.sel = { gid: null, hid: null }; S.view.fitted = false; S.pathStep = 0;
     S.nc.edited = false; S.nc.editText = ''; S.nc.editVerify = null;
     saveDB(true); renderAll();
@@ -5353,7 +5376,7 @@ var qrcode = function() {
     if (!Object.keys(nd.projects).length) { const n = C.newProject(nd.machines[0]); nd.projects[n.id] = n; }
     Object.values(nd.projects).forEach(p => { if (!nd.machines.find(m => m.id === p.machineId)) p.machineId = nd.machines[0].id; });
     nd.currentProjectId = nd.projects[d.db.currentProjectId] ? d.db.currentProjectId : Object.keys(nd.projects)[0];
-    DB = nd; P = DB.projects[DB.currentProjectId];
+    DB = nd; P = DB.projects[DB.currentProjectId]; regenSpecs();
     S.undo = []; S.redo = []; S.view.fitted = false; S.nc.edited = false;
     saveDB(true); closeDlg(); applyTheme(); renderAll();
     toast('복원했습니다. 장비 실가공 검증 상태는 관리자 재승인이 필요합니다.', 'warn');
@@ -5501,6 +5524,7 @@ var qrcode = function() {
     P = DB.projects[DB.currentProjectId] || Object.values(DB.projects)[0];
     if (!P) { const n = C.newProject(DB.machines[0]); DB.projects[n.id] = n; P = n; }
     if (!DB.machines.find(m => m.id === P.machineId)) P.machineId = DB.machines[0].id;
+    regenSpecs(); // 저장된 간편 입력 그룹을 현재 장비·소재 기준으로 다시 구성
     applyTheme();
     if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { applyTheme(); drawView(); });
     $('#projName').addEventListener('change', e => mutate(() => { P.name = e.target.value.slice(0, 60) || '프로젝트'; }));

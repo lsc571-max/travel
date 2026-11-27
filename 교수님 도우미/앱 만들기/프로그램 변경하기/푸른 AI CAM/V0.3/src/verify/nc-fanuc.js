@@ -54,7 +54,7 @@
         drilled.get(key).push({ dia: tool.dia, fullZ: s.cz + tipLength(tool) });
       }
       if (s.cycle === 84 && tool.type === 'tap' && tool.pitch > 0) {
-        const lo = tool.dia - 1.25 * tool.pitch, hi = tool.dia - 0.5 * tool.pitch;
+        const lo = P.minorD1(tool.dia, tool.pitch), hi = tool.dia - 0.5 * tool.pitch;
         const good = (drilled.get(key) || []).filter(d => d.dia >= lo - EPS && d.dia < hi - EPS);
         if (!good.length) E(ln, 'X' + fmt(x) + ' Y' + fmt(y) + ' 탭 위치에 맞는 기초 드릴 구멍(Ø' + r3(lo) + '~' + r3(hi) + ')이 앞에서 가공되지 않았습니다.');
         else if (!good.some(d => d.fullZ <= s.cz + 1e-3 || d.fullZ <= -stock.sz + 1e-3)) E(ln, 'X' + fmt(x) + ' Y' + fmt(y) + ' 탭 깊이 Z' + fmt(s.cz) + ' 이(가) 기초 드릴 직경부 깊이보다 깊습니다 (탭 파손).');

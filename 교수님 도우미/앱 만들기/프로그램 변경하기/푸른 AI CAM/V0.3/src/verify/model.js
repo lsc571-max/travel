@@ -70,8 +70,10 @@
       // 간편 입력 그룹: 필요한 공구가 없어 공정이 빠졌으면 차단 (예: 탭 지정인데 센터 드릴만 생성되는 경우)
       if (g.spec && P.planHoleSpec) {
         const plan0 = P.planHoleSpec(g.spec, machine, st);
-        plan0.missing.forEach(mm => add('error', 4, gname + ' ' + (g.spec.kind === 'tap' ? '탭' : '구멍') + ' 가공에 필요한 ' + (mm.type === 'tap' ? '탭 M' + mm.dia + '×' + mm.pitch : mm.type === 'center' ? '센터 드릴' : '드릴 Ø' + mm.dia) + ' 이(가) 장비에 없어 공정이 완성되지 않았습니다.', { gid: g.id }));
-        if (g.holes.length && g.ops.length !== plan0.ops.length) add('error', 11, gname + ' 간편 입력과 공정 목록이 일치하지 않습니다. 가공 방법을 다시 선택하세요.', { gid: g.id });
+        if (g.holes.length) plan0.missing.forEach(mm => add('error', 4, gname + ' ' + (g.spec.kind === 'tap' ? '탭' : '구멍') + ' 가공에 필요한 ' + (mm.type === 'tap' ? '탭 M' + mm.dia + '×' + mm.pitch : mm.type === 'center' ? '센터 드릴' : '드릴 Ø' + mm.dia) + ' 이(가) 장비에 없어 공정이 완성되지 않았습니다.', { gid: g.id }));
+        // 공정 내용까지 비교 (되돌리기·장비 변경 뒤 오래된 공정이 남는 것 방지)
+        const sig = o => [o.type, o.toolNo, P.r3(+o.depth), o.depthMode, !!o.thru, P.r3(+o.brk), P.r3(+o.q), P.r3(+o.r), P.r3(+o.dwell), !!o.auto].join('|');
+        if (g.holes.length && (g.ops.length !== plan0.ops.length || g.ops.some((o, k) => sig(o) !== sig(plan0.ops[k])))) add('error', 11, gname + ' 간편 입력과 공정 목록이 일치하지 않습니다 (설정 변경 후 갱신되지 않음). 가공 방법을 다시 선택하거나 값을 다시 입력하세요.', { gid: g.id });
       }
       if (!g.holes.length && g.ops.length) add('info', 4, gname + ' 공정은 있지만 홀이 없습니다.', { gid: g.id });
 

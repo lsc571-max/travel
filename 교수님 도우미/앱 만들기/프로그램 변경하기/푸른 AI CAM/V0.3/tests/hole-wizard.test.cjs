@@ -135,3 +135,89 @@ test('탭 공정 앞 오버라이드 100% 안내 주석 출력, 드릴만 있으
   const r2 = run(C.newHoleSpec('drill', { dia: 5, depth: 10 }));
   assert.ok(!/OVERRIDE/.test(C.generateNC(r2.p, r2.m, r2.v.plan).text));
 });
+
+// ---------- V0.3 독립 검증 지적 사항 (수정 확인) ----------
+test('[검증 1] 공구 지름이 바뀌었는데 공정이 갱신되지 않은 간편 입력 그룹 → 차단 (개수뿐 아니라 내용 비교)', () => {
+  const r = run(C.newHoleSpec('drill', { dia: 6.6, depth: 12 }));
+  assert.deepEqual(r.errs, []);
+  const t7 = r.m.tools.find(t => t.no === 7), t8 = r.m.tools.find(t => t.no === 8);
+  t7.dia = 9; t8.dia = 6.6; // 장비에서 공구 교체, 공정은 아직 T7 (갱신 안 됨)
+  const v = C.validateProject(r.p, r.m);
+  assert.ok(v.issues.some(i => i.level === 'error' && /일치하지 않습니다/.test(i.msg)));
+  C.applyHoleSpec(r.g, r.m, r.p.stock); // 화면은 regenSpecs 로 갱신
+  assert.equal(r.g.ops[1].toolNo, 8);
+  assert.ok(!C.validateProject(r.p, r.m).issues.some(i => i.level === 'error'));
+});
+
+test('[검증 2] 기초 드릴 하한 = 최소 내경 D1: 대체 선택·모델 검증·NC 검증기 모두 적용, 같은 거리면 큰 드릴', () => {
+  const m = C.defaultMachine();
+  m.tools = m.tools.filter(t => t.type !== 'drill').concat([{ no: 21, type: 'drill', dia: 2.4, angle: 118, mat: 'HSS', flute: 30 }, { no: 22, type: 'drill', dia: 2.6, angle: 118, mat: 'HSS', flute: 30 }]);
+  m.tools.push({ no: 23, type: 'tap', dia: 3, pitch: 0.5, mat: 'HSS', flute: 15 });
+  const r = C.planHoleSpec(C.newHoleSpec('tap', { tapD: 3, tapP: 0.5, tapDepth: 6 }), m, { sz: 20 });
+  assert.equal(C.toolMap(m).get(r.ops[1].toolNo).dia, 2.6, 'Ø2.4 (D1 2.459 미만) 대신 Ø2.6');
+  // 직접 구성으로 Ø2.4 를 쓰면 모델 검증 오류
+  const p = C.newProject(m); const g = C.newGroup('A', 0); g.holes = [{ id: 'a', x: 40, y: 40 }];
+  g.ops = [C.newOp('drill', 21, { depth: 10 }), C.newOp('rigid', 23, { depth: 6 })]; p.groups = [g];
+  const v = C.validateProject(p, m);
+  assert.ok(v.issues.some(i => i.level === 'error' && /최소 내경 D1/.test(i.msg)));
+  // NC 검증기도 Ø2.4 기초 구멍을 인정하지 않음
+  const nc = C.generateNC(p, m, v.plan);
+  const vr = C.verifyNC(nc.text, { stock: p.stock, machine: m, clamps: [], settings: p.settings, expected: null });
+  assert.ok(vr.errors.some(e => /기초 드릴 구멍/.test(e.msg)));
+  // 같은 거리(±0.1)면 큰 드릴
+  const m2 = C.defaultMachine(); m2.tools = m2.tools.filter(t => t.dia !== 6.8 || t.type !== 'drill').concat([{ no: 30, type: 'drill', dia: 6.9, angle: 118, mat: 'HSS', flute: 70 }, { no: 31, type: 'drill', dia: 6.7, angle: 118, mat: 'HSS', flute: 70 }]);
+  const r2 = C.planHoleSpec(C.newHoleSpec('tap', { tapD: 8, tapP: 1.25, tapDepth: 12 }), m2, { sz: 30 });
+  assert.equal(C.toolMap(m2).get(r2.ops[1].toolNo).dia, 6.9);
+});
+
+test('[검증 3] 관통 탭은 소재 아래로 max(관통 여유, 3P), 하부 여유가 모자라면 경고', () => {
+  const r = run(C.newHoleSpec('tap', { tapD: 10, tapP: 1.5, thru: true }), { stock: { sz: 20, under: 8 } });
+  const tap = r.g.ops[2];
+  assert.equal(tap.brk, 4.5); // 3P = 4.5
+  assert.deepEqual(r.errs, []);
+  const r2 = run(C.newHoleSpec('tap', { tapD: 10, tapP: 1.5, thru: true }), { stock: { sz: 20, under: 4 } });
+  assert.equal(r2.g.ops[2].brk, 4); // 하부 여유 4mm 안으로 제한
+  assert.ok(r2.res.notes.some(n => n.level === 'warn' && /권장 4.5mm/.test(n.msg)));
+  assert.deepEqual(r2.errs, []);
+  // 모델 검증: 관통 탭 출구가 2피치 미만이면 경고 (직접 구성 포함)
+  const m = C.defaultMachine(), p = C.newProject(m); Object.assign(p.stock, { sz: 20, under: 5 });
+  const g = C.newGroup('B', 0); g.holes = [{ id: 'a', x: 40, y: 40 }];
+  g.ops = [C.newOp('peck', 6, { thru: true, brk: 1, q: 3 }), C.newOp('rigid', 15, { thru: true, brk: 1 })]; p.groups = [g];
+  assert.ok(C.validateProject(p, m).issues.some(i => i.level === 'warn' && /불완전 나사부/.test(i.msg)));
+});
+
+test('[검증 4] 관통 여유 0.5mm 미만(음수 포함) → 차단', () => {
+  [-5, 0, 0.2].forEach(brk => {
+    const r = run(C.newHoleSpec('tap', { tapD: 8, tapP: 1.25, thru: true, brk }), { stock: { sz: 20, under: 10 } });
+    assert.ok(r.errs.some(i => /관통 여유는 0.5mm/.test(i.msg)), 'brk ' + brk);
+  });
+});
+
+test('[검증 5] 펙 Q ≤ 드릴 직경, 스테인리스·소경(Ø3 미만)은 0.5D', () => {
+  const cases = [[5, 'S45C', 5], [5, 'SUS304', 2.5], [1.25, 'S45C', 0.6], [2.05, 'AL6061', 1], [6.8, 'AL6061', 6.8]];
+  cases.forEach(([dia, mat, q]) => {
+    const r = run(C.newHoleSpec('drill', { dia, depth: dia * 4.5 }), { addMissing: true, stock: { sz: 60, material: mat } });
+    const d = r.g.ops[1];
+    assert.equal(d.q, q, 'Ø' + dia + ' ' + mat);
+    assert.ok(d.q <= dia);
+  });
+});
+
+test('[검증 6] 센터 공구가 작아 모따기가 구멍보다 작으면 안내', () => {
+  const r = C.planHoleSpec(C.newHoleSpec('tap', { tapD: 10, tapP: 1.5, tapDepth: 15 }), C.defaultMachine(), { sz: 30 });
+  assert.ok(r.notes.some(n => n.level === 'info' && /위치 표시용/.test(n.msg)));
+});
+
+test('[검증 7] 구멍이 없는 간편 입력 그룹의 공구 부족은 전체 NC 를 막지 않음', () => {
+  const m = C.defaultMachine(); const p = C.newProject(m);
+  const a = C.newGroup('A', 0); a.holes = [{ id: 'a', x: 40, y: 40 }]; a.spec = C.newHoleSpec('tap', { tapD: 6, tapP: 1, tapDepth: 10 }); C.applyHoleSpec(a, m, p.stock);
+  const b = C.newGroup('B', 1); b.spec = C.newHoleSpec('tap', { tapD: 20, tapP: 2.5, tapDepth: 20 }); C.applyHoleSpec(b, m, p.stock); // 공구 없음, 구멍 없음
+  p.groups = [a, b];
+  assert.ok(!C.validateProject(p, m).issues.some(i => i.level === 'error'));
+});
+
+test('[검증 8] 공구 날 길이보다 깊으면 간편 입력 단계에서 안내', () => {
+  const m = C.defaultMachine(); m.tools.find(t => t.no === 4).flute = 10;
+  const r = C.planHoleSpec(C.newHoleSpec('drill', { dia: 5, depth: 15 }), m, { sz: 30 });
+  assert.ok(r.notes.some(n => n.level === 'error' && /날 길이/.test(n.msg)));
+});

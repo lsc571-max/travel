@@ -4,10 +4,12 @@
  *       센터 → 드릴(사이클 자동) → 탭 공정을 계산 규칙으로 구성한다.
  *       결과는 일반 공정(ops)이므로 계획·포스트·검증 모듈은 그대로 쓴다.
  * 규칙 (모두 결정적 계산, AI 미사용)
- *   - 기초 드릴: 미터 나사 표 추천값. 없으면 허용 범위(D−1.25P ~ D−0.5P) 안에서 가장 가까운 보유 드릴
+ *   - 기초 드릴: 미터 나사 표 추천값. 없으면 허용 범위(최소 내경 D1 = D−1.0825P ~ D−0.5P) 안에서
+ *     가장 가까운 보유 드릴 (같은 거리면 큰 드릴)
  *   - 막힌 탭의 드릴 직경부 깊이 = 탭 깊이 + max(3P, 2mm) → 0.5mm 단위 올림
  *   - 드릴 사이클 자동: 직경부 깊이/직경 ≤ 3 → G81, ≤ 5 → G73, 그 이상 → G83
- *   - 펙 Q = 공구 직경 (0.5mm 단위, 최소 0.5)
+ *   - 펙 Q = 드릴 직경 × 1.0 (스테인리스·Ø3 미만은 × 0.5), 0.1mm 단위 내림, Q ≤ 직경
+ *   - 관통 탭: 소재 아래로 max(관통 여유, 3P) 나가게 하되 하부 여유를 넘지 않음
  *   - 센터 드릴: 모따기 직경 = 구멍(또는 나사) 직경 + 0.4, 공구 직경의 90% 이내
  *   - 탭 R점 = max(5, 3P) (올림), 드릴 R점 = 3
  * 의존: engine/*, ops/*
@@ -18,7 +20,6 @@
   const { toNum, r3, toolMap, tapDrill } = P;
   const EPSD = 1e-3;
   const ceilTo = (v, s) => Math.ceil(v / s - 1e-9) * s;
-  const roundTo = (v, s) => Math.round(v / s) * s;
 
   // 간편 입력 기본값
   function newHoleSpec(kind, extra) {
@@ -69,9 +70,10 @@
       drillDia = rec ? rec.dia : r3(spec.tapD - spec.tapP);
       let dt = findDrill(machine, drillDia);
       if (!dt) {
-        const lo = spec.tapD - 1.25 * spec.tapP, hi = spec.tapD - 0.5 * spec.tapP;
+        const lo = P.minorD1(spec.tapD, spec.tapP), hi = spec.tapD - 0.5 * spec.tapP;
+        const dist = t => Math.round(Math.abs(t.dia - drillDia) * 1e6);
         const alt = (machine.tools || []).filter(t => t.type === 'drill' && t.dia >= lo - EPSD && t.dia < hi - EPSD)
-          .sort((a, b) => Math.abs(a.dia - drillDia) - Math.abs(b.dia - drillDia) || a.no - b.no)[0];
+          .sort((a, b) => dist(a) - dist(b) || b.dia - a.dia || a.no - b.no)[0];
         if (alt) { notes.push({ level: 'warn', msg: '추천 기초 드릴 Ø' + drillDia + ' 이(가) 없어 보유 드릴 T' + alt.no + ' Ø' + alt.dia + ' 을(를) 사용합니다.' }); dt = alt; drillDia = alt.dia; }
         else missing.push({ type: 'drill', dia: drillDia, why: 'M' + spec.tapD + ' 기초 드릴' });
       }
@@ -100,13 +102,15 @@
         const chamfer = Math.min(holeDia + 0.4, ct.dia * 0.9);
         const depth = Math.max(0.1, Math.floor((chamfer / 2) / Math.tan(ang / 2 * Math.PI / 180) * 10) / 10);
         ops.push(P.newOp('center', ct.no, { depth, r: 3 }));
+        if (chamfer < (spec.kind === 'tap' ? drillDia : holeDia) - 1e-6) notes.push({ level: 'info', msg: '센터 공구(Ø' + ct.dia + ')가 작아 위치 표시용으로만 찍습니다 (모따기 Ø' + r3(chamfer) + '). 구멍 입구 모따기가 필요하면 더 큰 스팟·모따기 공구를 쓰세요.' });
       }
     }
     // 2. 드릴 (사이클 자동)
     if (dt) {
       const full = drillThru ? sz + toNum(spec.brk, 1) : drillFull;
       let cyc = spec.cycle === 'auto' ? autoCycle(full, dt.dia) : spec.cycle;
-      const q = Math.max(0.5, roundTo(dt.dia, 0.5));
+      const qf = (stock && stock.material === 'SUS304') || dt.dia < 3 ? 0.5 : 1.0;
+      const q = Math.max(0.1, Math.floor(dt.dia * qf * 10 + 1e-6) / 10);
       const extra = { r: 3, q, auto: true };
       if (drillThru) Object.assign(extra, { thru: true, brk: toNum(spec.brk, 1), depth: 10 });
       else if (spec.kind === 'drill' && spec.depthMode === 'tip') Object.assign(extra, { depth: drillFull, depthMode: 'tip' });
@@ -114,6 +118,9 @@
       ops.push(P.newOp(cyc, dt.no, extra));
       // 바로 고칠 수 있게 깊이 문제를 미리 안내 (최종 판단은 검증 모듈)
       const tip = P.tipLength(dt), under = toNum(stock && stock.under, 0);
+      const tipDepth = drillThru ? sz + toNum(spec.brk, 1) + tip : (extra.depthMode === 'tip' ? drillFull : drillFull + tip);
+      if (dt.flute > 0 && tipDepth > dt.flute + 1e-6) notes.push({ level: 'error', msg: 'T' + dt.no + ' 드릴 날 길이 ' + dt.flute + 'mm 보다 깊습니다 (필요 ' + r3(tipDepth) + 'mm). 긴 드릴을 쓰거나 [장비·공구]에서 날 길이를 확인하세요.' });
+      if (dt.dia >= 13) notes.push({ level: 'info', msg: 'Ø' + dt.dia + ' 대경 드릴입니다. 필요하면 작은 드릴로 먼저 뚫는(파일럿) 공정을 직접 구성하세요.' });
       if (drillThru) {
         const need = r3(toNum(spec.brk, 1) + tip);
         if (under < need - 1e-6) notes.push({ level: 'error', msg: '관통 가공에는 소재 아래 여유(패럴렐 틈)가 최소 ' + need + 'mm 필요합니다 (현재 ' + under + 'mm, 드릴 끝각 ' + r3(tip) + ' + 관통 여유 ' + toNum(spec.brk, 1) + '). [소재·가공]에서 하부 여유를 확인하세요.' });
@@ -129,8 +136,16 @@
       const type = spec.tapMode === 'auto' ? (machine.rigidTap ? 'rigid' : 'tap') : spec.tapMode;
       const r = Math.max(5, ceilTo(3 * spec.tapP, 0.5));
       const extra = { r, auto: true };
-      if (spec.thru) Object.assign(extra, { thru: true, brk: toNum(spec.brk, 1), depth: 10 });
-      else Object.assign(extra, { depth: toNum(spec.tapDepth, 0) });
+      if (spec.thru) {
+        // 탭 앞 불완전 나사부가 소재 밖으로 나가도록 max(관통 여유, 3P). 단 하부 여유 안으로 제한
+        const want = Math.max(toNum(spec.brk, 1), ceilTo(3 * spec.tapP, 0.5));
+        const under = toNum(stock && stock.under, 0);
+        const brk = Math.max(toNum(spec.brk, 1), Math.min(want, Math.floor(under * 2) / 2));
+        if (brk < want - 1e-6) notes.push({ level: 'warn', msg: '관통 탭이 소재 아래로 ' + brk + 'mm 만 나갑니다 (권장 ' + want + 'mm). 하부 여유를 늘리면 출구까지 완전한 나사가 됩니다.' });
+        Object.assign(extra, { thru: true, brk, depth: 10 });
+      } else Object.assign(extra, { depth: toNum(spec.tapDepth, 0) });
+      const tapDepthAbs = spec.thru ? sz + extra.brk : extra.depth;
+      if (tapTool.flute > 0 && tapDepthAbs > tapTool.flute + 1e-6) notes.push({ level: 'error', msg: 'T' + tapTool.no + ' 탭 날 길이 ' + tapTool.flute + 'mm 보다 깊습니다 (필요 ' + r3(tapDepthAbs) + 'mm).' });
       ops.push(P.newOp(type, tapTool.no, extra));
       if (type === 'tap') notes.push({ level: 'info', msg: '일반 탭(G84): 텐션·컴프레션 탭 홀더가 필요합니다.' });
     }
