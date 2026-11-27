@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="푸른 AI CAM - 소규모 기계가공 업체용 FANUC 3축 머시닝센터 2.5축 홀 가공 CAM (무설치·오프라인 웹앱)">
+<meta name="theme-color" content="#1e6f5c">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<title>푸른 AI CAM</title>
+<style>
+/*__CSS__*/
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- ① 상단 메뉴 -->
+  <header id="top" class="panel">
+    <div class="brand"><span class="logo" aria-hidden="true">◎</span><b>푸른 AI CAM</b><small id="verTag" class="ver"></small></div>
+    <input id="projName" class="projname" aria-label="프로젝트 이름" maxlength="60">
+    <nav id="steps" class="steps" aria-label="작업 순서"></nav>
+    <div class="topbtns">
+      <button id="btnProjects" title="프로젝트 목록·열기·내보내기">📁 <span class="lbl">프로젝트</span></button>
+      <button id="btnUndo" title="되돌리기 (Ctrl+Z)">↶</button>
+      <button id="btnRedo" title="다시 하기 (Ctrl+Y)">↷</button>
+      <button id="btnDownload" class="primary" title="NC 파일 다운로드">⬇ <span class="lbl">NC 다운로드</span></button>
+      <button id="btnShare" title="공유·QR코드">🔗 <span class="lbl">공유</span></button>
+      <button id="btnSettings" title="설정" aria-label="설정">⚙</button>
+    </div>
+  </header>
+
+  <!-- ② 좌측: 소재·장비·공정 묶음 -->
+  <aside id="left" class="panel mpanel">
+    <nav class="tabs" id="leftTabs" role="tablist">
+      <button data-tab="stock" role="tab">소재·가공</button>
+      <button data-tab="machine" role="tab">장비·공구</button>
+      <button data-tab="bundle" role="tab">공정 묶음</button>
+    </nav>
+    <div id="leftBody" class="pbody"></div>
+  </aside>
+
+  <!-- ③ 중앙: 그래픽 화면 -->
+  <section id="view" class="panel mpanel">
+    <div class="vtools" id="vtools"></div>
+    <div class="canvasWrap" id="canvasWrap">
+      <canvas id="cv" aria-label="가공 화면: 소재, 홀 위치, 가공 경로" tabindex="0"></canvas>
+      <div id="cursorPos" class="cursorpos"></div>
+      <div id="viewHint" class="viewhint"></div>
+    </div>
+  </section>
+
+  <!-- ④ 우측: 홀 그룹·공정·배열 -->
+  <aside id="right" class="panel mpanel">
+    <div id="rightBody" class="pbody"></div>
+  </aside>
+
+  <!-- ⑤ 하단: 검증 결과·G코드 -->
+  <section id="bottom" class="panel mpanel">
+    <nav class="tabs" id="bottomTabs" role="tablist">
+      <button data-tab="check" role="tab">검증 결과 <span id="chkBadge" class="badge"></span></button>
+      <button data-tab="code" role="tab">G코드</button>
+    </nav>
+    <div id="bottomBody" class="pbody"></div>
+  </section>
+
+  <nav id="mnav" aria-label="모바일 화면 전환">
+    <button data-m="left">⚙<br>설정</button>
+    <button data-m="view">▦<br>화면</button>
+    <button data-m="right">◉<br>홀·공정</button>
+    <button data-m="bottom">✔<br>검증·코드</button>
+  </nav>
+</div>
+
+<dialog id="dlg"><div id="dlgBody"></div></dialog>
+<dialog id="dlg2"><div id="dlg2Body"></div></dialog>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+/*__QR__*/
+</script>
+<script>
+/*__CORE__*/
+</script>
+<script>
+/*__UI__*/
+</script>
+</body>
+</html>
