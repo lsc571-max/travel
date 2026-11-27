@@ -87,6 +87,15 @@ label{display:block}
 #app.drawer-open{grid-template-rows:56px minmax(0,1fr) var(--hd) 38px}
 #app.lhide{--wl:0px}#app.lhide #left{display:none}
 #app.rhide{--wr:0px}#app.rhide #right{display:none}
+/* [V0.5] 왼쪽·오른쪽 패널 자리 바꾸기 */
+#app.swap{grid-template-columns:var(--wr) minmax(0,1fr) var(--wl);grid-template-areas:"top top top" "right view left" "drawer drawer left" "status status status"}
+#app.swap #left{border-right:0;border-left:1px solid var(--line)}#app.swap #right{border-left:0;border-right:1px solid var(--line)}
+/* [V0.5] 끌어서 순서 바꾸기 (머리글 아이콘·탭) */
+.sortable [draggable="true"]{cursor:grab}
+.sortable .dragging{opacity:.35}
+.sortable .dropbefore{box-shadow:-3px 0 0 0 var(--brand)}
+.sortable .dropafter{box-shadow:3px 0 0 0 var(--brand)}
+body.arranging #top .hgroup{outline:1.5px dashed var(--brand);outline-offset:2px;border-radius:9px;min-width:30px;min-height:34px}
 .panel{background:var(--surface);min-height:0;min-width:0}
 #top{grid-area:top;display:flex;align-items:center;gap:8px;padding:0 12px;background:var(--surface);border-bottom:1px solid var(--line);box-shadow:var(--shadow);z-index:3}
 #left{grid-area:left;display:flex;flex-direction:column;border-right:1px solid var(--line)}
@@ -291,7 +300,7 @@ dialog::backdrop{background:rgba(10,15,22,.5);backdrop-filter:blur(2px)}
 .qrbox{display:flex;flex-direction:column;align-items:center;gap:10px}
 .qrbox canvas{width:min(340px,80vw);height:auto;image-rendering:pixelated;background:#fff;border-radius:8px}
 .adm{border:2px solid var(--warn);border-radius:10px;padding:8px 10px;margin:8px 0;background:var(--warn-soft)}
-#toasts{position:fixed;left:50%;top:64px;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:9999;pointer-events:none;align-items:center}
+#toasts{position:fixed;left:50%;top:auto;bottom:52px;transform:translateX(-50%);display:flex;flex-direction:column-reverse;gap:6px;z-index:9999;pointer-events:none;align-items:center}
 .toast{background:#1d2630;color:#fff;padding:9px 16px;border-radius:9px;font-size:.95em;box-shadow:var(--shadow2);max-width:90vw}
 .toast.err{background:var(--err)}.toast.ok{background:var(--ok)}.toast.warn{background:#9a5b00}
 
@@ -304,6 +313,9 @@ dialog::backdrop{background:rgba(10,15,22,.5);backdrop-filter:blur(2px)}
 #splitL{left:calc(var(--wl) - 5px)}
 #splitR{right:calc(var(--wr) - 5px)}
 #app.lhide #splitL,#app.rhide #splitR{display:none}
+#app.swap #splitL{left:auto;right:calc(var(--wl) - 5px)}
+#app.swap #splitR{right:auto;left:calc(var(--wr) - 5px)}
+#app.swap .split.h{left:0;right:var(--wl)}
 .split.h{left:var(--wl);right:0;height:10px;bottom:calc(38px + var(--hd) - 5px);cursor:row-resize;display:none}
 .split.h::after{top:4px;height:3px;left:0;right:0}
 #app.drawer-open .split.h{display:block}
@@ -370,6 +382,7 @@ body.resizing.rows{cursor:row-resize}
 .stages .stg.on{border-style:solid;border-color:var(--brand);background:var(--brand-soft);color:var(--text)}
 .stages .arr{align-self:center;color:var(--muted);font-style:normal}
 .row.wrap{flex-wrap:wrap;gap:6px 12px}
+.reflist{margin:4px 0 4px 16px;padding:0}
 .treehint{font-size:.78em;color:var(--muted);margin:-2px 2px 6px}
 .titem input.rename{flex:1;min-width:0;min-height:26px;padding:2px 6px;font:inherit}
 .titem .qa .more{font-size:16px;line-height:1}
@@ -390,7 +403,8 @@ details.pop[open]>summary{border-color:var(--brand);background:var(--brand-soft)
 /* ---------- 반응형 ---------- */
 @media (max-width:1280px){.tbtn .lbl{display:none}}
 @media (max-width:900px){
-  #app,#app.drawer-open{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) 34px auto;grid-template-areas:"top" "main" "status" "nav"}
+  .paneltog{display:none}
+  #app,#app.drawer-open,#app.swap{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) 34px auto;grid-template-areas:"top" "main" "status" "nav"}
   #app>.mpanel{grid-area:main;display:none!important;border:0}
   #app>.mpanel.mact{display:flex!important}
   #mnav{grid-area:nav;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:4px;background:var(--surface);border-top:1px solid var(--line)}

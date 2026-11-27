@@ -412,6 +412,50 @@ function serve() {
     await c5.close();
   }
 
+  // 14-3. [V0.5 2차] 포켓 단계·다각·측벽 형상 · 2D 크기 손잡이 · 단면도 · 패널 바꾸기 · 아이콘/탭 끌어 옮기기
+  {
+    const c7 = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const p7 = await c7.newPage(); const e7 = [];
+    p7.on('pageerror', e => e7.push(e.message)); p7.on('console', m => { if (m.type() === 'error') e7.push(m.text()); }); p7.on('dialog', d => d.accept());
+    await p7.goto('file://' + HTML); await sleep(400);
+    await p7.click('#btnProjects'); await p7.click('#dlg button:has-text("새 프로젝트")'); await sleep(200);
+    ok('[V0.5] 작업 순서: 다음 할 일 안내 (가공 추가)', /다음 할 일/.test(await p7.textContent('#tree .nextstep')) && /가공을 추가/.test(await p7.textContent('#tree .nextstep')));
+    await p7.click('#tree .addbtn.k-pocket'); await sleep(250);
+    ok('[V0.5] 포켓 가공 단계 표시 (황삭 → 중삭 → 정삭)', (await p7.locator('#rightBody .stages .stg').count()) === 3);
+    await p7.click('#rightBody .stages + .row label:has-text("중삭")'); await sleep(250);
+    const q1 = await p7.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[0]; return { ops: g.ops.map(o => o.type).join(','), ok: U.downloadState().ok, ne: U.S.nc.verify.errors.length }; });
+    ok('[V0.5] 중삭 체크 → 황삭·중삭·바닥 정삭·측벽 정삭, 검증 통과', q1.ops === 'pocketRough,pocketSemi,pocketFloor,pocketWall' && q1.ok && q1.ne === 0, JSON.stringify(q1));
+    await p7.click('#rightBody .seg button:has-text("다각")'); await sleep(250);
+    const q2 = await p7.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[0]; return { shape: g.spec.shape, op: g.ops[0].shape, ok: U.downloadState().ok }; });
+    ok('[V0.5] 다각(육각) 포켓 → 자유 형상 경로, 검증 통과', q2.shape === 'ngon' && q2.op === 'poly' && q2.ok, JSON.stringify(q2));
+    await p7.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[0]; U.mutate(() => { g.spec.shape = 'rect'; g.spec.draft = 5; g.spec.floorR = 1; }); });
+    await sleep(400);
+    const q3 = await p7.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[0]; return { ops: g.ops.map(o => o.type).join(','), ok: U.downloadState().ok, ne: U.S.nc.verify.errors.length, m: U.S.nc.verify.match }; });
+    ok('[V0.5] 구배 5°·바닥 R1 → 측벽 형상 공정, 검증기 형상 판정 통과', /pocketProfile/.test(q3.ops) && q3.ok && q3.ne === 0 && q3.m === true, JSON.stringify(q3));
+    // 2D 크기 손잡이
+    await p7.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[0]; U.S.sel = { kind: 'group', gid: g.id, hid: g.holes[0].id }; U.renderAll(); });
+    const hp = await p7.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[0], h = g.holes[0], r = document.querySelector('#cv').getBoundingClientRect(); const [x, y] = U.G.w2s(h.x + g.spec.w / 2, h.y); return { x: r.left + x, y: r.top + y, w0: g.spec.w }; });
+    await p7.mouse.move(hp.x, hp.y); await p7.mouse.down(); await p7.mouse.move(hp.x + 30, hp.y, { steps: 5 }); await p7.mouse.up(); await sleep(400);
+    const w1 = await p7.evaluate(() => window.__PCAM_UI__.P.groups[0].spec.w);
+    ok('[V0.5] 2D 손잡이 끌기 → 포켓 가로 커짐', w1 > hp.w0 + 5, hp.w0 + '→' + w1);
+    await p7.click('#vtools button:has-text("단면도")'); await sleep(300);
+    ok('[V0.5] 단면도 켜기', await p7.evaluate(() => window.__PCAM_UI__.S.sec.on === true));
+    if (SHOT) await p7.screenshot({ path: path.join(SHOT, 'e2e-10-section.png') });
+    // 패널 바꾸기·아이콘/탭 끌어 옮기기 (저장 후 다시 열어도 유지)
+    await p7.click('#togSwap'); await sleep(200);
+    const sw = await p7.evaluate(() => document.querySelector('#left').getBoundingClientRect().left > document.querySelector('#right').getBoundingClientRect().left);
+    ok('[V0.5] 왼쪽·오른쪽 패널 자리 바꾸기', sw);
+    await p7.locator('#btnSheet').dragTo(p7.locator('#btnUndo')); await sleep(150);
+    await p7.locator('#tab3d').dragTo(p7.locator('#tab2d')); await sleep(150);
+    await p7.reload(); await sleep(500);
+    const ar = await p7.evaluate(() => ({ g0: [...document.querySelector('#top .hgroup').children].map(x => x.id)[0], t0: document.querySelector('#view .vtabs button').id, sw: document.querySelector('#app').classList.contains('swap') }));
+    ok('[V0.5] 머리글 아이콘·화면 탭 끌어 옮기기 · 다시 열어도 유지', ar.g0 === 'btnSheet' && ar.t0 === 'tab3d' && ar.sw, JSON.stringify(ar));
+    await p7.click('#togSwap'); await p7.click('#togR'); await sleep(150);
+    ok('[V0.5] 속성 패널 숨기면 그 폭이 0 (빈 칸 없음)', await p7.evaluate(() => getComputedStyle(document.querySelector('#app')).getPropertyValue('--wr').trim() === '0px'));
+    ok('[V0.5 2차] 화면 오류 없음', e7.length === 0, e7.join('|'));
+    await c7.close();
+  }
+
   // 14. 모바일 화면
   const mob = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const mp = await mob.newPage(); const mErr = [];

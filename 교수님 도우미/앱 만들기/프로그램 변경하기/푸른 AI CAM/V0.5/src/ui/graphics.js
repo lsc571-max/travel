@@ -113,7 +113,9 @@
     }
     // 구멍·포켓 (포켓은 실제 크기의 사각/원형, 구멍은 공구 직경 원) + 바닥 Z 표시
     const tm = C.toolMap(machine());
+    const focus = S.sel && S.sel.kind === 'group' ? S.sel.gid : null; // [V0.5] 선택한 가공 강조, 나머지는 흐리게
     P.groups.forEach(g => {
+      x.globalAlpha = focus && g.id !== focus ? 0.4 : 1;
       const ext = extentOf(g, tm), z = S.gz ? S.gz.get(g.id) : null;
       const lbl = S.gzLabel ? S.gzLabel.get(g.id) : '';
       if (ext.face) { // 평면: 소재 전체에 빗금
@@ -158,6 +160,26 @@
         if (hh.id === S.sel.hid) { x.strokeStyle = cssVar('--brand'); x.lineWidth = 2; x.setLineDash([3, 2]); ring(8); x.setLineDash([]); x.fillStyle = cssVar('--text'); x.font = '12px ' + cssVar('--mono'); x.fillText('X' + uf(hh.x) + ' Y' + uf(hh.y) + (lbl ? '  ' + lbl : ''), px + Math.min(rr, 60) + 10, py + 4); }
       });
     });
+    x.globalAlpha = 1;
+    // [V0.5] 선택한 포켓·윤곽·모따기 크기 손잡이 (끌어서 크기 조절) + 끄는 중 미리보기
+    const hs = handlesOf();
+    if (drag && drag.kind === 'resize') {
+      const d = drag, [px, py] = w2s(d.h.x, d.h.y);
+      x.save(); x.strokeStyle = cssVar('--brand'); x.lineWidth = 2; x.setLineDash([6, 4]); x.beginPath();
+      if (d.dims.shape === 'rect') { const hw = d.dims.w / 2 * sc, hh2 = d.dims.h / 2 * sc; roundRect(x, px - hw, py - hh2, hw * 2, hh2 * 2, Math.min(d.dims.cr * sc, hw, hh2)); }
+      else if (d.dims.shape === 'ngon') { C.GEOM.ngonPoly(d.dims.sides, d.dims.dia / 2, d.dims.rot, d.dims.cr).forEach((p, k) => { const [qx, qy] = w2s(d.h.x + p[0], d.h.y + p[1]); if (k) x.lineTo(qx, qy); else x.moveTo(qx, qy); }); x.closePath(); }
+      else x.arc(px, py, d.dims.dia / 2 * sc, 0, Math.PI * 2);
+      x.stroke(); x.restore();
+      const t = d.dims.shape === 'rect' ? uf(d.dims.w) + ' × ' + uf(d.dims.h) : 'Ø' + uf(d.dims.dia);
+      x.font = '600 13px ' + cssVar('--font'); const tw = x.measureText(t).width;
+      x.fillStyle = cssVar('--brand'); x.fillRect(px - tw / 2 - 6, py - 30, tw + 12, 20); x.fillStyle = '#fff'; x.textAlign = 'center'; x.fillText(t, px, py - 15); x.textAlign = 'start';
+    } else hs.forEach(hd => { const [qx, qy] = w2s(hd.x, hd.y); x.fillStyle = cssVar('--surface'); x.strokeStyle = cssVar('--brand'); x.lineWidth = 2; x.beginPath(); x.rect(qx - 5, qy - 5, 10, 10); x.fill(); x.stroke(); });
+    // [V0.5] 단면선
+    if (S.sec && S.sec.on) {
+      const sy = w2s(0, S.sec.y)[1];
+      x.save(); x.strokeStyle = cssVar('--info'); x.lineWidth = 1.5; x.setLineDash([10, 4, 2, 4]); x.beginPath(); x.moveTo(0, sy); x.lineTo(w, sy); x.stroke(); x.restore();
+      x.fillStyle = cssVar('--info'); x.font = '600 12px ' + cssVar('--font'); x.fillText('단면 A–A  Y' + uf(S.sec.y) + '  (선을 끌어 이동)', 8, sy - 6);
+    }
     // NC 해석 결과 오버레이 (독립 검증기의 해석 결과)
     const vr = S.nc.edited ? S.nc.editVerify : S.nc.verify;
     if (S.showNC && vr) {
@@ -171,12 +193,58 @@
       const [p0, q0] = w2s(drag.w0[0], drag.w0[1]), [p1, q1] = w2s(drag.cur[0], drag.cur[1]);
       x.strokeStyle = '#d9731a'; x.setLineDash([4, 3]); x.strokeRect(Math.min(p0, p1), Math.min(q0, q1), Math.abs(p1 - p0), Math.abs(q1 - q0)); x.setLineDash([]);
     }
+    if (S.sec && S.sec.on) drawSection(x, w, h);
     // 축척 막대
     let bar = 10; while (bar * sc < 60) bar *= (String(bar).startsWith('2') ? 2.5 : 2); while (bar * sc > 160) bar /= 2;
     x.strokeStyle = cssVar('--text'); x.lineWidth = 2; x.beginPath(); x.moveTo(w - 20 - bar * sc, h - 14); x.lineTo(w - 20, h - 14); x.stroke();
     x.fillStyle = cssVar('--text'); x.font = '11px ' + cssVar('--font'); x.fillText(C.r3(bar) + ' mm', w - 20 - bar * sc, h - 20);
   }
+  // [V0.5] 선택 위치의 크기 손잡이 (월드 좌표): 사각 = 오른쪽(가로)·위(세로)·오른쪽 위(둘 다), 원·다각 = 오른쪽(지름)
+  function handlesOf() {
+    if (!S.sel || S.sel.kind !== 'group' || !S.sel.hid) return [];
+    const g = P.groups.find(q => q.id === S.sel.gid), h = g && g.holes.find(q => q.id === S.sel.hid), sp = g && g.spec;
+    if (!h || !sp || !['pocket', 'contour', 'chamfer'].includes(sp.kind) || !['rect', 'circle', 'ngon'].includes(sp.shape)) return [];
+    if (sp.shape === 'rect') return [{ id: 'w', x: h.x + sp.w / 2, y: h.y }, { id: 'h', x: h.x, y: h.y + sp.h / 2 }, { id: 'wh', x: h.x + sp.w / 2, y: h.y + sp.h / 2 }].map(o => Object.assign(o, { g, h, sp }));
+    return [{ id: 'd', x: h.x + sp.dia / 2, y: h.y, g, h, sp }];
+  }
+  // [V0.5] 단면도: 가공 결과(높이맵 시뮬레이션)를 단면선 Y 에서 잘라 아래 띠에 그림 (가로 축척은 2D 와 같음)
+  let secCache = { key: '', sim: null };
+  function secSim() {
+    const vr = S.nc.edited ? S.nc.editVerify : S.nc.verify;
+    if (!vr || !vr.motions) return null;
+    const key = (S.nc.edited ? S.nc.editText : S.nc.text).length + '|' + vr.motions.length + '|' + JSON.stringify(P.stock);
+    if (secCache.key !== key) {
+      const sim = C.SIM.createSim(P.stock, { maxCells: 160000 }), tm = C.toolMap(machine());
+      vr.motions.forEach(mv => { const t = tm.get(mv.t); if (t) C.SIM.cutMotion(sim, mv, t); });
+      secCache = { key, sim };
+    }
+    return secCache.sim;
+  }
+  function drawSection(x, w, h) {
+    const bh = Math.max(110, Math.min(220, h * 0.3)), top = h - bh;
+    x.fillStyle = cssVar('--surface'); x.globalAlpha = 0.96; x.fillRect(0, top, w, bh); x.globalAlpha = 1;
+    x.strokeStyle = cssVar('--line2'); x.lineWidth = 1; x.beginPath(); x.moveTo(0, top + .5); x.lineTo(w, top + .5); x.stroke();
+    const r = C.stockRect(P.stock), sz = P.stock.sz, sim = secSim();
+    const vs = Math.min((bh - 40) / Math.max(sz, 1), S.view.scale * 4), z2y = z => top + 22 + (-z) * vs;
+    const [sx0] = w2s(r.x0, 0), [sx1] = w2s(r.x1, 0);
+    x.fillStyle = cssVar('--muted'); x.font = '600 11.5px ' + cssVar('--font');
+    x.fillText('단면 A–A (Y' + uf(S.sec.y) + ')  ·  세로 ' + (vs / S.view.scale > 1.05 ? '×' + C.r3(vs / S.view.scale) + ' 확대' : '실제 비율') + (sim ? '' : '  ·  NC 가 없어 소재만 표시'), 8, top + 14);
+    // 소재 (남은 살) 채우기
+    x.beginPath(); x.moveTo(sx0, z2y(-sz));
+    const n = Math.max(2, Math.min(1400, Math.round(sx1 - sx0)));
+    for (let i = 0; i <= n; i++) {
+      const px = sx0 + (sx1 - sx0) * i / n, wx = s2w(px, 0)[0];
+      const hz = sim ? Math.max(-sz, Math.min(0, C.SIM.heightAt(sim, wx, S.sec.y))) : 0;
+      x.lineTo(px, z2y(hz));
+    }
+    x.lineTo(sx1, z2y(-sz)); x.closePath();
+    x.fillStyle = cssVar('--cv-stock'); x.fill(); x.strokeStyle = cssVar('--text2'); x.lineWidth = 1.2; x.stroke();
+    // Z 눈금
+    x.strokeStyle = cssVar('--line'); x.fillStyle = cssVar('--muted'); x.font = '10.5px ' + cssVar('--mono');
+    let st = 1; while (st * vs < 14) st *= (String(st).startsWith('2') ? 2.5 : 2);
+    for (let z = 0; z >= -sz - 1e-9; z -= st) { const yy = Math.round(z2y(z)) + .5; x.beginPath(); x.moveTo(sx0 - 6, yy); x.lineTo(sx0, yy); x.stroke(); x.fillText('Z' + uf(C.r3(z)), Math.max(2, sx0 - 46), yy + 3); }
+  }
     const wrap = fn => function () { sync(); return fn.apply(null, arguments); };
-    return { extentOf, size: wrap(canvasSize), w2s: wrap(w2s), s2w: wrap(s2w), fit: wrap(fitView), zoom: wrap(zoom), draw: wrap(drawView) };
+    return { extentOf, handles: wrap(handlesOf), size: wrap(canvasSize), w2s: wrap(w2s), s2w: wrap(s2w), fit: wrap(fitView), zoom: wrap(zoom), draw: wrap(drawView) };
   };
 })();
