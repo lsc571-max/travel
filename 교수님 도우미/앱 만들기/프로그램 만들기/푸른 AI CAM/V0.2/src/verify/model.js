@@ -63,6 +63,8 @@
       const gname = '[' + g.name + ']';
       const dia = P.holeDiaForGroup(g, tm);
       const rad = dia / 2;
+      // 소재 범위·클램프는 이 홀에 쓰는 가장 큰 공구(스팟 드릴 포함) 반경으로 검사 (NC 검증기와 같은 기준)
+      const cutRad = Math.max(rad, ...g.ops.map(o => { const t = tm.get(o.toolNo); return t && t.dia > 0 ? t.dia / 2 : 0; }));
       totalHoles += g.holes.length;
       if (g.holes.length && !g.ops.length) add('warn', 4, gname + ' 홀은 있지만 공정이 없어 가공되지 않습니다.', { gid: g.id });
       if (!g.holes.length && g.ops.length) add('info', 4, gname + ' 공정은 있지만 홀이 없습니다.', { gid: g.id });
@@ -73,15 +75,15 @@
         const hn = gname + ' 홀 ' + (hi + 1);
         if (!isNum(h.x) || !isNum(h.y)) { add('error', 1, hn + ': 좌표가 숫자가 아닙니다.', ref); return; }
         if (Math.abs(h.x) > FANUC_MAX || Math.abs(h.y) > FANUC_MAX) add('error', 1, hn + ': 좌표가 입력 한계를 넘습니다.', ref);
-        if (h.x - rad < sr.x0 - EPS || h.x + rad > sr.x1 + EPS || h.y - rad < sr.y0 - EPS || h.y + rad > sr.y1 + EPS)
-          add('error', 2, hn + ' (X' + fmt(h.x) + ' Y' + fmt(h.y) + '): 홀(Ø' + r3(dia) + ')이 소재 밖으로 벗어납니다.', ref);
+        if (h.x - cutRad < sr.x0 - EPS || h.x + cutRad > sr.x1 + EPS || h.y - cutRad < sr.y0 - EPS || h.y + cutRad > sr.y1 + EPS)
+          add('error', 2, hn + ' (X' + fmt(h.x) + ' Y' + fmt(h.y) + '): ' + (cutRad > rad ? '공구' : '홀') + '(Ø' + r3(cutRad * 2) + ')이 소재 밖으로 벗어납니다.', ref);
         else {
           const wall = Math.min(h.x - rad - sr.x0, sr.x1 - h.x - rad, h.y - rad - sr.y0, sr.y1 - h.y - rad);
           if (dia > 0 && wall < Math.max(1, dia * 0.25)) add('warn', 2, hn + ': 소재 가장자리까지 남는 살 두께가 ' + r3(wall) + 'mm 로 얇습니다.', ref);
         }
         // 10. 클램프 영역
         project.clamps.forEach((c, ci) => {
-          if (inRect(h.x, h.y, clampRect(c, rad + 1))) add('error', 10, hn + ': 클램프 ' + (ci + 1) + ' 영역과 겹칩니다 (공구 충돌).', ref);
+          if (inRect(h.x, h.y, clampRect(c, cutRad + 1))) add('error', 10, hn + ': 클램프 ' + (ci + 1) + ' 영역과 겹칩니다 (공구 충돌).', ref);
         });
         allHoles.push({ g, h, rad, hi, ref, hn });
       });

@@ -3193,8 +3193,10 @@ var qrcode = function() {
   const { uid, toNum, MATERIALS, ORIGIN_LABEL, GROUP_COLORS, MAX_HOLES, newProject, newOp } = P;
   const isSpot = t => { const d = P.OPS.get(t); return !!d && d.role === 'spot'; };
 
+  // 지원하지 않는 가공 방식은 다른 가공으로 바꾸지 않는다 → null (호출하는 쪽에서 제외·경고)
   function normalizeOp(o) {
-    const type = P.OPS.get(o && o.type) ? o.type : 'drill';
+    if (!P.OPS.get(o && o.type)) return null;
+    const type = o.type;
     const n = newOp(type, Math.round(toNum(o && o.toolNo, 1)));
     if (o && typeof o.id === 'string') n.id = o.id;
     ['depth', 'brk', 'r', 'q', 'dwell', 'rpm', 'feed'].forEach(k => { n[k] = toNum(o && o[k], n[k]); });
@@ -3233,8 +3235,13 @@ var qrcode = function() {
   }
   function normalizeBundle(b) {
     b = b || {};
-    return { id: typeof b.id === 'string' ? b.id : uid('b'), name: String(b.name || '공정 묶음').slice(0, 60), desc: String(b.desc || '').slice(0, 200), ops: Array.isArray(b.ops) ? b.ops.slice(0, 20).filter(o => P.OPS.get(o && o.type)).map(o => { const n = normalizeOp(o); delete n.id; return n; }) : [] };
+    const src = Array.isArray(b.ops) ? b.ops.slice(0, 20) : [];
+    const ops = src.map(normalizeOp).filter(Boolean).map(n => { delete n.id; return n; });
+    const out = { id: typeof b.id === 'string' ? b.id : uid('b'), name: String(b.name || '공정 묶음').slice(0, 60), desc: String(b.desc || '').slice(0, 200), ops };
+    if (ops.length < src.length) out.importWarnings = ['공정 묶음 "' + out.name + '": 지원하지 않는 가공 방식 ' + (src.length - ops.length) + '개 제외'];
+    return out;
   }
+
 
   // 그룹 대표 홀 직경 (센터 드릴 제외 최대 공구 직경, 없으면 전체 최대)
   function holeDiaForGroup(group, tools) {
@@ -3354,7 +3361,9 @@ var qrcode = function() {
   function applyBundle(bundle, machine) {
     const tm = toolMap(machine), notes = [];
     const ops = bundle.ops.map(t => {
-      const op = P.normalizeOp(t); op.id = uid('o');
+      const op = P.normalizeOp(t);
+      if (!op) { notes.push('지원하지 않는 가공 방식(' + String(t && t.type).slice(0, 30) + ')은 제외했습니다. 공정 확인 필요'); return null; }
+      op.id = uid('o');
       const cur = tm.get(op.toolNo);
       if (t.toolSpec && !specMatches(cur, t.toolSpec)) {
         const alt = findToolBySpec(machine, t.toolSpec);
@@ -3363,7 +3372,7 @@ var qrcode = function() {
       }
       delete op.toolSpec;
       return op;
-    });
+    }).filter(Boolean);
     return { ops, notes };
   }
   function opsToBundle(name, ops, machine) {
@@ -3381,7 +3390,7 @@ var qrcode = function() {
     const p = newProject(machine); p.stock = clone(stock); p.groups = [g]; p.machineId = machine.id;
     const v = P.validateProject(p, machine);
     const issues = v.issues.filter(i => ![1, 2, 3, 10, 11].includes(i.cat) && i.level !== 'info');
-    return { notes: res.notes, issues, ok: !issues.some(i => i.level === 'error') && !res.notes.some(n => n.includes('없습니다')) };
+    return { notes: res.notes, issues, ok: !issues.some(i => i.level === 'error') && !res.notes.some(n => n.includes('없습니다') || n.includes('제외')) };
   }
 
   /* ---------------- 가공 계획 (공정 순서) ---------------- */
@@ -3647,6 +3656,8 @@ var qrcode = function() {
       const gname = '[' + g.name + ']';
       const dia = P.holeDiaForGroup(g, tm);
       const rad = dia / 2;
+      // 소재 범위·클램프는 이 홀에 쓰는 가장 큰 공구(스팟 드릴 포함) 반경으로 검사 (NC 검증기와 같은 기준)
+      const cutRad = Math.max(rad, ...g.ops.map(o => { const t = tm.get(o.toolNo); return t && t.dia > 0 ? t.dia / 2 : 0; }));
       totalHoles += g.holes.length;
       if (g.holes.length && !g.ops.length) add('warn', 4, gname + ' 홀은 있지만 공정이 없어 가공되지 않습니다.', { gid: g.id });
       if (!g.holes.length && g.ops.length) add('info', 4, gname + ' 공정은 있지만 홀이 없습니다.', { gid: g.id });
@@ -3657,15 +3668,15 @@ var qrcode = function() {
         const hn = gname + ' 홀 ' + (hi + 1);
         if (!isNum(h.x) || !isNum(h.y)) { add('error', 1, hn + ': 좌표가 숫자가 아닙니다.', ref); return; }
         if (Math.abs(h.x) > FANUC_MAX || Math.abs(h.y) > FANUC_MAX) add('error', 1, hn + ': 좌표가 입력 한계를 넘습니다.', ref);
-        if (h.x - rad < sr.x0 - EPS || h.x + rad > sr.x1 + EPS || h.y - rad < sr.y0 - EPS || h.y + rad > sr.y1 + EPS)
-          add('error', 2, hn + ' (X' + fmt(h.x) + ' Y' + fmt(h.y) + '): 홀(Ø' + r3(dia) + ')이 소재 밖으로 벗어납니다.', ref);
+        if (h.x - cutRad < sr.x0 - EPS || h.x + cutRad > sr.x1 + EPS || h.y - cutRad < sr.y0 - EPS || h.y + cutRad > sr.y1 + EPS)
+          add('error', 2, hn + ' (X' + fmt(h.x) + ' Y' + fmt(h.y) + '): ' + (cutRad > rad ? '공구' : '홀') + '(Ø' + r3(cutRad * 2) + ')이 소재 밖으로 벗어납니다.', ref);
         else {
           const wall = Math.min(h.x - rad - sr.x0, sr.x1 - h.x - rad, h.y - rad - sr.y0, sr.y1 - h.y - rad);
           if (dia > 0 && wall < Math.max(1, dia * 0.25)) add('warn', 2, hn + ': 소재 가장자리까지 남는 살 두께가 ' + r3(wall) + 'mm 로 얇습니다.', ref);
         }
         // 10. 클램프 영역
         project.clamps.forEach((c, ci) => {
-          if (inRect(h.x, h.y, clampRect(c, rad + 1))) add('error', 10, hn + ': 클램프 ' + (ci + 1) + ' 영역과 겹칩니다 (공구 충돌).', ref);
+          if (inRect(h.x, h.y, clampRect(c, cutRad + 1))) add('error', 10, hn + ': 클램프 ' + (ci + 1) + ' 영역과 겹칩니다 (공구 충돌).', ref);
         });
         allHoles.push({ g, h, rad, hi, ref, hn });
       });
@@ -3771,6 +3782,9 @@ var qrcode = function() {
    * 문법, 이동 경로, 소재/클램프 충돌, 조건을 검사한다. 사용자 수정 NC도 동일하게 검사. */
   const ALLOWED_G = new Set([0, 1, 4, 17, 21, 28, 40, 43, 49, 54, 55, 56, 57, 58, 59, 73, 80, 81, 82, 83, 84, 90, 91, 94, 98, 99]);
   const ALLOWED_M = new Set([0, 1, 2, 3, 5, 6, 8, 9, 29, 30]);
+  // FANUC 모달 그룹 (같은 그룹 동시 지령 금지 검사용)
+  const GROUPS = [['00 비모달', [4, 28]], ['01 이동', [0, 1]], ['02 평면', [17]], ['03 절대/증분', [90, 91]], ['05 이송', [94]], ['06 단위', [21]],
+    ['07 반경보정', [40]], ['08 공구길이', [43, 49]], ['09 고정사이클', [73, 80, 81, 82, 83, 84]], ['10 복귀', [98, 99]], ['14 좌표계', [54, 55, 56, 57, 58, 59]]];
   function verifyNC(text, ctx) {
     const errors = [], warnings = [], hits = [], moves = [];
     const E = (ln, m) => { if (errors.length < 200) errors.push({ line: ln, msg: m }); };
@@ -3782,6 +3796,7 @@ var qrcode = function() {
     const drilled = new Map(); // 위치별 드릴 구멍 기록 (탭 기초 구멍 확인용)
     const wantWcs = ctx.settings && /^G5[4-9]$/.test(ctx.settings.wcs) ? parseInt(ctx.settings.wcs.slice(1), 10) : null;
     let wcsChecked = false;
+    const zSafe = Math.max(1, ...(ctx.clamps || []).map(c => c.height + CLAMP_MARGIN)); // XY 미지정 상태 하강 한계
     const s = { feedMode: null, units: null, abs: true, motion: null, cycle: null, ret: 98, h: null, hNeed: true, tool: null, nextT: null, spin: false, S: 0, F: 0,
       m29: false, m29S: 0, x: null, y: null, z: Infinity, cz: null, cr: null, cq: null, cp: 0, initZ: null, cool: false, ended: false, wcs: null };
     let pct = 0, hasO = false, unitsWarned = false, sawMotion = false;
@@ -3801,7 +3816,7 @@ var qrcode = function() {
 
     // 공정 검증 (수정한 NC 포함): 탭 기초 구멍, 절삭 조건 한계
     function checkProcess(ln, tool, x, y) {
-      const key = r3(x) + ',' + r3(y);
+      const key = s.wcs + ':' + r3(x) + ',' + r3(y); // 좌표계별로 구분
       if (s.cycle !== 84 && tool.type === 'drill') {
         if (!drilled.has(key)) drilled.set(key, []);
         drilled.get(key).push({ dia: tool.dia, fullZ: s.cz + tipLength(tool) });
@@ -3864,6 +3879,12 @@ var qrcode = function() {
       if (badG.length) { E(ln, '검증할 수 없는 G코드: ' + badG.map(g => 'G' + g).join(', ') + (badG.includes(20) ? ' (인치 단위 미지원)' : '')); continue; }
       if (badM.length) { E(ln, '검증할 수 없는 M코드: ' + badM.map(m => 'M' + m).join(', ') + (badM.includes(4) ? ' (역회전 미지원)' : '')); continue; }
       if (M.length > 1) W(ln, '한 블록에 M코드가 여러 개입니다 (장비 설정에 따라 알람).');
+      // 같은 모달 그룹의 G코드가 한 블록에 둘 이상이면 FANUC 은 마지막 것만 적용 → 해석이 어긋나므로 차단
+      const grpOf = g => GROUPS.find(x => x[1].includes(g));
+      const seenGrp = new Map(); let grpBad = null;
+      G.forEach(g => { const gr = grpOf(g); if (!gr) return; if (seenGrp.has(gr[0])) grpBad = gr[0]; seenGrp.set(gr[0], g); });
+      if (grpBad) { E(ln, '같은 그룹(' + grpBad + ')의 G코드가 한 블록에 여러 개입니다: ' + G.map(g => 'G' + g).join(' ') + ' — 한 블록에 하나만 쓰세요.'); continue; }
+      if (G.some(g => g === 0 || g === 1) && G.some(g => [73, 81, 82, 83, 84].includes(g))) { E(ln, 'G00/G01 과 고정 사이클을 한 블록에 함께 쓸 수 없습니다.'); continue; }
 
       // 모달 설정
       let g28 = false, g43 = false, newCycle = null, g04 = false;
@@ -3877,7 +3898,7 @@ var qrcode = function() {
         else if (g >= 54 && g <= 59) s.wcs = g;
         else if (g === 49) { s.h = null; }
         else if (g === 80) { s.cycle = null; s.m29 = false; s.initZ = null; }
-        else if (g === 0 || g === 1) { s.motion = g; if (s.cycle !== null) { s.cycle = null; s.initZ = null; } }
+        else if (g === 0 || g === 1) { s.motion = g; s.m29 = false; s.m29S = 0; if (s.cycle !== null) { s.cycle = null; s.initZ = null; } }
         else if (g === 28) g28 = true;
         else if (g === 43) g43 = true;
         else if (g === 4) g04 = true;
@@ -3903,7 +3924,7 @@ var qrcode = function() {
           if (s.nextT === null || !tm.get(s.nextT)) E(ln, '교환할 공구(T)가 지정되지 않았습니다.');
           if (s.z !== Infinity) W(ln, 'Z축 원점 복귀(G91 G28 Z0.) 없이 공구를 교환합니다 (장비 M06 매크로 확인).');
           if (s.spin) W(ln, '주축 회전 중 공구 교환 (M05 권장).');
-          s.tool = s.nextT; s.hNeed = true; s.h = null;
+          s.tool = s.nextT; s.hNeed = true; s.h = null; s.spin = false; // 대부분의 M06 매크로는 주축 정지(정위치) → M03 재지령 필요
         } else if (m === 3) { if (!(s.S > 0)) E(ln, '회전수(S) 없이 M03 주축 정회전.'); s.spin = true; }
         else if (m === 5) s.spin = false;
         else if (m === 8) s.cool = true;
@@ -3936,14 +3957,13 @@ var qrcode = function() {
       }
       if (hasAxis && !s.units) { if (!unitsWarned) E(ln, 'G21(mm 단위) 지정 전에 이동 명령이 있습니다.'); unitsWarned = true; }
       if (hasAxis && !s.abs) { E(ln, '증분(G91) 이동은 검증기가 지원하지 않습니다 (G28 제외).'); continue; }
-      if (hasAxis && !wcsChecked) {
-        wcsChecked = true;
-        if (s.wcs === null) E(ln, '공작물 좌표계(G54~G59) 지정 없이 이동합니다.');
-        else if (wantWcs !== null && s.wcs !== wantWcs) E(ln, '좌표계 G' + s.wcs + ' 이(가) 프로젝트 설정 G' + wantWcs + ' 와 다릅니다.');
+      if (hasAxis) {
+        if (s.wcs === null) { if (!wcsChecked) E(ln, '공작물 좌표계(G54~G59) 지정 없이 이동합니다.'); wcsChecked = true; }
+        else if (wantWcs !== null && s.wcs !== wantWcs) E(ln, '좌표계 G' + s.wcs + ' 이(가) 프로젝트 설정 G' + wantWcs + ' 와 다른 상태에서 이동합니다.');
       }
-      if (hasAxis && wcsChecked && wantWcs !== null && s.wcs !== null && s.wcs !== wantWcs && G.some(g => g >= 54 && g <= 59)) E(ln, '좌표계 G' + s.wcs + ' 로 바뀌었습니다 (프로젝트 설정 G' + wantWcs + ').');
 
       const rad = s.tool && tm.get(s.tool) ? tm.get(s.tool).dia / 2 : 0;
+      if (newCycle !== null && newCycle !== 84) { s.m29 = false; s.m29S = 0; }
       if (newCycle !== null) {
         if (s.cycle === null) s.initZ = s.z;
         s.cycle = newCycle;
@@ -3951,6 +3971,7 @@ var qrcode = function() {
       }
       if (s.cycle !== null && (newCycle !== null || A.X || A.Y || A.Z || A.R)) {
         // 고정 사이클 실행 (구멍 1개)
+        if (s.cycle === 84 && s.m29 && A.S) E(ln, '리지드 탭(M29) 중 G84 블록에서 S를 바꿀 수 없습니다 (F = S × P 불일치).');
         if (A.Z) s.cz = A.Z.v;
         if (A.R) s.cr = A.R.v;
         if (A.Q) s.cq = A.Q.v;
@@ -4001,7 +4022,8 @@ var qrcode = function() {
         if (s.motion === null) { E(ln, '이동 모드(G00/G01)가 지정되지 않은 상태의 이동.'); continue; }
         const tx = A.X ? A.X.v : s.x, ty = A.Y ? A.Y.v : s.y, tz = A.Z ? A.Z.v : s.z;
         if (A.Z && (s.hNeed || s.h === null) && !g43) E(ln, '공구 길이 보정(G43 H) 없이 Z축 이동 (충돌 위험).');
-        if (s.motion === 1) { W(ln, 'G01 직선 절삭은 V0.1 홀 가공 범위 밖입니다.'); if (!(s.F > 0)) E(ln, 'G01 에 이송속도 F가 없습니다.'); }
+        if (s.motion === 1 && (tz < 0 || s.z < 0)) E(ln, 'G01 로 소재 상면(Z0) 아래를 이동합니다 — 홀 가공은 고정 사이클만 허용 (주축·날장·조건 미검사 경로).');
+        if (s.motion === 1) { W(ln, 'G01 직선 절삭은 홀 가공 범위 밖입니다.'); if (!(s.F > 0)) E(ln, 'G01 에 이송속도 F가 없습니다.'); }
         if (tz < bottom - EPS) E(ln, 'Z' + fmt(tz) + ' 이(가) 소재 바닥 허용 한계 아래입니다.');
         const xyMove = (A.X || A.Y) && tx !== null && ty !== null;
         const zLow = Math.min(tz, s.z);
@@ -4012,6 +4034,7 @@ var qrcode = function() {
           if (s.x !== null && s.y !== null) moves.push({ x0: s.x, y0: s.y, x1: tx, y1: ty, z: zAt, rapid: s.motion === 0 });
         }
         if (A.Z && s.motion === 0 && tz < s.z && tz < 1 - EPS && overStock(tx, ty, rad)) E(ln, '급속 이송(G00)으로 소재 상면 1mm 이내로 하강 (Z' + fmt(tz) + ').');
+        if (A.Z && (tx === null || ty === null) && tz < zSafe) E(ln, 'XY 위치를 모르는 상태(원점 복귀 후 등)에서 Z' + fmt(tz) + ' 까지 하강합니다 — 먼저 XY 를 지정하세요.');
         if (A.Z && zLow !== Infinity) clampHit(null, null, tx === null ? -1e9 : tx, ty === null ? -1e9 : ty, tz, rad, ln, 'Z 하강');
         s.x = tx; s.y = ty; s.z = tz;
       }
@@ -4089,7 +4112,7 @@ var qrcode = function() {
         const d = JSON.parse(raw);
         if (d && d.schema === 1 && Array.isArray(d.machines) && d.machines.length) {
           d.machines = d.machines.map(C.normalizeMachine);
-          d.bundles = Array.isArray(d.bundles) ? d.bundles.map(C.normalizeBundle) : [];
+          d.bundles = Array.isArray(d.bundles) ? d.bundles.map(b => { const n = C.normalizeBundle(b); if (n.importWarnings) { const w = n.importWarnings[0]; delete n.importWarnings; setTimeout(() => toast(w, 'err'), 500); } return n; }) : [];
           const pr = {};
           Object.values(d.projects || {}).forEach(p => { const n = C.normalizeProject(p); if (n.importWarnings) { const w = n.importWarnings[0]; delete n.importWarnings; setTimeout(() => toast('[' + n.name + '] ' + w, 'err'), 500); } pr[n.id] = n; });
           d.projects = pr;
@@ -4586,7 +4609,7 @@ var qrcode = function() {
       u.btn('⬆ 가져오기', () => pickFile('.json', txt => {
         const d = JSON.parse(txt); const arr = Array.isArray(d) ? d : d.bundles;
         if (!Array.isArray(arr)) throw new Error('공정 묶음 파일이 아닙니다.');
-        dbChange(() => { arr.slice(0, 200).forEach(b => { const n = C.normalizeBundle(b); n.id = C.uid('b'); DB.bundles.push(n); }); });
+        dbChange(() => { arr.slice(0, 200).forEach(b => { const n = C.normalizeBundle(b); n.id = C.uid('b'); if (n.importWarnings) { toast(n.importWarnings[0], 'err'); delete n.importWarnings; } DB.bundles.push(n); }); });
         toast(arr.length + '개 공정 묶음을 가져왔습니다.', 'ok');
       }), 'sm') + '</div>';
     h += '<small>묶음의 공구는 번호와 사양(종류·직경·피치)을 함께 저장합니다. 장비가 바뀌면 사양이 같은 공구로 자동 매칭하고, 없으면 경고합니다.</small>';
@@ -4632,7 +4655,7 @@ var qrcode = function() {
           if (g.ops.length && !confirm('현재 공정 ' + g.ops.length + '개를 "' + b.name + '" 묶음으로 바꿀까요?')) return;
           const r = C.applyBundle(b, machine());
           mutate(() => { g.ops = r.ops; });
-          r.notes.forEach(n => toast(n, n.includes('없습니다') ? 'err' : 'warn'));
+          r.notes.forEach(n => toast(n, (n.includes('없습니다') || n.includes('제외')) ? 'err' : 'warn'));
         }, 'sm') +
         u.btn('현재 공정을 묶음으로 저장', () => {
           if (!g.ops.length) return toast('저장할 공정이 없습니다.', 'err');
@@ -5006,7 +5029,7 @@ var qrcode = function() {
     if (!d || d.type !== 'pcam-backup' || !d.db || !Array.isArray(d.db.machines)) throw new Error('푸른 AI CAM 백업 파일이 아닙니다.');
     if (!confirm('현재 브라우저의 모든 데이터를 백업 파일 내용으로 바꿉니다. 계속할까요?\n(복원 전 현재 데이터를 자동 백업합니다)')) return;
     backupAll();
-    const nd = { schema: 1, machines: d.db.machines.map(C.normalizeMachine), bundles: (d.db.bundles || []).map(C.normalizeBundle), projects: {}, settings: Object.assign({}, DB.settings, d.db.settings || {}) };
+    const nd = { schema: 1, machines: d.db.machines.map(C.normalizeMachine), bundles: (d.db.bundles || []).map(b => { const n = C.normalizeBundle(b); if (n.importWarnings) { toast(n.importWarnings[0], 'err'); delete n.importWarnings; } return n; }), projects: {}, settings: Object.assign({}, DB.settings, d.db.settings || {}) };
     nd.machines.forEach(m => { m.verified = false; });
     Object.values(d.db.projects || {}).forEach(p => { const n = C.normalizeProject(p); if (n.importWarnings) { toast('[' + n.name + '] ' + n.importWarnings[0], 'err'); delete n.importWarnings; } nd.projects[n.id] = n; });
     if (!nd.machines.length) throw new Error('장비 정보가 없습니다.');

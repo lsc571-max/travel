@@ -85,9 +85,10 @@ test('[검증 7] 같은 공구로 일반 탭 → 리지드 탭: M29 전에 M05 �
   const s = setup();
   const g2 = C.newGroup('G2', 1); g2.holes = [{ id: 'q1', x: 120, y: 80 }];
   g2.ops = C.applyBundle(s.b[0], s.m).ops; g2.ops[2].type = 'tap'; // 일반 탭(같은 T12)
-  s.p.groups.unshift(g2); s.p.settings.toolOrder = 'group';
+  s.p.groups.unshift(g2); s.p.settings.toolOrder = 'tool'; // 일반 탭과 리지드 탭이 같은 T12 로 연속
   const { v, g } = gen(s);
   assert.equal(v.issues.filter(i => i.level === 'error').length, 0, JSON.stringify(v.issues.filter(i => i.level === 'error')));
+  assert.equal((g.text.match(/T12 M06/g) || []).length, 1, '공구 교환 없이 연속');
   const L = g.text.split('\n'), i29 = L.findIndex(l => l.startsWith('M29'));
   const lastSpin = L.slice(0, i29).map((l, k) => ({ l, k })).filter(x => /M03|M05/.test(x.l)).pop();
   assert.match(lastSpin.l, /M05/, 'M29 직전 주축 정지');
@@ -146,4 +147,87 @@ test('새 가공 모듈 등록 예: 다른 모듈 수정 없이 추가·사용 �
   assert.equal(v.issues.filter(i => i.level === 'error').length, 0);
   assert.match(n.text, /\(OP1 TEST SPOT T01 Z-1\. 1 HOLES\)/);
   assert.deepEqual(C2.verifyNC(n.text, { stock: p.stock, machine: m, clamps: [], settings: p.settings, expected: n.hits }).errors, []);
+});
+
+// ---------- 2차 독립 검증 지적 사항 (V0.2 에서 수정) ----------
+test('[2차-1 중대] 같은 모달 그룹 G코드 동시 지령 차단 (G43 G49, G73 G80, G00+사이클)', () => {
+  const s = setup(); const { g } = gen(s);
+  assert.match(errs(ver(s, g.text.replace('G43 Z50. H03 M08', 'G43 G49 Z50. H03 M08'))), /같은 그룹/);
+  assert.match(errs(ver(s, g.text.replace(/G98 G73 /, 'G98 G73 G80 '))), /같은 그룹/);
+  assert.match(errs(ver(s, g.text.replace(/G98 G73 /, 'G98 G00 G73 '))), /G00\/G01 과 고정 사이클/);
+  assert.deepEqual(ver(s, g.text, g.hits).errors, [], '생성 NC 의 G00 G17 G40 G49 G80 G90 G94 는 허용');
+});
+test('[2차-2 중대] G00 이후 리지드 탭 모드 해제 → 주축 정지 상태 G84 는 오류', () => {
+  const s = setup(); const { g } = gen(s);
+  const bad = g.text.replace(/(G84[^\n]*\n(?:X[^\n]*\n)*)X([\d.]+) Y([\d.]+)\nG80/, '$1G00 Z50.\nG98 G84 X$2 Y$3 Z-10. R5. F360.\nG80');
+  assert.notEqual(bad, g.text);
+  assert.match(errs(ver(s, bad)), /주축 정지 상태에서 일반 탭|탭 이송/);
+});
+test('[2차-3] 좌표계를 별도 줄에서 바꿔도 이동 시 오류, 기초 구멍 기록은 좌표계별', () => {
+  const s = setup(); const { g } = gen(s);
+  const bad = g.text.replace('(OP2', 'G55\n(OP2').replace(/(T03 M06\nG00 G90) G54/, '$1');
+  assert.notEqual(bad, g.text);
+  assert.match(errs(ver(s, bad)), /G55 이\(가\) 프로젝트 설정 G54 와 다른/);
+});
+test('[2차-4] M06 후 주축 정지로 간주 → M03 없이 드릴 사이클은 오류', () => {
+  const s = setup(); const { g } = gen(s);
+  const bad = g.text.replace(/M05\nG91 G28 Z0\.\nG90\nM01\n(\(OP2[^\n]*\n)T03 M06\nG00 G90 G54 (X[\d.]+ Y[\d.]+) S\d+ M03/, 'G91 G28 Z0.\nG90\nM01\n$1T03 M06\nG00 G90 G54 $2');
+  assert.notEqual(bad, g.text);
+  assert.match(errs(ver(s, bad)), /주축 정지 상태에서 드릴 사이클/);
+});
+test('[2차-5] G01 로 소재 아래 절입 → 오류', () => {
+  const s = setup(); const { g } = gen(s);
+  assert.match(errs(ver(s, g.text.replace('G43 Z50. H12 M08', 'G43 Z50. H12 M08\nG01 Z-10. F2000.\nG00 Z50.'))), /G01 로 소재 상면/);
+});
+test('[2차-6] XY 를 모르는 상태에서 Z 하강 → 오류', () => {
+  const s = setup(); const { g } = gen(s);
+  assert.match(errs(ver(s, g.text.replace(/G00 G90 G54 X[\d.]+ Y[\d.]+ S(\d+) M03\nG43 Z50\. H01/, 'G00 G90 G54 S$1 M03\nG43 Z-5. H01'))), /XY 위치를 모르는 상태/);
+  assert.match(errs(ver(s, g.text.replace('G43 Z50. H01 M08', 'G43 Z50. H01 M08\nG91 G28 X0. Y0.\nG90\nG00 Z-15.'))), /XY 위치를 모르는 상태/);
+});
+test('[2차-7] 모델 검증도 스팟 드릴 등 가장 큰 공구 반경으로 소재·클램프 검사 (검증기와 일치)', () => {
+  const s = setup({ holes: [{ x: 40, y: 50 }] });
+  s.p.clamps.push({ id: 'c', x: 44, y: 40, w: 10, h: 20, height: 20 });
+  assert.ok(C.validateProject(s.p, s.m).issues.some(i => i.level === 'error' && /클램프 1 영역/.test(i.msg)), 'Ø6 스팟이 클램프에 닿음');
+  const s2 = setup({ holes: [{ x: 2.6, y: 50 }] });
+  assert.ok(C.validateProject(s2.p, s2.m).issues.some(i => i.level === 'error' && /공구\(Ø6\)이 소재 밖/.test(i.msg)));
+});
+test('[2차] 미지원 가공: 공정 묶음 가져오기 경고, 묶음 적용 시 드릴로 바꾸지 않음', () => {
+  const b = C.normalizeBundle({ name: 'X', ops: [{ type: 'ream' }, { type: 'drill', toolNo: 4 }] });
+  assert.match(b.importWarnings[0], /1개 제외/);
+  const r = C.applyBundle({ ops: [{ type: 'ream', toolNo: 4 }, { type: 'drill', toolNo: 4 }] }, C.defaultMachine());
+  assert.deepEqual(r.ops.map(o => o.type), ['drill']);
+  assert.ok(r.notes.some(n => /ream/.test(n)));
+  assert.equal(C.normalizeOp({ type: 'ream' }), null);
+});
+test('[2차] 리지드 탭 중 G84 블록에서 S 변경 → 오류', () => {
+  const s = setup(); const { g } = gen(s);
+  assert.match(errs(ver(s, g.text.replace(/(G98 G84 [^\n]*) F/, '$1 S900 F'))), /S를 바꿀 수 없습니다/);
+});
+
+test('일관성: 무작위 2,000건 — 모델 오류 0 이면 생성 NC 도 독립 검증 오류 0·교차 일치 (클램프·좌표계·옵션 포함)', () => {
+  let seed = 4242; const R = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  let ok = 0;
+  for (let n = 0; n < 2000; n++) {
+    const m = C.defaultMachine(); m.rigidM03 = R() < 0.3; m.endY = R() < 0.7;
+    const p = C.newProject(m), b = C.defaultBundles(m);
+    Object.assign(p.stock, { sx: 80 + Math.round(R() * 250), sy: 60 + Math.round(R() * 150), sz: 25 + Math.round(R() * 20), origin: ['LL', 'UL', 'LR', 'UR', 'C'][Math.floor(R() * 5)], under: Math.round(R() * 5), material: Object.keys(C.MATERIALS)[Math.floor(R() * 7)] });
+    Object.assign(p.settings, { retract: R() < 0.5 ? 'G98' : 'G99', wcs: ['G54', 'G55', 'G59'][Math.floor(R() * 3)], seqNo: R() < 0.3, coolant: R() < 0.8, m01: R() < 0.5, toolOrder: R() < 0.5 ? 'tool' : 'group', pathOrder: ['nearest', 'zigzag', 'input'][Math.floor(R() * 3)] });
+    const r = C.stockRect(p.stock);
+    for (let gi = 0; gi < 1 + Math.floor(R() * 3); gi++) {
+      const g = C.newGroup('G' + gi, gi);
+      for (let k = 0; k < 1 + Math.floor(R() * 10); k++) g.holes.push({ id: gi + '_' + k, x: C.r3(r.x0 + 6 + R() * (p.stock.sx - 12)), y: C.r3(r.y0 + 6 + R() * (p.stock.sy - 12)) });
+      g.ops = C.applyBundle(b[Math.floor(R() * b.length)], m).ops;
+      if (R() < 0.3) g.ops.forEach(o => { if (o.type === 'rigid' && R() < 0.5) o.type = 'tap'; if (o.type === 'center' && R() < 0.5) o.dwell = 300; });
+      p.groups.push(g);
+    }
+    if (R() < 0.5) p.clamps.push({ id: 'c', x: r.x0 + R() * p.stock.sx, y: r.y0 - 5, w: 15, h: 12, height: 5 + Math.round(R() * 40) });
+    const v = C.validateProject(p, m);
+    if (v.issues.some(i => i.level === 'error')) continue;
+    const g = C.generateNC(p, m, v.plan);
+    const res = C.verifyNC(g.text, { stock: p.stock, machine: m, clamps: p.clamps, settings: p.settings, expected: g.hits });
+    assert.deepEqual(res.errors, [], '#' + n + '\n' + JSON.stringify(p.settings));
+    assert.equal(res.match, true);
+    ok++;
+  }
+  assert.ok(ok > 500, '통과 건수 ' + ok);
 });

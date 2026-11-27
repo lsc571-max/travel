@@ -14,6 +14,9 @@
    * 문법, 이동 경로, 소재/클램프 충돌, 조건을 검사한다. 사용자 수정 NC도 동일하게 검사. */
   const ALLOWED_G = new Set([0, 1, 4, 17, 21, 28, 40, 43, 49, 54, 55, 56, 57, 58, 59, 73, 80, 81, 82, 83, 84, 90, 91, 94, 98, 99]);
   const ALLOWED_M = new Set([0, 1, 2, 3, 5, 6, 8, 9, 29, 30]);
+  // FANUC 모달 그룹 (같은 그룹 동시 지령 금지 검사용)
+  const GROUPS = [['00 비모달', [4, 28]], ['01 이동', [0, 1]], ['02 평면', [17]], ['03 절대/증분', [90, 91]], ['05 이송', [94]], ['06 단위', [21]],
+    ['07 반경보정', [40]], ['08 공구길이', [43, 49]], ['09 고정사이클', [73, 80, 81, 82, 83, 84]], ['10 복귀', [98, 99]], ['14 좌표계', [54, 55, 56, 57, 58, 59]]];
   function verifyNC(text, ctx) {
     const errors = [], warnings = [], hits = [], moves = [];
     const E = (ln, m) => { if (errors.length < 200) errors.push({ line: ln, msg: m }); };
@@ -25,6 +28,7 @@
     const drilled = new Map(); // 위치별 드릴 구멍 기록 (탭 기초 구멍 확인용)
     const wantWcs = ctx.settings && /^G5[4-9]$/.test(ctx.settings.wcs) ? parseInt(ctx.settings.wcs.slice(1), 10) : null;
     let wcsChecked = false;
+    const zSafe = Math.max(1, ...(ctx.clamps || []).map(c => c.height + CLAMP_MARGIN)); // XY 미지정 상태 하강 한계
     const s = { feedMode: null, units: null, abs: true, motion: null, cycle: null, ret: 98, h: null, hNeed: true, tool: null, nextT: null, spin: false, S: 0, F: 0,
       m29: false, m29S: 0, x: null, y: null, z: Infinity, cz: null, cr: null, cq: null, cp: 0, initZ: null, cool: false, ended: false, wcs: null };
     let pct = 0, hasO = false, unitsWarned = false, sawMotion = false;
@@ -44,7 +48,7 @@
 
     // 공정 검증 (수정한 NC 포함): 탭 기초 구멍, 절삭 조건 한계
     function checkProcess(ln, tool, x, y) {
-      const key = r3(x) + ',' + r3(y);
+      const key = s.wcs + ':' + r3(x) + ',' + r3(y); // 좌표계별로 구분
       if (s.cycle !== 84 && tool.type === 'drill') {
         if (!drilled.has(key)) drilled.set(key, []);
         drilled.get(key).push({ dia: tool.dia, fullZ: s.cz + tipLength(tool) });
@@ -107,6 +111,12 @@
       if (badG.length) { E(ln, '검증할 수 없는 G코드: ' + badG.map(g => 'G' + g).join(', ') + (badG.includes(20) ? ' (인치 단위 미지원)' : '')); continue; }
       if (badM.length) { E(ln, '검증할 수 없는 M코드: ' + badM.map(m => 'M' + m).join(', ') + (badM.includes(4) ? ' (역회전 미지원)' : '')); continue; }
       if (M.length > 1) W(ln, '한 블록에 M코드가 여러 개입니다 (장비 설정에 따라 알람).');
+      // 같은 모달 그룹의 G코드가 한 블록에 둘 이상이면 FANUC 은 마지막 것만 적용 → 해석이 어긋나므로 차단
+      const grpOf = g => GROUPS.find(x => x[1].includes(g));
+      const seenGrp = new Map(); let grpBad = null;
+      G.forEach(g => { const gr = grpOf(g); if (!gr) return; if (seenGrp.has(gr[0])) grpBad = gr[0]; seenGrp.set(gr[0], g); });
+      if (grpBad) { E(ln, '같은 그룹(' + grpBad + ')의 G코드가 한 블록에 여러 개입니다: ' + G.map(g => 'G' + g).join(' ') + ' — 한 블록에 하나만 쓰세요.'); continue; }
+      if (G.some(g => g === 0 || g === 1) && G.some(g => [73, 81, 82, 83, 84].includes(g))) { E(ln, 'G00/G01 과 고정 사이클을 한 블록에 함께 쓸 수 없습니다.'); continue; }
 
       // 모달 설정
       let g28 = false, g43 = false, newCycle = null, g04 = false;
@@ -120,7 +130,7 @@
         else if (g >= 54 && g <= 59) s.wcs = g;
         else if (g === 49) { s.h = null; }
         else if (g === 80) { s.cycle = null; s.m29 = false; s.initZ = null; }
-        else if (g === 0 || g === 1) { s.motion = g; if (s.cycle !== null) { s.cycle = null; s.initZ = null; } }
+        else if (g === 0 || g === 1) { s.motion = g; s.m29 = false; s.m29S = 0; if (s.cycle !== null) { s.cycle = null; s.initZ = null; } }
         else if (g === 28) g28 = true;
         else if (g === 43) g43 = true;
         else if (g === 4) g04 = true;
@@ -146,7 +156,7 @@
           if (s.nextT === null || !tm.get(s.nextT)) E(ln, '교환할 공구(T)가 지정되지 않았습니다.');
           if (s.z !== Infinity) W(ln, 'Z축 원점 복귀(G91 G28 Z0.) 없이 공구를 교환합니다 (장비 M06 매크로 확인).');
           if (s.spin) W(ln, '주축 회전 중 공구 교환 (M05 권장).');
-          s.tool = s.nextT; s.hNeed = true; s.h = null;
+          s.tool = s.nextT; s.hNeed = true; s.h = null; s.spin = false; // 대부분의 M06 매크로는 주축 정지(정위치) → M03 재지령 필요
         } else if (m === 3) { if (!(s.S > 0)) E(ln, '회전수(S) 없이 M03 주축 정회전.'); s.spin = true; }
         else if (m === 5) s.spin = false;
         else if (m === 8) s.cool = true;
@@ -179,14 +189,13 @@
       }
       if (hasAxis && !s.units) { if (!unitsWarned) E(ln, 'G21(mm 단위) 지정 전에 이동 명령이 있습니다.'); unitsWarned = true; }
       if (hasAxis && !s.abs) { E(ln, '증분(G91) 이동은 검증기가 지원하지 않습니다 (G28 제외).'); continue; }
-      if (hasAxis && !wcsChecked) {
-        wcsChecked = true;
-        if (s.wcs === null) E(ln, '공작물 좌표계(G54~G59) 지정 없이 이동합니다.');
-        else if (wantWcs !== null && s.wcs !== wantWcs) E(ln, '좌표계 G' + s.wcs + ' 이(가) 프로젝트 설정 G' + wantWcs + ' 와 다릅니다.');
+      if (hasAxis) {
+        if (s.wcs === null) { if (!wcsChecked) E(ln, '공작물 좌표계(G54~G59) 지정 없이 이동합니다.'); wcsChecked = true; }
+        else if (wantWcs !== null && s.wcs !== wantWcs) E(ln, '좌표계 G' + s.wcs + ' 이(가) 프로젝트 설정 G' + wantWcs + ' 와 다른 상태에서 이동합니다.');
       }
-      if (hasAxis && wcsChecked && wantWcs !== null && s.wcs !== null && s.wcs !== wantWcs && G.some(g => g >= 54 && g <= 59)) E(ln, '좌표계 G' + s.wcs + ' 로 바뀌었습니다 (프로젝트 설정 G' + wantWcs + ').');
 
       const rad = s.tool && tm.get(s.tool) ? tm.get(s.tool).dia / 2 : 0;
+      if (newCycle !== null && newCycle !== 84) { s.m29 = false; s.m29S = 0; }
       if (newCycle !== null) {
         if (s.cycle === null) s.initZ = s.z;
         s.cycle = newCycle;
@@ -194,6 +203,7 @@
       }
       if (s.cycle !== null && (newCycle !== null || A.X || A.Y || A.Z || A.R)) {
         // 고정 사이클 실행 (구멍 1개)
+        if (s.cycle === 84 && s.m29 && A.S) E(ln, '리지드 탭(M29) 중 G84 블록에서 S를 바꿀 수 없습니다 (F = S × P 불일치).');
         if (A.Z) s.cz = A.Z.v;
         if (A.R) s.cr = A.R.v;
         if (A.Q) s.cq = A.Q.v;
@@ -244,7 +254,8 @@
         if (s.motion === null) { E(ln, '이동 모드(G00/G01)가 지정되지 않은 상태의 이동.'); continue; }
         const tx = A.X ? A.X.v : s.x, ty = A.Y ? A.Y.v : s.y, tz = A.Z ? A.Z.v : s.z;
         if (A.Z && (s.hNeed || s.h === null) && !g43) E(ln, '공구 길이 보정(G43 H) 없이 Z축 이동 (충돌 위험).');
-        if (s.motion === 1) { W(ln, 'G01 직선 절삭은 V0.1 홀 가공 범위 밖입니다.'); if (!(s.F > 0)) E(ln, 'G01 에 이송속도 F가 없습니다.'); }
+        if (s.motion === 1 && (tz < 0 || s.z < 0)) E(ln, 'G01 로 소재 상면(Z0) 아래를 이동합니다 — 홀 가공은 고정 사이클만 허용 (주축·날장·조건 미검사 경로).');
+        if (s.motion === 1) { W(ln, 'G01 직선 절삭은 홀 가공 범위 밖입니다.'); if (!(s.F > 0)) E(ln, 'G01 에 이송속도 F가 없습니다.'); }
         if (tz < bottom - EPS) E(ln, 'Z' + fmt(tz) + ' 이(가) 소재 바닥 허용 한계 아래입니다.');
         const xyMove = (A.X || A.Y) && tx !== null && ty !== null;
         const zLow = Math.min(tz, s.z);
@@ -255,6 +266,7 @@
           if (s.x !== null && s.y !== null) moves.push({ x0: s.x, y0: s.y, x1: tx, y1: ty, z: zAt, rapid: s.motion === 0 });
         }
         if (A.Z && s.motion === 0 && tz < s.z && tz < 1 - EPS && overStock(tx, ty, rad)) E(ln, '급속 이송(G00)으로 소재 상면 1mm 이내로 하강 (Z' + fmt(tz) + ').');
+        if (A.Z && (tx === null || ty === null) && tz < zSafe) E(ln, 'XY 위치를 모르는 상태(원점 복귀 후 등)에서 Z' + fmt(tz) + ' 까지 하강합니다 — 먼저 XY 를 지정하세요.');
         if (A.Z && zLow !== Infinity) clampHit(null, null, tx === null ? -1e9 : tx, ty === null ? -1e9 : ty, tz, rad, ln, 'Z 하강');
         s.x = tx; s.y = ty; s.z = tz;
       }

@@ -67,12 +67,19 @@ const DATE = new Date(2026, 10, 27, 9, 0);
 
 test('모듈화 전후 동일 결과: 정상·비정상 입력 1,200건', { skip: !hasV01 && 'V0.1 폴더 없음' }, () => {
   const R = rng(20261127);
-  let same = 0, generated = 0, m29cases = 0;
+  let same = 0, generated = 0, m29cases = 0, stricter = 0;
   for (let n = 0; n < 1200; n++) {
     const { p, m } = randomProject(R, n % 3 === 2);
     const pa = JSON.parse(JSON.stringify(p)), pb = JSON.parse(JSON.stringify(p));
     const va = OLD.validateProject(pa, m), vb = NEW.validateProject(pb, m);
-    assert.deepEqual(sortIssues(vb), sortIssues(va), '검증 결과 차이 #' + n);
+    // [2차 검증 7] V0.2 는 소재 범위·클램프를 가장 큰 공구(스팟 포함) 반경으로 검사 → 더 엄격해질 수만 있음
+    const geo = i => (i.cat === 2) || (i.cat === 10 && /클램프 \d+ 영역과 겹칩니다/.test(i.msg));
+    const strip = v => ({ issues: v.issues.filter(i => !geo(i)) });
+    assert.deepEqual(sortIssues(strip(vb)), sortIssues(strip(va)), '검증 결과 차이 #' + n);
+    const geoErrRefs = v => new Set(v.issues.filter(i => geo(i) && i.level === 'error').map(i => JSON.stringify(i.ref)));
+    const oldGeo = geoErrRefs(va), newGeo = geoErrRefs(vb);
+    oldGeo.forEach(r => assert.ok(newGeo.has(r), '모듈화 후 소재/클램프 오류 누락 #' + n));
+    if (newGeo.size > oldGeo.size) stricter++;
     assert.equal(vb.plan.steps.length, va.plan.steps.length);
     vb.plan.steps.forEach((s, k) => { const o = va.plan.steps[k]; assert.equal(s.key, o.key); assert.deepEqual(s.holes, o.holes); });
     const ga = OLD.generateNC(pa, m, va.plan, { date: DATE }), gb = NEW.generateNC(pb, m, vb.plan, { date: DATE });
@@ -90,7 +97,7 @@ test('모듈화 전후 동일 결과: 정상·비정상 입력 1,200건', { skip
     same++;
   }
   assert.ok(generated > 300, 'G코드 생성 건수 ' + generated);
-  console.log('  비교 ' + same + '건, G코드 생성 ' + generated + '건 (의도한 변경: G94 추가, M29 전 M05 ' + m29cases + '건)');
+  console.log('  비교 ' + same + '건, G코드 생성 ' + generated + '건 (의도한 변경: G94 추가, M29 전 M05 ' + m29cases + '건, 공구 반경 기준 소재/클램프 검사 강화 ' + stricter + '건)');
 });
 
 test('모듈화 전후 동일 계산: 깊이·조건·추천·기초 드릴·배열', { skip: !hasV01 && 'V0.1 폴더 없음' }, () => {

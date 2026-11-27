@@ -36,7 +36,9 @@
   function applyBundle(bundle, machine) {
     const tm = toolMap(machine), notes = [];
     const ops = bundle.ops.map(t => {
-      const op = P.normalizeOp(t); op.id = uid('o');
+      const op = P.normalizeOp(t);
+      if (!op) { notes.push('지원하지 않는 가공 방식(' + String(t && t.type).slice(0, 30) + ')은 제외했습니다. 공정 확인 필요'); return null; }
+      op.id = uid('o');
       const cur = tm.get(op.toolNo);
       if (t.toolSpec && !specMatches(cur, t.toolSpec)) {
         const alt = findToolBySpec(machine, t.toolSpec);
@@ -45,7 +47,7 @@
       }
       delete op.toolSpec;
       return op;
-    });
+    }).filter(Boolean);
     return { ops, notes };
   }
   function opsToBundle(name, ops, machine) {
@@ -63,7 +65,7 @@
     const p = newProject(machine); p.stock = clone(stock); p.groups = [g]; p.machineId = machine.id;
     const v = P.validateProject(p, machine);
     const issues = v.issues.filter(i => ![1, 2, 3, 10, 11].includes(i.cat) && i.level !== 'info');
-    return { notes: res.notes, issues, ok: !issues.some(i => i.level === 'error') && !res.notes.some(n => n.includes('없습니다')) };
+    return { notes: res.notes, issues, ok: !issues.some(i => i.level === 'error') && !res.notes.some(n => n.includes('없습니다') || n.includes('제외')) };
   }
 
   /* ---------------- 가공 계획 (공정 순서) ---------------- */

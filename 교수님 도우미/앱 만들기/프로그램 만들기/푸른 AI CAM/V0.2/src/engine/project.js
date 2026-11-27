@@ -9,8 +9,10 @@
   const { uid, toNum, MATERIALS, ORIGIN_LABEL, GROUP_COLORS, MAX_HOLES, newProject, newOp } = P;
   const isSpot = t => { const d = P.OPS.get(t); return !!d && d.role === 'spot'; };
 
+  // 지원하지 않는 가공 방식은 다른 가공으로 바꾸지 않는다 → null (호출하는 쪽에서 제외·경고)
   function normalizeOp(o) {
-    const type = P.OPS.get(o && o.type) ? o.type : 'drill';
+    if (!P.OPS.get(o && o.type)) return null;
+    const type = o.type;
     const n = newOp(type, Math.round(toNum(o && o.toolNo, 1)));
     if (o && typeof o.id === 'string') n.id = o.id;
     ['depth', 'brk', 'r', 'q', 'dwell', 'rpm', 'feed'].forEach(k => { n[k] = toNum(o && o[k], n[k]); });
@@ -49,8 +51,13 @@
   }
   function normalizeBundle(b) {
     b = b || {};
-    return { id: typeof b.id === 'string' ? b.id : uid('b'), name: String(b.name || '공정 묶음').slice(0, 60), desc: String(b.desc || '').slice(0, 200), ops: Array.isArray(b.ops) ? b.ops.slice(0, 20).filter(o => P.OPS.get(o && o.type)).map(o => { const n = normalizeOp(o); delete n.id; return n; }) : [] };
+    const src = Array.isArray(b.ops) ? b.ops.slice(0, 20) : [];
+    const ops = src.map(normalizeOp).filter(Boolean).map(n => { delete n.id; return n; });
+    const out = { id: typeof b.id === 'string' ? b.id : uid('b'), name: String(b.name || '공정 묶음').slice(0, 60), desc: String(b.desc || '').slice(0, 200), ops };
+    if (ops.length < src.length) out.importWarnings = ['공정 묶음 "' + out.name + '": 지원하지 않는 가공 방식 ' + (src.length - ops.length) + '개 제외'];
+    return out;
   }
+
 
   // 그룹 대표 홀 직경 (센터 드릴 제외 최대 공구 직경, 없으면 전체 최대)
   function holeDiaForGroup(group, tools) {

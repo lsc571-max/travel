@@ -33,7 +33,7 @@
         const d = JSON.parse(raw);
         if (d && d.schema === 1 && Array.isArray(d.machines) && d.machines.length) {
           d.machines = d.machines.map(C.normalizeMachine);
-          d.bundles = Array.isArray(d.bundles) ? d.bundles.map(C.normalizeBundle) : [];
+          d.bundles = Array.isArray(d.bundles) ? d.bundles.map(b => { const n = C.normalizeBundle(b); if (n.importWarnings) { const w = n.importWarnings[0]; delete n.importWarnings; setTimeout(() => toast(w, 'err'), 500); } return n; }) : [];
           const pr = {};
           Object.values(d.projects || {}).forEach(p => { const n = C.normalizeProject(p); if (n.importWarnings) { const w = n.importWarnings[0]; delete n.importWarnings; setTimeout(() => toast('[' + n.name + '] ' + w, 'err'), 500); } pr[n.id] = n; });
           d.projects = pr;

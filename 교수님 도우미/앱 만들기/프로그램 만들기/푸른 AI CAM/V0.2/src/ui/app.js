@@ -337,7 +337,7 @@
       u.btn('⬆ 가져오기', () => pickFile('.json', txt => {
         const d = JSON.parse(txt); const arr = Array.isArray(d) ? d : d.bundles;
         if (!Array.isArray(arr)) throw new Error('공정 묶음 파일이 아닙니다.');
-        dbChange(() => { arr.slice(0, 200).forEach(b => { const n = C.normalizeBundle(b); n.id = C.uid('b'); DB.bundles.push(n); }); });
+        dbChange(() => { arr.slice(0, 200).forEach(b => { const n = C.normalizeBundle(b); n.id = C.uid('b'); if (n.importWarnings) { toast(n.importWarnings[0], 'err'); delete n.importWarnings; } DB.bundles.push(n); }); });
         toast(arr.length + '개 공정 묶음을 가져왔습니다.', 'ok');
       }), 'sm') + '</div>';
     h += '<small>묶음의 공구는 번호와 사양(종류·직경·피치)을 함께 저장합니다. 장비가 바뀌면 사양이 같은 공구로 자동 매칭하고, 없으면 경고합니다.</small>';
@@ -383,7 +383,7 @@
           if (g.ops.length && !confirm('현재 공정 ' + g.ops.length + '개를 "' + b.name + '" 묶음으로 바꿀까요?')) return;
           const r = C.applyBundle(b, machine());
           mutate(() => { g.ops = r.ops; });
-          r.notes.forEach(n => toast(n, n.includes('없습니다') ? 'err' : 'warn'));
+          r.notes.forEach(n => toast(n, (n.includes('없습니다') || n.includes('제외')) ? 'err' : 'warn'));
         }, 'sm') +
         u.btn('현재 공정을 묶음으로 저장', () => {
           if (!g.ops.length) return toast('저장할 공정이 없습니다.', 'err');
@@ -757,7 +757,7 @@
     if (!d || d.type !== 'pcam-backup' || !d.db || !Array.isArray(d.db.machines)) throw new Error('푸른 AI CAM 백업 파일이 아닙니다.');
     if (!confirm('현재 브라우저의 모든 데이터를 백업 파일 내용으로 바꿉니다. 계속할까요?\n(복원 전 현재 데이터를 자동 백업합니다)')) return;
     backupAll();
-    const nd = { schema: 1, machines: d.db.machines.map(C.normalizeMachine), bundles: (d.db.bundles || []).map(C.normalizeBundle), projects: {}, settings: Object.assign({}, DB.settings, d.db.settings || {}) };
+    const nd = { schema: 1, machines: d.db.machines.map(C.normalizeMachine), bundles: (d.db.bundles || []).map(b => { const n = C.normalizeBundle(b); if (n.importWarnings) { toast(n.importWarnings[0], 'err'); delete n.importWarnings; } return n; }), projects: {}, settings: Object.assign({}, DB.settings, d.db.settings || {}) };
     nd.machines.forEach(m => { m.verified = false; });
     Object.values(d.db.projects || {}).forEach(p => { const n = C.normalizeProject(p); if (n.importWarnings) { toast('[' + n.name + '] ' + n.importWarnings[0], 'err'); delete n.importWarnings; } nd.projects[n.id] = n; });
     if (!nd.machines.length) throw new Error('장비 정보가 없습니다.');
