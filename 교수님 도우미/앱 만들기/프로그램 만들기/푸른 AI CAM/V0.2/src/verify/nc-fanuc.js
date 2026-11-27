@@ -3,12 +3,12 @@
  * 역할: 포스트프로세서와 별도의 코드로 NC 텍스트를 한 줄씩 해석·시뮬레이션하여
  *       문법·모달 상태·이동 경로·충돌·탭 이송을 검사하고, 생성기 결과와 교차 비교한다.
  *       사용자가 직접 수정한 NC 도 이 검증기를 통과해야 출력할 수 있다.
- * 의존: engine/common.js (생성기 코드에는 의존하지 않음)
+ * 의존: engine/common.js, 가공 모듈의 참고 절삭 조건표(refConditions) — 포스트프로세서(생성기) 코드에는 의존하지 않음
  * ===================================================================== */
 (function (root) {
   'use strict';
   const P = root.PCAM;
-  const { EPS, CLAMP_MARGIN, toNum, r3, fmt, toolMap, stockRect, segRectHit, clampRect, inRect } = P;
+  const { EPS, CLAMP_MARGIN, toNum, r3, fmt, toolMap, stockRect, segRectHit, clampRect, inRect, tipLength } = P;
   /* ---------------- 독립 NC 검증기 (G코드 해석·시뮬레이션) ----------------
    * 생성기와 별도로 NC 텍스트를 한 줄씩 해석하여 모달 상태를 추적하고
    * 문법, 이동 경로, 소재/클램프 충돌, 조건을 검사한다. 사용자 수정 NC도 동일하게 검사. */
@@ -22,7 +22,10 @@
     const sr = stockRect(stock);
     const bottom = -(stock.sz + toNum(stock.under, 0));
     const tm = toolMap(machine);
-    const s = { units: null, abs: true, motion: null, cycle: null, ret: 98, h: null, hNeed: true, tool: null, nextT: null, spin: false, S: 0, F: 0,
+    const drilled = new Map(); // 위치별 드릴 구멍 기록 (탭 기초 구멍 확인용)
+    const wantWcs = ctx.settings && /^G5[4-9]$/.test(ctx.settings.wcs) ? parseInt(ctx.settings.wcs.slice(1), 10) : null;
+    let wcsChecked = false;
+    const s = { feedMode: null, units: null, abs: true, motion: null, cycle: null, ret: 98, h: null, hNeed: true, tool: null, nextT: null, spin: false, S: 0, F: 0,
       m29: false, m29S: 0, x: null, y: null, z: Infinity, cz: null, cr: null, cq: null, cp: 0, initZ: null, cool: false, ended: false, wcs: null };
     let pct = 0, hasO = false, unitsWarned = false, sawMotion = false;
     const lines = String(text).split(/\r?\n/);
@@ -36,7 +39,32 @@
       });
     };
     const overStock = (x, y, rad) => x !== null && y !== null && x + rad > sr.x0 && x - rad < sr.x1 && y + rad > sr.y0 && y - rad < sr.y1;
+    // 이동 선분 전체가 소재(공구 반경만큼 확장)를 지나는지 (끝점만 보면 관통 이동을 놓침)
+    const crossStock = (x0, y0, x1, y1, rad) => (x0 === null || y0 === null) ? overStock(x1, y1, rad) : segRectHit(x0, y0, x1, y1, { x0: sr.x0 - rad, y0: sr.y0 - rad, x1: sr.x1 + rad, y1: sr.y1 + rad });
 
+    // 공정 검증 (수정한 NC 포함): 탭 기초 구멍, 절삭 조건 한계
+    function checkProcess(ln, tool, x, y) {
+      const key = r3(x) + ',' + r3(y);
+      if (s.cycle !== 84 && tool.type === 'drill') {
+        if (!drilled.has(key)) drilled.set(key, []);
+        drilled.get(key).push({ dia: tool.dia, fullZ: s.cz + tipLength(tool) });
+      }
+      if (s.cycle === 84 && tool.type === 'tap' && tool.pitch > 0) {
+        const lo = tool.dia - 1.25 * tool.pitch, hi = tool.dia - 0.5 * tool.pitch;
+        const good = (drilled.get(key) || []).filter(d => d.dia >= lo - EPS && d.dia < hi - EPS);
+        if (!good.length) E(ln, 'X' + fmt(x) + ' Y' + fmt(y) + ' 탭 위치에 맞는 기초 드릴 구멍(Ø' + r3(lo) + '~' + r3(hi) + ')이 앞에서 가공되지 않았습니다.');
+        else if (!good.some(d => d.fullZ <= s.cz + 1e-3 || d.fullZ <= -stock.sz + 1e-3)) E(ln, 'X' + fmt(x) + ' Y' + fmt(y) + ' 탭 깊이 Z' + fmt(s.cz) + ' 이(가) 기초 드릴 직경부 깊이보다 깊습니다 (탭 파손).');
+      }
+      // 절삭 조건: 모델 검증과 같은 한계 (참고값 3배 초과 = 오류)
+      const type = s.cycle === 84 ? (s.m29 ? 'rigid' : 'tap') : s.cycle === 73 ? 'peck' : s.cycle === 83 ? 'deep' : (tool.type === 'center' ? 'center' : 'drill');
+      const rpm = s.cycle === 84 && s.m29 ? s.m29S : s.S;
+      const ref = P.refConditions(type, tool, stock.material);
+      if (ref && ref.vc > 0 && rpm > 0) {
+        const vc = Math.PI * tool.dia * rpm / 1000;
+        if (vc / ref.vc > 3) E(ln, 'T' + tool.no + ' 절삭속도 Vc ' + r3(vc) + ' m/min 이 참고값(' + r3(ref.vc) + ')의 3배를 넘습니다.');
+        if (s.cycle !== 84 && s.F > 0 && (s.F / rpm) / ref.fpr > 3) E(ln, 'T' + tool.no + ' 회전당 이송 ' + r3(s.F / rpm) + ' mm/rev 가 참고값(' + r3(ref.fpr) + ')의 3배를 넘습니다.');
+      }
+    }
     for (let i = 0; i < lines.length; i++) {
       const ln = i + 1, raw = lines[i];
       if ((raw.match(/\(/g) || []).length !== (raw.match(/\)/g) || []).length) { E(ln, '주석 괄호가 짝이 맞지 않습니다.'); continue; }
@@ -66,7 +94,7 @@
       words.forEach(w => {
         if (w.L === 'G') G.push(w.v);
         else if (w.L === 'M') M.push(w.v);
-        else if (w.L === 'N') { /* 시퀀스 번호 */ }
+        else if (w.L === 'N') { if (!(w.v >= 1 && w.v <= 99999 && Number.isInteger(w.v))) E(ln, '시퀀스 번호 N' + w.raw + ' 은(는) 1~99999 범위여야 합니다.'); }
         else { if (A[w.L]) dup = true; A[w.L] = w; }
       });
       if (dup) { E(ln, '한 블록에 같은 주소가 두 번 있습니다.'); continue; }
@@ -86,6 +114,7 @@
         if (g === 21) s.units = 'mm';
         else if (g === 90) s.abs = true;
         else if (g === 91) s.abs = false;
+        else if (g === 94) s.feedMode = 94;
         else if (g === 98) s.ret = 98;
         else if (g === 99) s.ret = 99;
         else if (g >= 54 && g <= 59) s.wcs = g;
@@ -97,6 +126,7 @@
         else if (g === 4) g04 = true;
         else if ([73, 81, 82, 83, 84].includes(g)) newCycle = g;
       });
+      if (A.F && s.feedMode !== 94) E(ln, 'G94(분당 이송) 지정 전에 F를 사용합니다. G95 상태가 남아 있으면 F가 mm/rev 로 해석됩니다.');
       if (A.F) { if (!(A.F.v > 0)) E(ln, '이송속도 F는 0보다 커야 합니다.'); else if (A.F.v > machine.maxFeed) E(ln, 'F' + A.F.raw + ' 이(가) 장비 최대 이송 ' + machine.maxFeed + ' 을 초과합니다.'); s.F = A.F.v; }
       if (A.T) {
         const tn = A.T.v;
@@ -124,6 +154,7 @@
         else if (m === 29) {
           if (!A.S) E(ln, 'M29(리지드 탭)는 같은 블록에 S가 필요합니다.');
           if (!machine.rigidTap) E(ln, '장비가 리지드 탭을 지원하지 않도록 설정되어 있습니다.');
+          if (s.spin) { if (machine.rigidM03) W(ln, '주축 회전 중 M29 지령 (장비 설정: 리지드 탭 전 M03 사용).'); else E(ln, '주축 회전 중 M29 지령 — 주축 정지(M05) 후 지령해야 합니다.'); }
           s.m29 = true; s.m29S = A.S ? A.S.v : 0;
           if (A.S && A.S.v > (machine.maxTapRpm || machine.maxRpm)) E(ln, '리지드 탭 S' + A.S.v + ' 이(가) 탭 최대 회전수를 초과합니다.');
         } else if (m === 30 || m === 2) s.ended = true;
@@ -147,7 +178,13 @@
         continue;
       }
       if (hasAxis && !s.units) { if (!unitsWarned) E(ln, 'G21(mm 단위) 지정 전에 이동 명령이 있습니다.'); unitsWarned = true; }
-      if (hasAxis && !s.abs) { E(ln, '증분(G91) 이동은 V0.1 검증기가 지원하지 않습니다 (G28 제외).'); continue; }
+      if (hasAxis && !s.abs) { E(ln, '증분(G91) 이동은 검증기가 지원하지 않습니다 (G28 제외).'); continue; }
+      if (hasAxis && !wcsChecked) {
+        wcsChecked = true;
+        if (s.wcs === null) E(ln, '공작물 좌표계(G54~G59) 지정 없이 이동합니다.');
+        else if (wantWcs !== null && s.wcs !== wantWcs) E(ln, '좌표계 G' + s.wcs + ' 이(가) 프로젝트 설정 G' + wantWcs + ' 와 다릅니다.');
+      }
+      if (hasAxis && wcsChecked && wantWcs !== null && s.wcs !== null && s.wcs !== wantWcs && G.some(g => g >= 54 && g <= 59)) E(ln, '좌표계 G' + s.wcs + ' 로 바뀌었습니다 (프로젝트 설정 G' + wantWcs + ').');
 
       const rad = s.tool && tm.get(s.tool) ? tm.get(s.tool).dia / 2 : 0;
       if (newCycle !== null) {
@@ -195,7 +232,8 @@
         const travelZ = s.z;
         if (s.x !== null && s.y !== null) moves.push({ x0: s.x, y0: s.y, x1: nx, y1: ny, z: travelZ, rapid: true });
         clampHit(s.x, s.y, nx, ny, travelZ, rad, ln, '구멍 간 이동');
-        if (travelZ <= 0 && overStock(s.x, s.y, rad)) E(ln, '소재 상면 아래 높이에서 구멍 간 급속 이동.');
+        if (travelZ <= 0 && crossStock(s.x, s.y, nx, ny, rad)) E(ln, '소재 상면 아래 높이에서 구멍 간 급속 이동.');
+        if (tool) checkProcess(ln, tool, nx, ny);
         s.x = nx; s.y = ny;
         hits.push({ t: s.tool, x: r3(nx), y: r3(ny), z: r3(s.cz), r: r3(s.cr), code, line: ln });
         s.z = s.ret === 98 ? s.initZ : s.cr;
@@ -213,7 +251,7 @@
         if (xyMove) {
           const zAt = tz < s.z ? tz : s.z; // 하강이 섞이면 낮은 높이로 보수적 판단
           clampHit(s.x, s.y, tx, ty, zAt, rad, ln, (s.motion === 0 ? '급속' : '직선') + ' 이동');
-          if (s.motion === 0 && zAt <= 0 && (overStock(s.x, s.y, rad) || overStock(tx, ty, rad))) E(ln, '소재 상면 높이 이하에서 급속 XY 이동 (소재 충돌).');
+          if (zAt <= 0 && crossStock(s.x, s.y, tx, ty, rad)) E(ln, s.motion === 0 ? '소재 상면 높이 이하에서 급속 XY 이동 (소재 충돌).' : '소재 상면 높이 이하에서 G01 XY 이동 — 드릴·탭으로 측면 절삭 (공구 파손).');
           if (s.x !== null && s.y !== null) moves.push({ x0: s.x, y0: s.y, x1: tx, y1: ty, z: zAt, rapid: s.motion === 0 });
         }
         if (A.Z && s.motion === 0 && tz < s.z && tz < 1 - EPS && overStock(tx, ty, rad)) E(ln, '급속 이송(G00)으로 소재 상면 1mm 이내로 하강 (Z' + fmt(tz) + ').');

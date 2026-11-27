@@ -9,7 +9,8 @@
   'use strict';
   const C = window.PCAM;
   const CHANGELOG = [
-    { v: 'V0.1', d: C.BUILD_DATE, items: ['최초 버전: FANUC 3축 2.5축 홀 가공(G81·G82·G73·G83·G84·M29 리지드 탭)', '홀 배열(개별·직선·사각·PCD), 공정 묶음, 공구·장비 관리', '11개 항목 자동 검증, 독립 NC 해석 검증, 오류 시 NC 생성 차단', '로컬 저장·JSON 백업/복원, 공유·QR코드, 숨겨진 관리자 설정'] }
+    { v: 'V0.2', d: C.BUILD_DATE, items: ['기능별 모듈 구조: 공통 엔진·가공 모듈(6종)·공정 관리·포스트프로세서·검증·저장·그래픽 분리', '안전 강화: 소재 관통 급속/G01 이동, 탭 기초 구멍·절삭 조건(수정 NC 포함), 좌표계, G94, M29 주축 정지, N번호 5자리 검사', '수정 NC 재검증 결과를 소재·장비 변경 시 자동 갱신, 검증 전 G코드 복사 차단', '개발 예정 가공(평면·사각/원형 포켓·외곽) 목록 표시, 미지원 가공은 드릴로 바꾸지 않고 제외'] },
+    { v: 'V0.1', d: '2026-11-27', items: ['최초 버전: FANUC 3축 2.5축 홀 가공(G81·G82·G73·G83·G84·M29 리지드 탭)', '홀 배열(개별·직선·사각·PCD), 공정 묶음, 공구·장비 관리', '11개 항목 자동 검증, 독립 NC 해석 검증, 오류 시 NC 생성 차단', '로컬 저장·JSON 백업/복원, 공유·QR코드, 숨겨진 관리자 설정'] }
   ];
 
   /* ---------------- 상태 ---------------- */
@@ -89,7 +90,9 @@
     S.V = C.validateProject(P, m);
     const g = C.generateNC(P, m, S.V.plan);
     S.nc.text = g.text; S.nc.hits = g.hits; S.nc.blocked = g.blocked || '';
-    S.nc.verify = g.text ? C.verifyNC(g.text, { stock: P.stock, machine: m, clamps: P.clamps, expected: g.hits }) : null;
+    S.nc.verify = g.text ? C.verifyNC(g.text, { stock: P.stock, machine: m, clamps: P.clamps, settings: P.settings, expected: g.hits }) : null;
+    // 재검증한 수정본도 소재·장비·클램프가 바뀌면 현재 조건으로 다시 검사 (이전 통과 결과 재사용 금지)
+    if (S.nc.edited && S.nc.editVerify) S.nc.editVerify = C.verifyNC(S.nc.editText, { stock: P.stock, machine: m, clamps: P.clamps, settings: P.settings, expected: null });
   }
   function counts() {
     const iss = S.V ? S.V.issues : [];
@@ -479,7 +482,7 @@
     const text = S.nc.edited ? S.nc.editText : S.nc.text;
     let h = '<div class="codebar">' +
       u.btn('⟳ 다시 생성', () => { if (S.nc.edited && !confirm('수정한 내용이 사라지고 현재 설정으로 다시 생성합니다.')) return; S.nc.edited = false; S.nc.editText = ''; S.nc.editVerify = null; renderAll(); toast('G코드를 다시 생성했습니다.'); }, 'sm') +
-      u.btn('⧉ 복사', () => copyText(text), 'sm') +
+      u.btn('⧉ 복사', () => { const st = downloadState(); if (!st.ok) { beep(); return toast('복사 차단: ' + st.why + ' (검증을 통과한 G코드만 복사할 수 있습니다)', 'err'); } copyText(text); }, 'sm', ds.ok ? '' : 'aria-disabled="true" title="검증 통과 후 복사 가능"') +
       u.btn(S.nc.edited ? '✎ 편집 중' : '✎ 직접 수정', () => {
         if (!S.nc.text) return toast('먼저 오류를 해결하여 G코드를 생성하세요.', 'err');
         if (!S.nc.edited) { if (!confirm('G코드를 직접 수정하면 기존 검증 결과가 무효화되고, 다운로드 전에 재검증이 필요합니다.\n계속할까요?')) return; S.nc.edited = true; S.nc.editText = S.nc.text; S.nc.editVerify = null; renderAll(); }
@@ -499,7 +502,7 @@
   }
   function reverify() {
     const m = machine();
-    S.nc.editVerify = C.verifyNC(S.nc.editText, { stock: P.stock, machine: m, clamps: P.clamps, expected: null });
+    S.nc.editVerify = C.verifyNC(S.nc.editText, { stock: P.stock, machine: m, clamps: P.clamps, settings: P.settings, expected: null });
     renderAll();
     const e = S.nc.editVerify.errors.length;
     toast(e ? '재검증 오류 ' + e + '건 — 다운로드 차단' : '재검증 통과', e ? 'err' : 'ok');
@@ -701,6 +704,7 @@
     const d = JSON.parse(txt);
     if (!d || d.type !== 'pcam-project' || !d.project) throw new Error('푸른 AI CAM 프로젝트 파일이 아닙니다.');
     const p = C.normalizeProject(d.project); p.id = C.uid('p'); p.updatedAt = new Date().toISOString();
+    if (p.importWarnings) { p.importWarnings.forEach(w => toast(w, 'err')); delete p.importWarnings; }
     if (d.machine) {
       const m = C.normalizeMachine(d.machine); m.verified = false; m.verifiedBy = ''; m.verifiedAt = '';
       const ex = DB.machines.find(x => x.id === m.id);
@@ -755,7 +759,7 @@
     backupAll();
     const nd = { schema: 1, machines: d.db.machines.map(C.normalizeMachine), bundles: (d.db.bundles || []).map(C.normalizeBundle), projects: {}, settings: Object.assign({}, DB.settings, d.db.settings || {}) };
     nd.machines.forEach(m => { m.verified = false; });
-    Object.values(d.db.projects || {}).forEach(p => { const n = C.normalizeProject(p); nd.projects[n.id] = n; });
+    Object.values(d.db.projects || {}).forEach(p => { const n = C.normalizeProject(p); if (n.importWarnings) { toast('[' + n.name + '] ' + n.importWarnings[0], 'err'); delete n.importWarnings; } nd.projects[n.id] = n; });
     if (!nd.machines.length) throw new Error('장비 정보가 없습니다.');
     if (!Object.keys(nd.projects).length) { const n = C.newProject(nd.machines[0]); nd.projects[n.id] = n; }
     Object.values(nd.projects).forEach(p => { if (!nd.machines.find(m => m.id === p.machineId)) p.machineId = nd.machines[0].id; });

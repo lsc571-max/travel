@@ -223,6 +223,39 @@ function serve() {
 
   ok('전체 과정 콘솔 오류 없음', consoleErr.length === 0, consoleErr.join(' | '));
 
+  // 14-0. V0.2 안전 수정 (새 브라우저 컨텍스트 = 새 저장소)
+  {
+    const c2 = await browser.newContext({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
+    const p2 = await c2.newPage(); const e2 = [];
+    p2.on('pageerror', e => e2.push(e.message)); p2.on('dialog', d => d.accept());
+    await p2.goto('file://' + HTML); await sleep(400);
+    const st2 = () => p2.evaluate(() => window.__PCAM_UI__.downloadState());
+    // 개발 예정 가공: 공정 추가 목록에 표시되지만 선택 불가
+    const planned = await p2.$$eval('#rightBody select option', os => os.filter(o => /개발 예정/.test(o.textContent)).map(o => o.disabled));
+    ok('개발 예정 가공 4종 표시·선택 불가', planned.length === 4 && planned.every(Boolean), JSON.stringify(planned));
+    // [검증 2] 재검증한 수정본 → 소재 축소 → 다운로드 다시 차단
+    await p2.click('#bottomTabs button[data-tab=code]');
+    await p2.click('#bottomBody button:has-text("직접 수정")'); await sleep(100);
+    const ta2 = p2.locator('#ncText'); const v0 = await ta2.inputValue();
+    await ta2.fill(v0.replace(/(G81[^\n]*\n)/, '$1X140. Y50.\n'));
+    await p2.click('#bottomBody button:has-text("재검증")'); await sleep(150);
+    ok('수정본(X140) 재검증 통과', (await st2()).ok, JSON.stringify(await st2()));
+    await p2.click('#leftTabs button[data-tab=stock]');
+    const sx = p2.locator('#leftBody .grid3 input').nth(0); await sx.fill('136'); await sx.press('Tab'); await sleep(200);
+    const s3 = await st2();
+    ok('[검증 2] 소재 변경 후 수정본 자동 재검사 → 차단', !s3.ok && /수정한 G코드 검증 오류/.test(s3.why), JSON.stringify(s3));
+    let dlx = null; const w = p2.waitForEvent('download', { timeout: 1200 }).then(d => { dlx = d; }).catch(() => { });
+    await p2.click('#btnDownload', { force: true }); await w;
+    ok('[검증 2] 차단된 수정본 다운로드 안 됨', dlx === null);
+    // [검증 9] 차단 상태에서 복사 거부
+    await p2.evaluate(() => { window.__copied = null; navigator.clipboard && (navigator.clipboard.writeText = t => { window.__copied = t; return Promise.resolve(); }); document.execCommand = () => { window.__copied = 'exec'; return true; }; });
+    await p2.click('#bottomTabs button[data-tab=code]'); await sleep(100);
+    await p2.click('#bottomBody button:has-text("복사")', { force: true }); await sleep(150);
+    ok('[검증 9] 차단 상태 G코드 복사 거부', (await p2.evaluate(() => window.__copied)) === null);
+    ok('V0.2 안전 수정 화면 오류 없음', e2.length === 0, e2.join('|'));
+    await c2.close();
+  }
+
   // 14. 모바일 화면
   const mob = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const mp = await mob.newPage(); const mErr = [];

@@ -16,12 +16,9 @@
 
   function generate(project, machine, plan, opts) {
     const set = project.settings, st = project.stock;
-    const L = [], hits = [];
-    let seq = 0;
-    const out = (s, numbered) => {
-      if (set.seqNo && numbered !== false && s && s[0] !== '(' && s !== '%') { seq += 10; L.push('N' + seq + ' ' + s); }
-      else L.push(s);
-    };
+    const B = [], hits = []; // B: { s: 블록, num: 시퀀스 번호 대상 }
+    let spinOn = false;
+    const out = (s, numbered) => B.push({ s, num: numbered !== false && !!s && s[0] !== '(' && s !== '%' });
     const now = opts.date || new Date();
     const ds = now.getFullYear() + '-' + pad(now.getMonth() + 1, 2) + '-' + pad(now.getDate(), 2) + ' ' + pad(now.getHours(), 2) + ':' + pad(now.getMinutes(), 2);
     out('%', false);
@@ -35,7 +32,7 @@
     plan.steps.forEach(s => { if (s.tool && !used.includes(s.tool)) used.push(s.tool); });
     used.forEach(t => out('(T' + pad(t.no, 2) + ' ' + (t.type === 'tap' ? 'TAP M' + fmt(t.dia) + ' P' + fmt(t.pitch) : (t.type === 'center' ? 'SPOT DRILL D' : 'DRILL D') + fmt(t.dia)) + ')', false));
     out('G21');
-    out('G00 G17 G40 G49 G80 G90');
+    out('G00 G17 G40 G49 G80 G90 G94'); // G94: 분당 이송 (이전 프로그램의 G95 잔류 방지)
     out('G91 G28 Z0.');
     out('G90');
     plan.steps.forEach(s => {
@@ -44,7 +41,7 @@
       // 공구 교환·안전 이동 (공정 관리 모듈이 정한 toolChange 에 따름)
       if (s.toolChange && !s.first) {
         if (set.coolant) out('M09');
-        out('M05');
+        out('M05'); spinOn = false;
         out('G91 G28 Z0.');
         out('G90');
         if (set.m01) out('M01');
@@ -56,7 +53,9 @@
       const spin = rigid && !machine.rigidM03 ? '' : ' S' + tp.rpm + ' M03';
       if (!s.toolChange) out('G00 Z' + fmt(set.initialZ)); // 같은 공구 연속 공정: 먼저 초기점으로 상승 후 XY 이동
       out('G00 G90 ' + set.wcs + ' X' + fmt(h0.x) + ' Y' + fmt(h0.y) + spin);
+      if (spin) spinOn = true;
       if (s.toolChange) out('G43 Z' + fmt(set.initialZ) + ' H' + pad(t.no, 2) + (set.coolant ? ' M08' : ''));
+      if (rigid && spinOn && !machine.rigidM03) { out('M05'); spinOn = false; } // FANUC: M29 는 주축 정지 상태에서 지령
       if (rigid) out('M29 S' + tp.rpm);
       let first = 'G' + set.retract.slice(1) + ' ' + code + ' X' + fmt(h0.x) + ' Y' + fmt(h0.y) + ' Z' + fmt(tp.z) + ' R' + fmt(tp.r);
       if (code === 'G73' || code === 'G83') first += ' Q' + fmt(tp.q);
@@ -80,6 +79,13 @@
     out('G90');
     out('M30');
     out('%', false);
+    // 시퀀스 번호: 10 간격, 5자리(N99999) 초과 시 1 간격, 그래도 넘으면 1부터 다시 (FANUC 최대 5자리)
+    let L;
+    if (set.seqNo) {
+      const n = B.filter(b => b.num).length, inc = n * 10 <= 99999 ? 10 : 1;
+      let k = 0;
+      L = B.map(b => { if (!b.num) return b.s; k++; return 'N' + (((k * inc - 1) % 99999) + 1) + ' ' + b.s; });
+    } else L = B.map(b => b.s);
     return { text: L.join('\n'), hits, lines: L.length };
   }
 

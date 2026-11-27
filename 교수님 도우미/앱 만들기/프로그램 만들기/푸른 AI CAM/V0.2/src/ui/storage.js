@@ -35,7 +35,7 @@
           d.machines = d.machines.map(C.normalizeMachine);
           d.bundles = Array.isArray(d.bundles) ? d.bundles.map(C.normalizeBundle) : [];
           const pr = {};
-          Object.values(d.projects || {}).forEach(p => { const n = C.normalizeProject(p); pr[n.id] = n; });
+          Object.values(d.projects || {}).forEach(p => { const n = C.normalizeProject(p); if (n.importWarnings) { const w = n.importWarnings[0]; delete n.importWarnings; setTimeout(() => toast('[' + n.name + '] ' + w, 'err'), 500); } pr[n.id] = n; });
           d.projects = pr;
           d.settings = Object.assign({ theme: 'system', fs: 'm', sound: true }, d.settings || {});
           d.settings.grid = Object.assign({ show: true, step: 5, snap: true }, d.settings.grid || {});

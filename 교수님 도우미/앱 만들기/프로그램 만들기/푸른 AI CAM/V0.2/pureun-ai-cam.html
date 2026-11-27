@@ -3207,6 +3207,9 @@ var qrcode = function() {
     const d = newProject(null);
     p = p || {};
     const s = p.stock || {}, st = p.settings || {};
+    // 지원하지 않는 가공 방식(개발 예정·상위 버전 파일)은 다른 가공으로 바꾸지 않고 제외 + 경고
+    const dropped = [];
+    const keepOp = (o, g) => { if (P.OPS.get(o && o.type)) return true; dropped.push('[' + String((g && g.name) || '그룹').slice(0, 40) + '] ' + String(o && o.type).slice(0, 30)); return false; };
     const out = {
       schema: 1, id: typeof p.id === 'string' ? p.id : uid('p'), name: String(p.name || d.name).slice(0, 60),
       programNo: Math.round(toNum(p.programNo, 1)), createdAt: String(p.createdAt || d.createdAt), updatedAt: String(p.updatedAt || d.updatedAt),
@@ -3222,14 +3225,15 @@ var qrcode = function() {
         id: typeof g.id === 'string' ? g.id : uid('g'), name: String(g.name || '홀 그룹').slice(0, 40),
         color: /^#[0-9a-fA-F]{6}$/.test(g.color) ? g.color : GROUP_COLORS[i % GROUP_COLORS.length],
         holes: Array.isArray(g.holes) ? g.holes.slice(0, MAX_HOLES).map(h => ({ id: typeof h.id === 'string' ? h.id : uid('h'), x: toNum(h.x, NaN), y: toNum(h.y, NaN) })) : [],
-        ops: Array.isArray(g.ops) ? g.ops.slice(0, 20).map(normalizeOp) : []
+        ops: Array.isArray(g.ops) ? g.ops.slice(0, 20).filter(o => keepOp(o, g)).map(normalizeOp) : []
       })) : []
     };
+    if (dropped.length) out.importWarnings = ['지원하지 않는 가공 방식이라 제외한 공정 ' + dropped.length + '개: ' + dropped.slice(0, 5).join(', ')];
     return out;
   }
   function normalizeBundle(b) {
     b = b || {};
-    return { id: typeof b.id === 'string' ? b.id : uid('b'), name: String(b.name || '공정 묶음').slice(0, 60), desc: String(b.desc || '').slice(0, 200), ops: Array.isArray(b.ops) ? b.ops.slice(0, 20).map(o => { const n = normalizeOp(o); delete n.id; return n; }) : [] };
+    return { id: typeof b.id === 'string' ? b.id : uid('b'), name: String(b.name || '공정 묶음').slice(0, 60), desc: String(b.desc || '').slice(0, 200), ops: Array.isArray(b.ops) ? b.ops.slice(0, 20).filter(o => P.OPS.get(o && o.type)).map(o => { const n = normalizeOp(o); delete n.id; return n; }) : [] };
   }
 
   // 그룹 대표 홀 직경 (센터 드릴 제외 최대 공구 직경, 없으면 전체 최대)
@@ -3498,12 +3502,9 @@ var qrcode = function() {
 
   function generate(project, machine, plan, opts) {
     const set = project.settings, st = project.stock;
-    const L = [], hits = [];
-    let seq = 0;
-    const out = (s, numbered) => {
-      if (set.seqNo && numbered !== false && s && s[0] !== '(' && s !== '%') { seq += 10; L.push('N' + seq + ' ' + s); }
-      else L.push(s);
-    };
+    const B = [], hits = []; // B: { s: 블록, num: 시퀀스 번호 대상 }
+    let spinOn = false;
+    const out = (s, numbered) => B.push({ s, num: numbered !== false && !!s && s[0] !== '(' && s !== '%' });
     const now = opts.date || new Date();
     const ds = now.getFullYear() + '-' + pad(now.getMonth() + 1, 2) + '-' + pad(now.getDate(), 2) + ' ' + pad(now.getHours(), 2) + ':' + pad(now.getMinutes(), 2);
     out('%', false);
@@ -3517,7 +3518,7 @@ var qrcode = function() {
     plan.steps.forEach(s => { if (s.tool && !used.includes(s.tool)) used.push(s.tool); });
     used.forEach(t => out('(T' + pad(t.no, 2) + ' ' + (t.type === 'tap' ? 'TAP M' + fmt(t.dia) + ' P' + fmt(t.pitch) : (t.type === 'center' ? 'SPOT DRILL D' : 'DRILL D') + fmt(t.dia)) + ')', false));
     out('G21');
-    out('G00 G17 G40 G49 G80 G90');
+    out('G00 G17 G40 G49 G80 G90 G94'); // G94: 분당 이송 (이전 프로그램의 G95 잔류 방지)
     out('G91 G28 Z0.');
     out('G90');
     plan.steps.forEach(s => {
@@ -3526,7 +3527,7 @@ var qrcode = function() {
       // 공구 교환·안전 이동 (공정 관리 모듈이 정한 toolChange 에 따름)
       if (s.toolChange && !s.first) {
         if (set.coolant) out('M09');
-        out('M05');
+        out('M05'); spinOn = false;
         out('G91 G28 Z0.');
         out('G90');
         if (set.m01) out('M01');
@@ -3538,7 +3539,9 @@ var qrcode = function() {
       const spin = rigid && !machine.rigidM03 ? '' : ' S' + tp.rpm + ' M03';
       if (!s.toolChange) out('G00 Z' + fmt(set.initialZ)); // 같은 공구 연속 공정: 먼저 초기점으로 상승 후 XY 이동
       out('G00 G90 ' + set.wcs + ' X' + fmt(h0.x) + ' Y' + fmt(h0.y) + spin);
+      if (spin) spinOn = true;
       if (s.toolChange) out('G43 Z' + fmt(set.initialZ) + ' H' + pad(t.no, 2) + (set.coolant ? ' M08' : ''));
+      if (rigid && spinOn && !machine.rigidM03) { out('M05'); spinOn = false; } // FANUC: M29 는 주축 정지 상태에서 지령
       if (rigid) out('M29 S' + tp.rpm);
       let first = 'G' + set.retract.slice(1) + ' ' + code + ' X' + fmt(h0.x) + ' Y' + fmt(h0.y) + ' Z' + fmt(tp.z) + ' R' + fmt(tp.r);
       if (code === 'G73' || code === 'G83') first += ' Q' + fmt(tp.q);
@@ -3562,6 +3565,13 @@ var qrcode = function() {
     out('G90');
     out('M30');
     out('%', false);
+    // 시퀀스 번호: 10 간격, 5자리(N99999) 초과 시 1 간격, 그래도 넘으면 1부터 다시 (FANUC 최대 5자리)
+    let L;
+    if (set.seqNo) {
+      const n = B.filter(b => b.num).length, inc = n * 10 <= 99999 ? 10 : 1;
+      let k = 0;
+      L = B.map(b => { if (!b.num) return b.s; k++; return 'N' + (((k * inc - 1) % 99999) + 1) + ' ' + b.s; });
+    } else L = B.map(b => b.s);
     return { text: L.join('\n'), hits, lines: L.length };
   }
 
@@ -3750,12 +3760,12 @@ var qrcode = function() {
  * 역할: 포스트프로세서와 별도의 코드로 NC 텍스트를 한 줄씩 해석·시뮬레이션하여
  *       문법·모달 상태·이동 경로·충돌·탭 이송을 검사하고, 생성기 결과와 교차 비교한다.
  *       사용자가 직접 수정한 NC 도 이 검증기를 통과해야 출력할 수 있다.
- * 의존: engine/common.js (생성기 코드에는 의존하지 않음)
+ * 의존: engine/common.js, 가공 모듈의 참고 절삭 조건표(refConditions) — 포스트프로세서(생성기) 코드에는 의존하지 않음
  * ===================================================================== */
 (function (root) {
   'use strict';
   const P = root.PCAM;
-  const { EPS, CLAMP_MARGIN, toNum, r3, fmt, toolMap, stockRect, segRectHit, clampRect, inRect } = P;
+  const { EPS, CLAMP_MARGIN, toNum, r3, fmt, toolMap, stockRect, segRectHit, clampRect, inRect, tipLength } = P;
   /* ---------------- 독립 NC 검증기 (G코드 해석·시뮬레이션) ----------------
    * 생성기와 별도로 NC 텍스트를 한 줄씩 해석하여 모달 상태를 추적하고
    * 문법, 이동 경로, 소재/클램프 충돌, 조건을 검사한다. 사용자 수정 NC도 동일하게 검사. */
@@ -3769,7 +3779,10 @@ var qrcode = function() {
     const sr = stockRect(stock);
     const bottom = -(stock.sz + toNum(stock.under, 0));
     const tm = toolMap(machine);
-    const s = { units: null, abs: true, motion: null, cycle: null, ret: 98, h: null, hNeed: true, tool: null, nextT: null, spin: false, S: 0, F: 0,
+    const drilled = new Map(); // 위치별 드릴 구멍 기록 (탭 기초 구멍 확인용)
+    const wantWcs = ctx.settings && /^G5[4-9]$/.test(ctx.settings.wcs) ? parseInt(ctx.settings.wcs.slice(1), 10) : null;
+    let wcsChecked = false;
+    const s = { feedMode: null, units: null, abs: true, motion: null, cycle: null, ret: 98, h: null, hNeed: true, tool: null, nextT: null, spin: false, S: 0, F: 0,
       m29: false, m29S: 0, x: null, y: null, z: Infinity, cz: null, cr: null, cq: null, cp: 0, initZ: null, cool: false, ended: false, wcs: null };
     let pct = 0, hasO = false, unitsWarned = false, sawMotion = false;
     const lines = String(text).split(/\r?\n/);
@@ -3783,7 +3796,32 @@ var qrcode = function() {
       });
     };
     const overStock = (x, y, rad) => x !== null && y !== null && x + rad > sr.x0 && x - rad < sr.x1 && y + rad > sr.y0 && y - rad < sr.y1;
+    // 이동 선분 전체가 소재(공구 반경만큼 확장)를 지나는지 (끝점만 보면 관통 이동을 놓침)
+    const crossStock = (x0, y0, x1, y1, rad) => (x0 === null || y0 === null) ? overStock(x1, y1, rad) : segRectHit(x0, y0, x1, y1, { x0: sr.x0 - rad, y0: sr.y0 - rad, x1: sr.x1 + rad, y1: sr.y1 + rad });
 
+    // 공정 검증 (수정한 NC 포함): 탭 기초 구멍, 절삭 조건 한계
+    function checkProcess(ln, tool, x, y) {
+      const key = r3(x) + ',' + r3(y);
+      if (s.cycle !== 84 && tool.type === 'drill') {
+        if (!drilled.has(key)) drilled.set(key, []);
+        drilled.get(key).push({ dia: tool.dia, fullZ: s.cz + tipLength(tool) });
+      }
+      if (s.cycle === 84 && tool.type === 'tap' && tool.pitch > 0) {
+        const lo = tool.dia - 1.25 * tool.pitch, hi = tool.dia - 0.5 * tool.pitch;
+        const good = (drilled.get(key) || []).filter(d => d.dia >= lo - EPS && d.dia < hi - EPS);
+        if (!good.length) E(ln, 'X' + fmt(x) + ' Y' + fmt(y) + ' 탭 위치에 맞는 기초 드릴 구멍(Ø' + r3(lo) + '~' + r3(hi) + ')이 앞에서 가공되지 않았습니다.');
+        else if (!good.some(d => d.fullZ <= s.cz + 1e-3 || d.fullZ <= -stock.sz + 1e-3)) E(ln, 'X' + fmt(x) + ' Y' + fmt(y) + ' 탭 깊이 Z' + fmt(s.cz) + ' 이(가) 기초 드릴 직경부 깊이보다 깊습니다 (탭 파손).');
+      }
+      // 절삭 조건: 모델 검증과 같은 한계 (참고값 3배 초과 = 오류)
+      const type = s.cycle === 84 ? (s.m29 ? 'rigid' : 'tap') : s.cycle === 73 ? 'peck' : s.cycle === 83 ? 'deep' : (tool.type === 'center' ? 'center' : 'drill');
+      const rpm = s.cycle === 84 && s.m29 ? s.m29S : s.S;
+      const ref = P.refConditions(type, tool, stock.material);
+      if (ref && ref.vc > 0 && rpm > 0) {
+        const vc = Math.PI * tool.dia * rpm / 1000;
+        if (vc / ref.vc > 3) E(ln, 'T' + tool.no + ' 절삭속도 Vc ' + r3(vc) + ' m/min 이 참고값(' + r3(ref.vc) + ')의 3배를 넘습니다.');
+        if (s.cycle !== 84 && s.F > 0 && (s.F / rpm) / ref.fpr > 3) E(ln, 'T' + tool.no + ' 회전당 이송 ' + r3(s.F / rpm) + ' mm/rev 가 참고값(' + r3(ref.fpr) + ')의 3배를 넘습니다.');
+      }
+    }
     for (let i = 0; i < lines.length; i++) {
       const ln = i + 1, raw = lines[i];
       if ((raw.match(/\(/g) || []).length !== (raw.match(/\)/g) || []).length) { E(ln, '주석 괄호가 짝이 맞지 않습니다.'); continue; }
@@ -3813,7 +3851,7 @@ var qrcode = function() {
       words.forEach(w => {
         if (w.L === 'G') G.push(w.v);
         else if (w.L === 'M') M.push(w.v);
-        else if (w.L === 'N') { /* 시퀀스 번호 */ }
+        else if (w.L === 'N') { if (!(w.v >= 1 && w.v <= 99999 && Number.isInteger(w.v))) E(ln, '시퀀스 번호 N' + w.raw + ' 은(는) 1~99999 범위여야 합니다.'); }
         else { if (A[w.L]) dup = true; A[w.L] = w; }
       });
       if (dup) { E(ln, '한 블록에 같은 주소가 두 번 있습니다.'); continue; }
@@ -3833,6 +3871,7 @@ var qrcode = function() {
         if (g === 21) s.units = 'mm';
         else if (g === 90) s.abs = true;
         else if (g === 91) s.abs = false;
+        else if (g === 94) s.feedMode = 94;
         else if (g === 98) s.ret = 98;
         else if (g === 99) s.ret = 99;
         else if (g >= 54 && g <= 59) s.wcs = g;
@@ -3844,6 +3883,7 @@ var qrcode = function() {
         else if (g === 4) g04 = true;
         else if ([73, 81, 82, 83, 84].includes(g)) newCycle = g;
       });
+      if (A.F && s.feedMode !== 94) E(ln, 'G94(분당 이송) 지정 전에 F를 사용합니다. G95 상태가 남아 있으면 F가 mm/rev 로 해석됩니다.');
       if (A.F) { if (!(A.F.v > 0)) E(ln, '이송속도 F는 0보다 커야 합니다.'); else if (A.F.v > machine.maxFeed) E(ln, 'F' + A.F.raw + ' 이(가) 장비 최대 이송 ' + machine.maxFeed + ' 을 초과합니다.'); s.F = A.F.v; }
       if (A.T) {
         const tn = A.T.v;
@@ -3871,6 +3911,7 @@ var qrcode = function() {
         else if (m === 29) {
           if (!A.S) E(ln, 'M29(리지드 탭)는 같은 블록에 S가 필요합니다.');
           if (!machine.rigidTap) E(ln, '장비가 리지드 탭을 지원하지 않도록 설정되어 있습니다.');
+          if (s.spin) { if (machine.rigidM03) W(ln, '주축 회전 중 M29 지령 (장비 설정: 리지드 탭 전 M03 사용).'); else E(ln, '주축 회전 중 M29 지령 — 주축 정지(M05) 후 지령해야 합니다.'); }
           s.m29 = true; s.m29S = A.S ? A.S.v : 0;
           if (A.S && A.S.v > (machine.maxTapRpm || machine.maxRpm)) E(ln, '리지드 탭 S' + A.S.v + ' 이(가) 탭 최대 회전수를 초과합니다.');
         } else if (m === 30 || m === 2) s.ended = true;
@@ -3894,7 +3935,13 @@ var qrcode = function() {
         continue;
       }
       if (hasAxis && !s.units) { if (!unitsWarned) E(ln, 'G21(mm 단위) 지정 전에 이동 명령이 있습니다.'); unitsWarned = true; }
-      if (hasAxis && !s.abs) { E(ln, '증분(G91) 이동은 V0.1 검증기가 지원하지 않습니다 (G28 제외).'); continue; }
+      if (hasAxis && !s.abs) { E(ln, '증분(G91) 이동은 검증기가 지원하지 않습니다 (G28 제외).'); continue; }
+      if (hasAxis && !wcsChecked) {
+        wcsChecked = true;
+        if (s.wcs === null) E(ln, '공작물 좌표계(G54~G59) 지정 없이 이동합니다.');
+        else if (wantWcs !== null && s.wcs !== wantWcs) E(ln, '좌표계 G' + s.wcs + ' 이(가) 프로젝트 설정 G' + wantWcs + ' 와 다릅니다.');
+      }
+      if (hasAxis && wcsChecked && wantWcs !== null && s.wcs !== null && s.wcs !== wantWcs && G.some(g => g >= 54 && g <= 59)) E(ln, '좌표계 G' + s.wcs + ' 로 바뀌었습니다 (프로젝트 설정 G' + wantWcs + ').');
 
       const rad = s.tool && tm.get(s.tool) ? tm.get(s.tool).dia / 2 : 0;
       if (newCycle !== null) {
@@ -3942,7 +3989,8 @@ var qrcode = function() {
         const travelZ = s.z;
         if (s.x !== null && s.y !== null) moves.push({ x0: s.x, y0: s.y, x1: nx, y1: ny, z: travelZ, rapid: true });
         clampHit(s.x, s.y, nx, ny, travelZ, rad, ln, '구멍 간 이동');
-        if (travelZ <= 0 && overStock(s.x, s.y, rad)) E(ln, '소재 상면 아래 높이에서 구멍 간 급속 이동.');
+        if (travelZ <= 0 && crossStock(s.x, s.y, nx, ny, rad)) E(ln, '소재 상면 아래 높이에서 구멍 간 급속 이동.');
+        if (tool) checkProcess(ln, tool, nx, ny);
         s.x = nx; s.y = ny;
         hits.push({ t: s.tool, x: r3(nx), y: r3(ny), z: r3(s.cz), r: r3(s.cr), code, line: ln });
         s.z = s.ret === 98 ? s.initZ : s.cr;
@@ -3960,7 +4008,7 @@ var qrcode = function() {
         if (xyMove) {
           const zAt = tz < s.z ? tz : s.z; // 하강이 섞이면 낮은 높이로 보수적 판단
           clampHit(s.x, s.y, tx, ty, zAt, rad, ln, (s.motion === 0 ? '급속' : '직선') + ' 이동');
-          if (s.motion === 0 && zAt <= 0 && (overStock(s.x, s.y, rad) || overStock(tx, ty, rad))) E(ln, '소재 상면 높이 이하에서 급속 XY 이동 (소재 충돌).');
+          if (zAt <= 0 && crossStock(s.x, s.y, tx, ty, rad)) E(ln, s.motion === 0 ? '소재 상면 높이 이하에서 급속 XY 이동 (소재 충돌).' : '소재 상면 높이 이하에서 G01 XY 이동 — 드릴·탭으로 측면 절삭 (공구 파손).');
           if (s.x !== null && s.y !== null) moves.push({ x0: s.x, y0: s.y, x1: tx, y1: ty, z: zAt, rapid: s.motion === 0 });
         }
         if (A.Z && s.motion === 0 && tz < s.z && tz < 1 - EPS && overStock(tx, ty, rad)) E(ln, '급속 이송(G00)으로 소재 상면 1mm 이내로 하강 (Z' + fmt(tz) + ').');
@@ -4043,7 +4091,7 @@ var qrcode = function() {
           d.machines = d.machines.map(C.normalizeMachine);
           d.bundles = Array.isArray(d.bundles) ? d.bundles.map(C.normalizeBundle) : [];
           const pr = {};
-          Object.values(d.projects || {}).forEach(p => { const n = C.normalizeProject(p); pr[n.id] = n; });
+          Object.values(d.projects || {}).forEach(p => { const n = C.normalizeProject(p); if (n.importWarnings) { const w = n.importWarnings[0]; delete n.importWarnings; setTimeout(() => toast('[' + n.name + '] ' + w, 'err'), 500); } pr[n.id] = n; });
           d.projects = pr;
           d.settings = Object.assign({ theme: 'system', fs: 'm', sound: true }, d.settings || {});
           d.settings.grid = Object.assign({ show: true, step: 5, snap: true }, d.settings.grid || {});
@@ -4210,7 +4258,8 @@ var qrcode = function() {
   'use strict';
   const C = window.PCAM;
   const CHANGELOG = [
-    { v: 'V0.1', d: C.BUILD_DATE, items: ['최초 버전: FANUC 3축 2.5축 홀 가공(G81·G82·G73·G83·G84·M29 리지드 탭)', '홀 배열(개별·직선·사각·PCD), 공정 묶음, 공구·장비 관리', '11개 항목 자동 검증, 독립 NC 해석 검증, 오류 시 NC 생성 차단', '로컬 저장·JSON 백업/복원, 공유·QR코드, 숨겨진 관리자 설정'] }
+    { v: 'V0.2', d: C.BUILD_DATE, items: ['기능별 모듈 구조: 공통 엔진·가공 모듈(6종)·공정 관리·포스트프로세서·검증·저장·그래픽 분리', '안전 강화: 소재 관통 급속/G01 이동, 탭 기초 구멍·절삭 조건(수정 NC 포함), 좌표계, G94, M29 주축 정지, N번호 5자리 검사', '수정 NC 재검증 결과를 소재·장비 변경 시 자동 갱신, 검증 전 G코드 복사 차단', '개발 예정 가공(평면·사각/원형 포켓·외곽) 목록 표시, 미지원 가공은 드릴로 바꾸지 않고 제외'] },
+    { v: 'V0.1', d: '2026-11-27', items: ['최초 버전: FANUC 3축 2.5축 홀 가공(G81·G82·G73·G83·G84·M29 리지드 탭)', '홀 배열(개별·직선·사각·PCD), 공정 묶음, 공구·장비 관리', '11개 항목 자동 검증, 독립 NC 해석 검증, 오류 시 NC 생성 차단', '로컬 저장·JSON 백업/복원, 공유·QR코드, 숨겨진 관리자 설정'] }
   ];
 
   /* ---------------- 상태 ---------------- */
@@ -4290,7 +4339,9 @@ var qrcode = function() {
     S.V = C.validateProject(P, m);
     const g = C.generateNC(P, m, S.V.plan);
     S.nc.text = g.text; S.nc.hits = g.hits; S.nc.blocked = g.blocked || '';
-    S.nc.verify = g.text ? C.verifyNC(g.text, { stock: P.stock, machine: m, clamps: P.clamps, expected: g.hits }) : null;
+    S.nc.verify = g.text ? C.verifyNC(g.text, { stock: P.stock, machine: m, clamps: P.clamps, settings: P.settings, expected: g.hits }) : null;
+    // 재검증한 수정본도 소재·장비·클램프가 바뀌면 현재 조건으로 다시 검사 (이전 통과 결과 재사용 금지)
+    if (S.nc.edited && S.nc.editVerify) S.nc.editVerify = C.verifyNC(S.nc.editText, { stock: P.stock, machine: m, clamps: P.clamps, settings: P.settings, expected: null });
   }
   function counts() {
     const iss = S.V ? S.V.issues : [];
@@ -4680,7 +4731,7 @@ var qrcode = function() {
     const text = S.nc.edited ? S.nc.editText : S.nc.text;
     let h = '<div class="codebar">' +
       u.btn('⟳ 다시 생성', () => { if (S.nc.edited && !confirm('수정한 내용이 사라지고 현재 설정으로 다시 생성합니다.')) return; S.nc.edited = false; S.nc.editText = ''; S.nc.editVerify = null; renderAll(); toast('G코드를 다시 생성했습니다.'); }, 'sm') +
-      u.btn('⧉ 복사', () => copyText(text), 'sm') +
+      u.btn('⧉ 복사', () => { const st = downloadState(); if (!st.ok) { beep(); return toast('복사 차단: ' + st.why + ' (검증을 통과한 G코드만 복사할 수 있습니다)', 'err'); } copyText(text); }, 'sm', ds.ok ? '' : 'aria-disabled="true" title="검증 통과 후 복사 가능"') +
       u.btn(S.nc.edited ? '✎ 편집 중' : '✎ 직접 수정', () => {
         if (!S.nc.text) return toast('먼저 오류를 해결하여 G코드를 생성하세요.', 'err');
         if (!S.nc.edited) { if (!confirm('G코드를 직접 수정하면 기존 검증 결과가 무효화되고, 다운로드 전에 재검증이 필요합니다.\n계속할까요?')) return; S.nc.edited = true; S.nc.editText = S.nc.text; S.nc.editVerify = null; renderAll(); }
@@ -4700,7 +4751,7 @@ var qrcode = function() {
   }
   function reverify() {
     const m = machine();
-    S.nc.editVerify = C.verifyNC(S.nc.editText, { stock: P.stock, machine: m, clamps: P.clamps, expected: null });
+    S.nc.editVerify = C.verifyNC(S.nc.editText, { stock: P.stock, machine: m, clamps: P.clamps, settings: P.settings, expected: null });
     renderAll();
     const e = S.nc.editVerify.errors.length;
     toast(e ? '재검증 오류 ' + e + '건 — 다운로드 차단' : '재검증 통과', e ? 'err' : 'ok');
@@ -4902,6 +4953,7 @@ var qrcode = function() {
     const d = JSON.parse(txt);
     if (!d || d.type !== 'pcam-project' || !d.project) throw new Error('푸른 AI CAM 프로젝트 파일이 아닙니다.');
     const p = C.normalizeProject(d.project); p.id = C.uid('p'); p.updatedAt = new Date().toISOString();
+    if (p.importWarnings) { p.importWarnings.forEach(w => toast(w, 'err')); delete p.importWarnings; }
     if (d.machine) {
       const m = C.normalizeMachine(d.machine); m.verified = false; m.verifiedBy = ''; m.verifiedAt = '';
       const ex = DB.machines.find(x => x.id === m.id);
@@ -4956,7 +5008,7 @@ var qrcode = function() {
     backupAll();
     const nd = { schema: 1, machines: d.db.machines.map(C.normalizeMachine), bundles: (d.db.bundles || []).map(C.normalizeBundle), projects: {}, settings: Object.assign({}, DB.settings, d.db.settings || {}) };
     nd.machines.forEach(m => { m.verified = false; });
-    Object.values(d.db.projects || {}).forEach(p => { const n = C.normalizeProject(p); nd.projects[n.id] = n; });
+    Object.values(d.db.projects || {}).forEach(p => { const n = C.normalizeProject(p); if (n.importWarnings) { toast('[' + n.name + '] ' + n.importWarnings[0], 'err'); delete n.importWarnings; } nd.projects[n.id] = n; });
     if (!nd.machines.length) throw new Error('장비 정보가 없습니다.');
     if (!Object.keys(nd.projects).length) { const n = C.newProject(nd.machines[0]); nd.projects[n.id] = n; }
     Object.values(nd.projects).forEach(p => { if (!nd.machines.find(m => m.id === p.machineId)) p.machineId = nd.machines[0].id; });

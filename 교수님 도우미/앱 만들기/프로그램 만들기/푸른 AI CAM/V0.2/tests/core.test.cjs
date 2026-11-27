@@ -416,7 +416,7 @@ test('JSON 정규화: 악성·손상 데이터 방어', () => {
   assert.equal(p.stock.origin, 'LL'); assert.equal(p.stock.material, 'S45C'); assert.equal(p.stock.sx, 150);
   assert.equal(p.settings.wcs, 'G54');
   assert.match(p.groups[0].color, /^#[0-9a-f]{6}$/i);
-  assert.equal(p.groups[0].ops[0].type, 'drill');
+  assert.equal(p.groups[0].ops.length, 0, 'V0.2: 미지원 가공(evil)은 드릴로 바꾸지 않고 제외'); assert.ok(p.importWarnings);
   assert.ok(Number.isNaN(p.groups[0].holes[0].y));
   const m = C.normalizeMachine({ tools: [{ type: 'laser', no: '3' }], verified: 'yes' });
   assert.equal(m.tools[0].type, 'drill');

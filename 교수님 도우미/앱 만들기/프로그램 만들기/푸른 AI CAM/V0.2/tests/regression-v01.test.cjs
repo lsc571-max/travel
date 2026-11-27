@@ -14,7 +14,16 @@ const NEW = require('../src/load-node.cjs');
 const OLD = hasV01 ? (() => { const saved = globalThis.PCAM; const m = require(V01_PATH); globalThis.PCAM = saved; return m; })() : null;
 
 // V0.2 에서 의도적으로 바꾼 출력 (안전 수정). 비교 전에 V0.1 결과에 같은 변환을 적용한다.
-const KNOWN_CHANGES = NEW.REGRESSION_KNOWN_CHANGES || [];
+const KNOWN_CHANGES = [
+  // [검증 6] 안전 블록에 G94(분당 이송) 추가
+  { id: 'G94', apply: t => t.replace(/^((?:N\d+ )?G00 G17 G40 G49 G80 G90)$/m, '$1 G94') }
+];
+// [검증 7] 같은 공구로 일반 탭 후 리지드 탭: M29 전에 M05 추가 → 해당 경우는 텍스트 비교 제외 (별도 단위 테스트)
+function spindleOnBeforeM29(text) {
+  let on = false;
+  for (const l of text.split('\n')) { if (/M03/.test(l)) on = true; if (/M05/.test(l)) on = false; if (/M29/.test(l) && on) return true; }
+  return false;
+}
 const normText = t => t.replace(/\(PUREUN AI CAM V[\d.]+ [^)]*\)/, '(PUREUN AI CAM)');
 function applyKnown(oldText, ctx) { return KNOWN_CHANGES.reduce((t, k) => k.apply(t, ctx), oldText); }
 
@@ -58,7 +67,7 @@ const DATE = new Date(2026, 10, 27, 9, 0);
 
 test('모듈화 전후 동일 결과: 정상·비정상 입력 1,200건', { skip: !hasV01 && 'V0.1 폴더 없음' }, () => {
   const R = rng(20261127);
-  let same = 0, generated = 0;
+  let same = 0, generated = 0, m29cases = 0;
   for (let n = 0; n < 1200; n++) {
     const { p, m } = randomProject(R, n % 3 === 2);
     const pa = JSON.parse(JSON.stringify(p)), pb = JSON.parse(JSON.stringify(p));
@@ -70,7 +79,8 @@ test('모듈화 전후 동일 결과: 정상·비정상 입력 1,200건', { skip
     assert.equal(!!gb.blocked, !!ga.blocked, '차단 여부 차이 #' + n);
     if (ga.text) {
       generated++;
-      assert.equal(normText(gb.text), normText(applyKnown(ga.text, { p: pa, m })), 'G코드 차이 #' + n);
+      if (spindleOnBeforeM29(ga.text) && !m.rigidM03) { m29cases++; assert.ok(/M05\n(N\d+ )?M29/.test(gb.text), 'M29 전 M05 #' + n); }
+      else assert.equal(normText(gb.text), normText(applyKnown(ga.text, { p: pa, m })), 'G코드 차이 #' + n);
       assert.deepEqual(gb.hits, ga.hits);
       const ctx = { stock: pa.stock, machine: m, clamps: pa.clamps, expected: ga.hits };
       const ra = OLD.verifyNC(ga.text, ctx), rb = NEW.verifyNC(gb.text, Object.assign({}, ctx, { settings: pb.settings }));
@@ -80,7 +90,7 @@ test('모듈화 전후 동일 결과: 정상·비정상 입력 1,200건', { skip
     same++;
   }
   assert.ok(generated > 300, 'G코드 생성 건수 ' + generated);
-  console.log('  비교 ' + same + '건 동일, G코드 생성 ' + generated + '건');
+  console.log('  비교 ' + same + '건, G코드 생성 ' + generated + '건 (의도한 변경: G94 추가, M29 전 M05 ' + m29cases + '건)');
 });
 
 test('모듈화 전후 동일 계산: 깊이·조건·추천·기초 드릴·배열', { skip: !hasV01 && 'V0.1 폴더 없음' }, () => {

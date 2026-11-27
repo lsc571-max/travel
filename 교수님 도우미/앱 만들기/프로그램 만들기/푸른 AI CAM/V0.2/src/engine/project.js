@@ -23,6 +23,9 @@
     const d = newProject(null);
     p = p || {};
     const s = p.stock || {}, st = p.settings || {};
+    // 지원하지 않는 가공 방식(개발 예정·상위 버전 파일)은 다른 가공으로 바꾸지 않고 제외 + 경고
+    const dropped = [];
+    const keepOp = (o, g) => { if (P.OPS.get(o && o.type)) return true; dropped.push('[' + String((g && g.name) || '그룹').slice(0, 40) + '] ' + String(o && o.type).slice(0, 30)); return false; };
     const out = {
       schema: 1, id: typeof p.id === 'string' ? p.id : uid('p'), name: String(p.name || d.name).slice(0, 60),
       programNo: Math.round(toNum(p.programNo, 1)), createdAt: String(p.createdAt || d.createdAt), updatedAt: String(p.updatedAt || d.updatedAt),
@@ -38,14 +41,15 @@
         id: typeof g.id === 'string' ? g.id : uid('g'), name: String(g.name || '홀 그룹').slice(0, 40),
         color: /^#[0-9a-fA-F]{6}$/.test(g.color) ? g.color : GROUP_COLORS[i % GROUP_COLORS.length],
         holes: Array.isArray(g.holes) ? g.holes.slice(0, MAX_HOLES).map(h => ({ id: typeof h.id === 'string' ? h.id : uid('h'), x: toNum(h.x, NaN), y: toNum(h.y, NaN) })) : [],
-        ops: Array.isArray(g.ops) ? g.ops.slice(0, 20).map(normalizeOp) : []
+        ops: Array.isArray(g.ops) ? g.ops.slice(0, 20).filter(o => keepOp(o, g)).map(normalizeOp) : []
       })) : []
     };
+    if (dropped.length) out.importWarnings = ['지원하지 않는 가공 방식이라 제외한 공정 ' + dropped.length + '개: ' + dropped.slice(0, 5).join(', ')];
     return out;
   }
   function normalizeBundle(b) {
     b = b || {};
-    return { id: typeof b.id === 'string' ? b.id : uid('b'), name: String(b.name || '공정 묶음').slice(0, 60), desc: String(b.desc || '').slice(0, 200), ops: Array.isArray(b.ops) ? b.ops.slice(0, 20).map(o => { const n = normalizeOp(o); delete n.id; return n; }) : [] };
+    return { id: typeof b.id === 'string' ? b.id : uid('b'), name: String(b.name || '공정 묶음').slice(0, 60), desc: String(b.desc || '').slice(0, 200), ops: Array.isArray(b.ops) ? b.ops.slice(0, 20).filter(o => P.OPS.get(o && o.type)).map(o => { const n = normalizeOp(o); delete n.id; return n; }) : [] };
   }
 
   // 그룹 대표 홀 직경 (센터 드릴 제외 최대 공구 직경, 없으면 전체 최대)
