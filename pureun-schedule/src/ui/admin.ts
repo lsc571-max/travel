@@ -194,8 +194,9 @@ function render() {
   body.replaceChildren(
     el('section', { className: 'set-group' },
       el('h3', { textContent: 'Google Calendar 연결' }),
-      el('p', { className: 'note', textContent: '사용 중 · 일정 보기·등록·수정·삭제에 사용합니다. 인증 방식: OAuth (API 키·비밀키 없음)' }),
-      row('권한 범위', SCOPES.replace('https://www.googleapis.com/auth/', '')),
+      el('p', { className: 'note', textContent: '사용 중 · 일정과 할 일의 보기·등록·수정·삭제에 사용합니다. 인증 방식: OAuth (API 키·비밀키 없음)' }),
+      row('권한 범위', SCOPES.split(' ').map((s) => s.replace('https://www.googleapis.com/auth/', '')).join(', ')),
+      row('할 일 권한', auth.isConnected() ? (auth.hasTasksAccess() ? '허용됨' : '허용 안 됨 (다시 연결해 체크)') : '연결 후 확인'),
       row('현재 상태', status),
       el('label', { className: 'field' }, el('span', { textContent: 'OAuth 클라이언트 ID (공개 식별자, 비밀 아님)' }), input),
       el('div', { className: 'row-btns' }, saveBtn, testBtn, disconnectBtn, delBtn),

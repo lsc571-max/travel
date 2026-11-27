@@ -98,6 +98,26 @@ button { cursor: pointer; }
 .ev .meta { font-size: .82em; color: var(--muted); }
 .ev.holiday .what { color: var(--sunday); }
 .compact .ev { padding: 6px 10px; }
+
+/* 할 일 */
+.task-head { margin-top: 18px; }
+.task-head .sub-head { margin: 0; }
+.task-head .count { font-weight: 400; }
+.task-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.task-list .empty { color: var(--muted); font-size: .9em; padding: 4px 2px; }
+.task { display: grid; grid-template-columns: 40px 1fr; align-items: stretch; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.tk-check { margin: 6px; width: 28px; height: 28px; align-self: center; border: 2px solid var(--primary); border-radius: 7px; background: var(--surface); color: var(--primary-text); font-weight: 800; display: grid; place-items: center; padding: 0; }
+.tk-check.on { background: var(--primary); }
+.tk-body { text-align: left; background: none; border: 0; padding: 7px 10px 7px 2px; display: grid; min-width: 0; border-radius: 0 10px 10px 0; }
+.tk-body:hover { background: var(--surface-2); }
+.tk-body .what { font-weight: 600; overflow-wrap: anywhere; }
+.tk-body .when { font-size: .82em; color: var(--muted); }
+.tk-body .when.overdue { color: var(--danger); font-weight: 600; }
+.task.done .what { text-decoration: line-through; color: var(--muted); font-weight: 400; }
+#btnDoneToggle { margin-top: 4px; }
+.fc .ev-task { --fc-event-bg-color: var(--surface-2); --fc-event-border-color: var(--primary); --fc-event-text-color: var(--text); border-style: dashed; }
+.fc .ev-task .fc-event-main { color: var(--text); }
+.fc .ev-task-done .fc-event-title { text-decoration: line-through; opacity: .6; }
 .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; flex: none; }
 
 .fab {

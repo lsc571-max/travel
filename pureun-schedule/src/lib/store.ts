@@ -4,6 +4,7 @@ import * as api from './calendarApi';
 import * as cache from './cache';
 import { fromGoogle, overlaps, type CalEvent } from './eventModel';
 import { getSettings } from './settings';
+import * as tasksStore from './tasksStore';
 
 const events = new Map<string, CalEvent>();
 const fetched: { cal: string; min: number; max: number; at: number }[] = [];
@@ -110,6 +111,7 @@ export async function removeLocal(pred: (e: CalEvent) => boolean) {
 export function invalidate() { fetched.length = 0; generation++; }
 
 export async function clearAll() {
+  tasksStore.clearAll(); // 할 일 사본도 함께 지운다
   generation++;
   events.clear();
   fetched.length = 0;

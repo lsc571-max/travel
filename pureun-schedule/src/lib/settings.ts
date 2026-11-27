@@ -11,6 +11,7 @@ export interface Settings {
   weekStart: 0 | 1;
   defaultView: ViewName;
   showHolidays: boolean;
+  showTasks: boolean;
   categoryColors: Record<string, string>;
   defaultReminder: ReminderChoice;
 }
@@ -21,6 +22,7 @@ const DEFAULT_SETTINGS: Settings = {
   weekStart: 0,
   defaultView: 'dayGridMonth',
   showHolidays: true,
+  showTasks: true,
   categoryColors: { ...DEFAULT_CATEGORY_COLORS },
   defaultReminder: 'default',
 };

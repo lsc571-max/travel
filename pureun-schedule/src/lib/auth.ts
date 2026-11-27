@@ -1,6 +1,6 @@
 // Google 로그인 (Google Identity Services 토큰 방식). 서버·클라이언트 비밀번호 없음.
 // 액세스 토큰은 메모리에만 보관하고 기기 저장소에 저장하지 않는다.
-import { BUILD_CLIENT_ID, GIS_SCRIPT, SCOPES } from '../config';
+import { BUILD_CLIENT_ID, CALENDAR_SCOPE, GIS_SCRIPT, SCOPES, TASKS_SCOPE } from '../config';
 import { getStoredClientId, safeStorage } from './settings';
 
 interface TokenResponse { access_token?: string; expires_in?: number | string; error?: string; error_description?: string; scope?: string }
@@ -11,6 +11,7 @@ interface GoogleOAuth2 {
     error_callback?: (e: { type: string; message?: string }) => void;
   }): TokenClient;
   hasGrantedAllScopes(r: TokenResponse, ...scopes: string[]): boolean;
+  hasGrantedAnyScope?(r: TokenResponse, ...scopes: string[]): boolean;
   revoke(token: string, done?: () => void): void;
 }
 declare global { interface Window { google?: { accounts?: { oauth2?: GoogleOAuth2 } } } }
@@ -20,6 +21,7 @@ class AuthError extends Error {
 }
 
 let token: { value: string; exp: number } | null = null;
+let tasksGranted = false; // 할 일 권한은 선택: 허용하지 않아도 일정 기능은 동작
 let client: TokenClient | null = null;
 let clientFor = '';
 let pending: { resolve: (t: string) => void; reject: (e: Error) => void } | null = null;
@@ -38,8 +40,9 @@ export function getToken(): string | null {
   return null;
 }
 export function isConnected(): boolean { return !!getToken(); }
+export function hasTasksAccess(): boolean { return isConnected() && tasksGranted; }
 
-export function invalidateToken() { token = null; emit(); }
+export function invalidateToken() { token = null; tasksGranted = false; emit(); }
 
 function loadScript(): Promise<void> {
   if (window.google?.accounts?.oauth2) return Promise.resolve();
@@ -78,10 +81,13 @@ function ensureClient(): TokenClient {
         p.reject(new AuthError(r.error === 'access_denied' ? '권한 허용이 취소되었습니다.' : `로그인 실패: ${r.error_description || r.error || '알 수 없는 오류'}`, r.error || 'unknown'));
         return;
       }
-      if (!oauth2.hasGrantedAllScopes(r, SCOPES)) {
+      if (!oauth2.hasGrantedAllScopes(r, CALENDAR_SCOPE)) {
         p.reject(new AuthError('캘린더 권한이 허용되지 않았습니다. 다시 연결하고 "일정 보기·수정" 권한에 체크해 주세요.', 'scope'));
         return;
       }
+      tasksGranted = oauth2.hasGrantedAnyScope
+        ? oauth2.hasGrantedAnyScope(r, TASKS_SCOPE)
+        : (r.scope ?? '').split(' ').includes(TASKS_SCOPE);
       token = { value: r.access_token, exp: Date.now() + Number(r.expires_in ?? 3600) * 1000 };
       safeStorage.setItem(CONNECTED_KEY, '1');
       p.resolve(r.access_token);
@@ -110,6 +116,7 @@ export async function connect(prompt: '' | 'consent' | 'select_account' = ''): P
 export async function disconnect(): Promise<void> {
   const t = token?.value;
   token = null;
+  tasksGranted = false;
   safeStorage.removeItem(CONNECTED_KEY);
   if (t && window.google?.accounts?.oauth2) {
     await new Promise<void>((res) => window.google!.accounts!.oauth2!.revoke(t, () => res()));
@@ -118,4 +125,4 @@ export async function disconnect(): Promise<void> {
 }
 
 /** 클라이언트 ID가 바뀌면 기존 연결을 끊는다 */
-export function resetClient() { client = null; clientFor = ''; token = null; emit(); }
+export function resetClient() { client = null; clientFor = ''; token = null; tasksGranted = false; emit(); }

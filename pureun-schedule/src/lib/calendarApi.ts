@@ -16,11 +16,21 @@ const MESSAGES: Record<number, string> = {
   412: '다른 기기에서 먼저 수정된 일정입니다.',
   429: '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.',
 };
+export const TASK_MESSAGES: Record<number, string> = {
+  ...MESSAGES,
+  403: '할 일 권한이 없거나 사용 한도를 넘었습니다. 연결을 끊고 다시 연결해 "할 일" 권한에 체크해 주세요.',
+  404: '할 일을 찾을 수 없습니다. 이미 삭제되었을 수 있습니다.',
+  410: '할 일이 이미 삭제되었습니다.',
+  412: '다른 기기에서 먼저 수정된 할 일입니다.',
+};
 
-async function call<T>(method: string, path: string, opts: { params?: Record<string, string>; body?: unknown; etag?: string } = {}): Promise<T> {
+type CallOpts = { params?: Record<string, string>; body?: unknown; etag?: string };
+
+/** Google REST 공통 호출 (캘린더·할 일 공용). 토큰은 메모리에서만 꺼내 쓴다. */
+export async function googleCall<T>(base: string, service: string, msgs: Record<number, string>, method: string, path: string, opts: CallOpts = {}): Promise<T> {
   const t = getToken();
-  if (!t) throw new ApiError(MESSAGES[401], 401);
-  const url = new URL(CALENDAR_API + path);
+  if (!t) throw new ApiError(msgs[401], 401);
+  const url = new URL(base + path);
   Object.entries(opts.params ?? {}).forEach(([k, v]) => url.searchParams.set(k, v));
   const headers: Record<string, string> = { Authorization: `Bearer ${t}` };
   if (opts.body !== undefined) headers['Content-Type'] = 'application/json';
@@ -37,12 +47,16 @@ async function call<T>(method: string, path: string, opts: { params?: Record<str
     let detail = '';
     try { detail = (await res.json())?.error?.message ?? ''; } catch { /* 본문 없음 */ }
     // 오류 메시지에 토큰 등 비밀정보가 섞이지 않도록 서버 메시지는 짧게만 덧붙인다
-    const base = MESSAGES[res.status] ?? `Google 캘린더 오류 (${res.status})`;
-    throw new ApiError(detail && !MESSAGES[res.status] ? `${base}: ${detail.slice(0, 120)}` : base, res.status);
+    const text = msgs[res.status] ?? `${service} 오류 (${res.status})`;
+    throw new ApiError(detail && !msgs[res.status] ? `${text}: ${detail.slice(0, 120)}` : text, res.status);
   }
   if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
+  const raw = await res.text();
+  return (raw ? JSON.parse(raw) : undefined) as T;
 }
+
+const call = <T>(method: string, path: string, opts: CallOpts = {}) =>
+  googleCall<T>(CALENDAR_API, 'Google 캘린더', MESSAGES, method, path, opts);
 
 const enc = encodeURIComponent;
 

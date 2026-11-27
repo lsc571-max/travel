@@ -14,9 +14,12 @@ import { importanceMark, type CalEvent } from './lib/eventModel';
 import { getSettings, onSettings, updateSettings, type Settings, type ViewName } from './lib/settings';
 import { checkOwner } from './lib/owner';
 import * as store from './lib/store';
+import { dueLabel, type TaskItem } from './lib/taskModel';
+import * as tasksStore from './lib/tasksStore';
 import { initAdmin, startAuth } from './ui/admin';
 import { $, el, openDialog, toast, wireDialogs } from './ui/dom';
 import { initEditor, openEdit, openNew, parseReminder, reminderOptions } from './ui/editor';
+import { initTaskEditor, openEditTask, openNewTask, toggleDone } from './ui/taskEditor';
 import { initServiceWorker, initShare, openShare, openVersion } from './ui/shareVersion';
 
 let selectedDate = toDateStr(new Date());
@@ -47,9 +50,23 @@ function toFc(e: CalEvent): EventInput {
   };
 }
 
+const TASK_PREFIX = 'task:';
+function taskToFc(t: TaskItem): EventInput {
+  return {
+    id: TASK_PREFIX + t.key,
+    title: (t.done ? '✓ ' : '☐ ') + (t.title || '(제목 없음)'),
+    start: t.due,
+    allDay: true,
+    classNames: t.done ? ['ev-task', 'ev-task-done'] : ['ev-task'],
+  };
+}
+
 function renderCalendar() {
   if (!calendar || !viewRange) return;
   const evs = store.inRange(viewRange[0], viewRange[1]).map(toFc);
+  if (getSettings().showTasks) {
+    evs.push(...tasksStore.dueBetween(toDateStr(viewRange[0]), toDateStr(viewRange[1])).map(taskToFc));
+  }
   calendar.batchRendering(() => {
     calendar.removeAllEventSources();
     calendar.addEventSource(evs);
@@ -104,6 +121,11 @@ function initCalendar() {
     },
     eventClick: (info) => {
       info.jsEvent.preventDefault();
+      if (info.event.id.startsWith(TASK_PREFIX)) {
+        const t = tasksStore.get(info.event.id.slice(TASK_PREFIX.length));
+        if (t) openEditTask(t);
+        return;
+      }
       const ev = store.get(info.event.id);
       if (ev) void openEdit(ev);
     },
@@ -156,6 +178,58 @@ function renderSide() {
   const upStart = parseDateStr(addDays(today, 1)), upEnd = parseDateStr(addDays(today, 8));
   const up = store.inRange(upStart, upEnd).sort(sortEv).slice(0, 30);
   $('upcoming').replaceChildren(...(up.length ? up.map((e) => evItem(e, true)) : [el('li', { className: 'empty', textContent: '다가오는 일정이 없습니다.' })]));
+  renderTasks();
+}
+
+// ───────── 할 일 ─────────
+let showDone = false;
+function taskItem(t: TaskItem, today: string, multiList: boolean): HTMLLIElement {
+  const check = el('button', { type: 'button', className: t.done ? 'tk-check on' : 'tk-check', textContent: t.done ? '✓' : '' });
+  check.setAttribute('role', 'checkbox');
+  check.setAttribute('aria-checked', String(t.done));
+  check.setAttribute('aria-label', `${t.title || '(제목 없음)'} ${t.done ? '완료 취소' : '완료로 표시'}`);
+  check.onclick = () => void toggleDone(t);
+  const d = dueLabel(t.due, today);
+  const meta = [d.text, multiList ? t.listTitle : ''].filter(Boolean).join(' · ');
+  const body = el('button', { type: 'button', className: 'tk-body' },
+    el('span', { className: 'what', textContent: t.title || '(제목 없음)' }),
+    el('span', { className: d.overdue && !t.done ? 'when overdue' : 'when', textContent: meta }),
+  );
+  body.onclick = () => openEditTask(t);
+  return el('li', { className: t.done ? 'task done' : 'task' }, check, body);
+}
+
+function renderTasks() {
+  const on = getSettings().showTasks;
+  ['taskHead', 'taskList'].forEach((id) => { $(id).hidden = !on; });
+  const note = $('taskNote');
+  if (!on) { note.hidden = true; $('btnDoneToggle').hidden = true; $('doneList').hidden = true; return; }
+  let msg = '';
+  if (!auth.isConnected()) msg = tasksStore.all().length ? '' : '구글 연결 후 할 일이 보입니다.';
+  else if (!auth.hasTasksAccess()) msg = '할 일 권한이 없습니다. 설정 → 연결 끊기 → 구글 연결에서 "할 일" 권한에 체크해 주세요.';
+  else if (tasksStore.lastError) msg = `할 일을 불러오지 못했습니다: ${tasksStore.lastError}`;
+  note.textContent = msg;
+  note.hidden = !msg;
+
+  const today = toDateStr(new Date());
+  const multi = tasksStore.getLists().length > 1;
+  const all = tasksStore.all();
+  const open = all.filter((t) => !t.done);
+  const done = all.filter((t) => t.done).sort((a, b) => (a.completedAt < b.completedAt ? 1 : -1)).slice(0, 30);
+  $('taskCount').textContent = open.length ? `(${open.length})` : '';
+  $('taskList').replaceChildren(...(open.length
+    ? open.slice(0, 100).map((t) => taskItem(t, today, multi))
+    : [el('li', { className: 'empty', textContent: auth.hasTasksAccess() ? '남은 할 일이 없습니다.' : '' })]));
+  const tg = $<HTMLButtonElement>('btnDoneToggle');
+  tg.hidden = !done.length;
+  tg.textContent = showDone ? '완료한 할 일 숨기기' : `완료한 할 일 ${done.length}개 보기`;
+  $('doneList').hidden = !showDone || !done.length;
+  $('doneList').replaceChildren(...done.map((t) => taskItem(t, today, multi)));
+}
+
+async function syncTasks(force: boolean) {
+  if (!getSettings().showTasks || !auth.hasTasksAccess() || !navigator.onLine) return;
+  try { await tasksStore.ensure(force); } catch { /* 안내는 할 일 칸에 표시 */ }
 }
 
 // ───────── 동기화 ─────────
@@ -167,7 +241,7 @@ async function sync(force: boolean) {
   syncing = true;
   $('btnSync').classList.add('spin');
   try {
-    await Promise.all(ranges.map(([a, b]) => store.ensure(a, b, force)));
+    await Promise.all([...ranges.map(([a, b]) => store.ensure(a, b, force)), syncTasks(force)]);
   } catch (e) {
     if (e instanceof Error) toast(e.message);
   } finally {
@@ -228,6 +302,7 @@ function renderSettings() {
   $<HTMLSelectElement>('sView').value = s.defaultView;
   $<HTMLSelectElement>('sWeek').value = String(s.weekStart);
   $<HTMLInputElement>('sHoliday').checked = s.showHolidays;
+  $<HTMLInputElement>('sTasks').checked = s.showTasks;
   reminderOptions($<HTMLSelectElement>('sReminder'), s.defaultReminder, false);
   $('sAccount').textContent = !auth.hasClientId() ? '아직 연결 설정이 없습니다 (관리자 설정 필요).' : auth.isConnected() ? 'Google 캘린더에 연결되어 있습니다.' : '연결되어 있지 않습니다.';
   $<HTMLButtonElement>('sConnect').hidden = auth.isConnected() || !auth.hasClientId();
@@ -268,6 +343,10 @@ function initSettings() {
     updateSettings({ showHolidays: (e.target as HTMLInputElement).checked });
     renderCalendar(); renderSide(); void sync(false);
   };
+  $<HTMLInputElement>('sTasks').onchange = (e) => {
+    updateSettings({ showTasks: (e.target as HTMLInputElement).checked });
+    void sync(false);
+  };
   $<HTMLSelectElement>('sReminder').onchange = (e) => updateSettings({ defaultReminder: parseReminder((e.target as HTMLSelectElement).value) });
   $('sConnect').onclick = async () => { await doConnect(); renderSettings(); };
   $('sLogout').onclick = async () => {
@@ -288,6 +367,9 @@ function init() {
   wireDialogs();
   initCalendar();
   initEditor({ onChange: refreshAfterChange, requireConnect: updateBanner });
+  initTaskEditor({ requireConnect: updateBanner });
+  $('btnAddTask').onclick = () => openNewTask(selectedDate);
+  $('btnDoneToggle').onclick = () => { showDone = !showDone; renderTasks(); };
   initSettings();
   initAdmin({ onStatusChange: () => { updateBanner(); renderSettings(); void sync(true); } });
   initShare();
@@ -316,8 +398,10 @@ function init() {
   $('fab').onclick = () => openNew(selectedDate);
   $('btnAddDay').onclick = () => openNew(selectedDate);
 
-  auth.onAuthChange(updateBanner);
+  auth.onAuthChange(() => { updateBanner(); renderTasks(); });
   store.onChange(() => { renderCalendar(); renderSide(); });
+  tasksStore.onChange(() => { renderCalendar(); renderTasks(); });
+  tasksStore.loadCache();
   window.addEventListener('online', () => { updateBanner(); void sync(false); });
   window.addEventListener('offline', updateBanner);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void sync(false); });

@@ -113,9 +113,60 @@ function makeFakeCalendar() {
   return { handle, cals, overrides, all, state, bump: (id) => { const e = cals.primary.get(id); e.summary += ' (다른 기기)'; e.etag = newEtag(); } };
 }
 
+// ───── 가짜 Google 할 일(Tasks) 서버 ─────
+function makeFakeTasks() {
+  let seq = 1;
+  const lists = [{ id: 'L1', title: '내 할 일' }];
+  const store = new Map([['L1', new Map()]]);
+  const L1 = store.get('L1');
+  L1.set('t1', { id: 't1', title: '성적 입력', status: 'needsAction', due: '2026-11-23T00:00:00.000Z', position: '001' });
+  L1.set('t2', { id: 't2', title: '강의자료 준비', status: 'needsAction', due: '2026-11-26T00:00:00.000Z', position: '002' });
+  L1.set('t3', { id: 't3', title: '책 반납', status: 'needsAction', position: '003' });
+  L1.set('t4', { id: 't4', title: '출장 보고서', status: 'completed', completed: '2026-11-20T01:00:00.000Z', due: '2026-11-20T00:00:00.000Z', position: '004' });
+  L1.set('t5', { id: 't5', title: '숨긴 완료 항목', status: 'completed', hidden: true, completed: '2026-11-01T01:00:00.000Z', position: '005' });
+  const patches = [];
+
+  async function handle(route) {
+    const req = route.request();
+    const url = new URL(req.url());
+    const json = (status, body) => route.fulfill({ status, contentType: 'application/json', body: body === undefined ? '' : JSON.stringify(body) });
+    if (req.headers().authorization !== 'Bearer fake-token') return json(401, { error: { message: 'no auth' } });
+    const p = decodeURIComponent(url.pathname);
+    if (req.method() === 'GET' && p === '/tasks/v1/users/@me/lists') return json(200, { items: lists });
+    const m = /^\/tasks\/v1\/lists\/([^/]+)\/tasks(?:\/([^/]+))?$/.exec(p);
+    if (!m || !store.has(m[1])) return json(404, { error: { message: 'nf' } });
+    const tasks = store.get(m[1]);
+    const id = m[2];
+    const method = req.method();
+    if (method === 'GET' && !id) {
+      const showHidden = url.searchParams.get('showHidden') === 'true';
+      return json(200, { items: [...tasks.values()].filter((t) => showHidden || !t.hidden) });
+    }
+    if (method === 'POST' && !id) {
+      const t = { ...req.postDataJSON(), id: `n${seq++}`, position: '900' };
+      if (t.status === 'completed') t.completed = new Date().toISOString();
+      tasks.set(t.id, t);
+      return json(200, t);
+    }
+    const cur = id && tasks.get(id);
+    if (!cur) return json(404, { error: { message: 'nf' } });
+    if (method === 'PATCH') {
+      const body = req.postDataJSON();
+      patches.push(body);
+      for (const [k, v] of Object.entries(body)) { if (v === null) delete cur[k]; else cur[k] = v; }
+      if (body.status === 'completed' && !cur.completed) cur.completed = new Date().toISOString();
+      return json(200, cur);
+    }
+    if (method === 'DELETE') { tasks.delete(id); return json(204); }
+    return json(400, {});
+  }
+  return { handle, L1, patches };
+}
+
 const FAKE_GIS = `window.google = { accounts: { oauth2: {
-  initTokenClient(cfg) { window.__gisInit = cfg.client_id; return { requestAccessToken() { setTimeout(() => cfg.callback({ access_token: 'fake-token', expires_in: 3600, scope: cfg.scope }), 20); } }; },
+  initTokenClient(cfg) { window.__gisInit = cfg.client_id; window.__gisScope = cfg.scope; return { requestAccessToken() { setTimeout(() => cfg.callback({ access_token: 'fake-token', expires_in: 3600, scope: cfg.scope }), 20); } }; },
   hasGrantedAllScopes() { return true; },
+  hasGrantedAnyScope(r, s) { return !(window.__denyTasks && /tasks/.test(s)); },
   revoke(t, cb) { window.__revoked = t; cb && cb(); }
 } } };`;
 
@@ -130,6 +181,7 @@ const FAKE_GIS = `window.google = { accounts: { oauth2: {
   for (let i = 0; i < 50; i++) { try { await fetch(BASE); break; } catch { await new Promise((r) => setTimeout(r, 200)); } }
   const browser = await chromium.launch();
   const fake = makeFakeCalendar();
+  const fakeTasks = makeFakeTasks();
   const errors = [];
   const external = [];
 
@@ -140,6 +192,7 @@ const FAKE_GIS = `window.google = { accounts: { oauth2: {
     await ctx.route(/^https?:\/\/(?!localhost)/, (r) => { external.push(r.request().url()); r.abort(); });
     await ctx.route('https://accounts.google.com/**', (r) => r.fulfill({ contentType: 'text/javascript', body: FAKE_GIS }));
     await ctx.route('https://www.googleapis.com/calendar/v3/**', fake.handle);
+    await ctx.route('https://tasks.googleapis.com/tasks/v1/**', fakeTasks.handle);
     const page = await ctx.newPage();
     page.setDefaultTimeout(8000);
     page.on('pageerror', (e) => errors.push(e.message));
@@ -156,7 +209,7 @@ const FAKE_GIS = `window.google = { accounts: { oauth2: {
   await step('첫 실행: 처음 설정 안내 표시', async () => {
     await page.waitForSelector('#banner:not([hidden])');
     assert((await page.textContent('#bannerText')).includes('처음 설정'), '안내 문구 없음');
-    assert((await page.textContent('#verBtn')) === 'V1.1', '버전 표시 없음');
+    assert((await page.textContent('#verBtn')) === 'V1.2', '버전 표시 없음');
   });
 
   await step('관리자 비밀번호 최초 등록 → 관리자 설정 열림', async () => {
@@ -190,6 +243,102 @@ const FAKE_GIS = `window.google = { accounts: { oauth2: {
   await step('연결 후 안내 배너 사라지고 공휴일 표시', async () => {
     await page.waitForSelector('#banner[hidden]', { state: 'attached' });
     await page.waitForSelector('.fc-event:has-text("테스트 휴일")');
+  });
+
+  console.log('할 일');
+  const taskRow = (title) => page.locator('#taskList li.task', { hasText: title });
+  await step('로그인 때 일정·할 일 권한을 함께 요청', async () => {
+    const scope = await page.evaluate(() => window.__gisScope);
+    assert(scope.includes('auth/calendar.events') && scope.includes('auth/tasks'), `요청 권한: ${scope}`);
+  });
+
+  await step('할 일 목록: 마감 빠른 순, 마감 지남 표시, 숨긴 완료 항목 제외', async () => {
+    await page.waitForSelector('#taskList >> text=성적 입력');
+    const titles = await page.locator('#taskList li.task .what').allTextContents();
+    assert(titles.join(',') === '성적 입력,강의자료 준비,책 반납', `순서 오류: ${titles}`);
+    assert(await taskRow('성적 입력').locator('.when.overdue').count() === 1, '마감 지남 표시 없음');
+    assert((await page.textContent('#taskCount')) === '(3)', '할 일 개수 오류');
+    assert((await page.textContent('#btnDoneToggle')).includes('1개'), '완료 항목 수 오류');
+    assert(!(await page.textContent('.day-pane')).includes('숨긴 완료 항목'), '숨긴 완료 항목이 보임');
+  });
+
+  await step('마감일 있는 할 일은 달력에 표시 (마감 없는 할 일은 표시 안 함)', async () => {
+    await page.waitForSelector('.fc-event.ev-task:has-text("성적 입력")');
+    assert(await page.locator('.fc-event.ev-task:has-text("책 반납")').count() === 0, '마감 없는 할 일이 달력에 보임');
+    await page.screenshot({ path: `${OUT}/08-tasks.png` });
+  });
+
+  await step('할 일 등록 (마감일 지정) → 구글에 날짜로 저장', async () => {
+    await page.click('#btnAddTask');
+    await dialogOpen('taskEditor').waitFor();
+    await page.click('#tkSave');
+    assert((await page.textContent('#tkError')).includes('제목'), '빈 제목 검사 실패');
+    await page.fill('#tTitle', '논문 심사 서류');
+    await page.fill('#tDue', '2026-11-27');
+    await page.click('#tkSave');
+    await page.waitForSelector('dialog#taskEditor:not([open])', { state: 'attached' });
+    const t = [...fakeTasks.L1.values()].find((x) => x.title === '논문 심사 서류');
+    assert(t && t.due === '2026-11-27T00:00:00.000Z' && t.status === 'needsAction', `저장 오류 ${JSON.stringify(t)}`);
+    await page.waitForSelector('.fc-event.ev-task:has-text("논문 심사 서류")');
+    await taskRow('논문 심사 서류').waitFor();
+  });
+
+  await step('체크하면 완료, 다시 누르면 되돌리기 (구글에 반영)', async () => {
+    await taskRow('논문 심사 서류').locator('.tk-check').click();
+    await page.waitForFunction(() => ![...document.querySelectorAll('#taskList .what')].some((e) => e.textContent === '논문 심사 서류'));
+    const t = [...fakeTasks.L1.values()].find((x) => x.title === '논문 심사 서류');
+    assert(t.status === 'completed' && t.completed, '완료 미반영');
+    await page.waitForSelector('.fc-event.ev-task-done:has-text("논문 심사 서류")');
+    await page.click('#btnDoneToggle');
+    await page.locator('#doneList li', { hasText: '논문 심사 서류' }).locator('.tk-check').click();
+    await taskRow('논문 심사 서류').waitFor();
+    assert(t.status === 'needsAction' && !t.completed, `되돌리기 미반영 ${JSON.stringify(t)}`);
+    await page.click('#btnDoneToggle');
+  });
+
+  await step('할 일 수정: 바뀐 칸만 보내고, 마감일을 지우면 달력에서 빠짐', async () => {
+    await taskRow('논문 심사 서류').locator('.tk-body').click();
+    await dialogOpen('taskEditor').waitFor();
+    assert((await page.inputValue('#tDue')) === '2026-11-27', '마감일 안 불러옴');
+    await page.fill('#tTitle', '논문 심사 서류 제출');
+    await page.fill('#tDue', '');
+    fakeTasks.patches.length = 0;
+    await page.click('#tkSave');
+    await page.waitForSelector('dialog#taskEditor:not([open])', { state: 'attached' });
+    const sent = fakeTasks.patches[0];
+    assert(JSON.stringify(Object.keys(sent).sort()) === '["due","title"]' && sent.due === null, `보낸 내용 ${JSON.stringify(sent)}`);
+    const t = [...fakeTasks.L1.values()].find((x) => x.title === '논문 심사 서류 제출');
+    assert(t && !('due' in t), '마감일 안 지워짐');
+    await page.waitForFunction(() => !document.querySelector('.fc-event.ev-task')?.textContent?.includes('논문 심사 서류'));
+    assert(await page.locator('.fc-event.ev-task:has-text("논문 심사 서류")').count() === 0, '달력에 남음');
+  });
+
+  await step('달력의 할 일을 눌러 수정 창 열기', async () => {
+    await page.click('.fc-event.ev-task:has-text("강의자료 준비")');
+    await dialogOpen('taskEditor').waitFor();
+    assert((await page.inputValue('#tTitle')) === '강의자료 준비', '다른 할 일이 열림');
+    await page.click('#taskEditor [data-close] >> nth=0');
+  });
+
+  await step('할 일 삭제 (확인 후)', async () => {
+    await taskRow('논문 심사 서류 제출').locator('.tk-body').click();
+    await page.click('#tkDelete');
+    await page.click('#cfBtns >> text=삭제');
+    await page.waitForSelector('dialog#taskEditor:not([open])', { state: 'attached' });
+    assert(![...fakeTasks.L1.values()].some((x) => x.title === '논문 심사 서류 제출'), '서버에서 안 지워짐');
+    assert(await taskRow('논문 심사 서류 제출').count() === 0, '목록에 남음');
+  });
+
+  await step('설정에서 할 일 표시 끄기/켜기', async () => {
+    await page.click('#btnSettings');
+    await page.uncheck('#sTasks');
+    await page.click('#settings [data-close]');
+    assert(await page.isHidden('#taskList'), '할 일 목록이 보임');
+    assert(await page.locator('.fc-event.ev-task').count() === 0, '달력에 할 일이 보임');
+    await page.click('#btnSettings');
+    await page.check('#sTasks');
+    await page.click('#settings [data-close]');
+    await page.waitForSelector('.fc-event.ev-task:has-text("성적 입력")');
   });
 
   await step('새 일정 등록: 카테고리 선택 시 색상 자동, 중요도 표시', async () => {
@@ -438,7 +587,7 @@ const FAKE_GIS = `window.google = { accounts: { oauth2: {
 
   await step('버전 정보 화면', async () => {
     await page.click('#verBtn');
-    await page.waitForSelector('#versionBody:has-text("V1.1 (2026-11-27)")');
+    await page.waitForSelector('#versionBody:has-text("V1.2 (2026-11-27)")');
     assert(await page.isVisible('#versionBody >> text=최신 버전입니다'), '최신 버전 표시 오류');
     await page.click('#version [data-close]');
   });
@@ -450,6 +599,8 @@ const FAKE_GIS = `window.google = { accounts: { oauth2: {
     await page.waitForSelector('#banner:not([hidden])');
     await page.click('#settings [data-close]');
     assert((await page.locator('.fc-event:has-text("학과 회의")').count()) === 0, '연결 끊은 뒤 일정이 남음');
+    assert((await page.locator('#taskList li.task').count()) === 0, '연결 끊은 뒤 할 일이 남음');
+    assert(await page.evaluate(() => localStorage.getItem('pc.tasks') === null), '할 일 사본이 기기에 남음');
   });
 
   console.log('스마트폰 화면');
@@ -459,6 +610,7 @@ const FAKE_GIS = `window.google = { accounts: { oauth2: {
   await step('스마트폰: 위 오늘 일정, 아래 달력, 일정 버튼', async () => {
     await p2.evaluate(() => { localStorage.setItem('pc.clientId', '123456789-abcdef.apps.googleusercontent.com'); });
     await p2.reload();
+    await p2.evaluate(() => { window.__denyTasks = true; }); // 이 기기에서는 할 일 권한을 허용하지 않은 경우
     await p2.click('#bannerBtn');
     await p2.waitForSelector('#dayList >> text=학과 회의 (최종)');
     const dayTop = (await p2.locator('.day-pane').boundingBox()).y;
@@ -473,6 +625,12 @@ const FAKE_GIS = `window.google = { accounts: { oauth2: {
     const over = await p2.evaluate(() => [...document.querySelectorAll('#editor input, #editor select')].filter((x) => x.offsetParent && x.getBoundingClientRect().right > window.innerWidth + 1).map((x) => x.id));
     assert(over.length === 0, `화면 밖으로 넘친 입력칸: ${over.join(',')}`);
     await p2.screenshot({ path: `${OUT}/07-phone-editor.png` });
+  });
+
+  await step('할 일 권한을 허용하지 않아도 일정은 정상, 할 일 칸에 안내', async () => {
+    await p2.waitForSelector('#taskNote:has-text("할 일 권한이 없습니다")');
+    assert(await p2.isVisible('#dayList >> text=학과 회의 (최종)'), '일정이 안 보임');
+    assert((await p2.locator('#taskList li.task').count()) === 0, '권한 없이 할 일이 보임');
   });
 
   await step('오프라인: 저장된 일정 표시, 등록 버튼 비활성', async () => {
