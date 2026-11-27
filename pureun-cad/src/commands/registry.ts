@@ -135,6 +135,7 @@ export function setCustomAliases(text: string): string[] {
   });
   return errors;
 }
+export const isCustomAlias = (s: string) => custom.has(s.trim().toUpperCase());
 export const findCommand = (s: string) => {
   const k = s.trim().toUpperCase();
   return custom.get(k) ?? byName.get(k);

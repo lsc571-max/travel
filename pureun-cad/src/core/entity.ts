@@ -134,7 +134,7 @@ export function moveEntity<T extends Entity>(e: T, d: Vec2): T {
     case 'arc':
       return { ...e, c: mv(e.c, d) };
     case 'polyline':
-      return { ...e, pts: e.pts.map((q) => ({ x: q.x + d.x, y: q.y + d.y, b: q.b })) };
+      return { ...e, pts: e.pts.map((q) => ({ ...q, x: q.x + d.x, y: q.y + d.y })) };
     case 'text':
       return { ...e, p: mv(e.p, d), p2: e.p2 ? mv(e.p2, d) : undefined };
     case 'dimension':
@@ -154,7 +154,7 @@ export function rotateEntity<T extends Entity>(e: T, base: Vec2, angDeg: number)
     case 'arc':
       return { ...e, c: r(e.c), a0: normDeg(e.a0 + angDeg), a1: normDeg(e.a1 + angDeg) };
     case 'polyline':
-      return { ...e, pts: e.pts.map((q) => ({ ...r(q), b: q.b })) };
+      return { ...e, pts: e.pts.map((q) => ({ ...q, ...r(q) })) };
     case 'text':
       return { ...e, p: r(e.p), p2: e.p2 ? r(e.p2) : undefined, rot: normDeg(e.rot + angDeg) };
     case 'dimension':

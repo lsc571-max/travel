@@ -3,7 +3,7 @@
 import { dimGeometry } from './dimension';
 import { baseProps, entitySegs, getDimFormatter, moveEntity, rotateEntity } from './entity';
 import {
-  add, angleOf, closestOnSeg, DEG, dist, dot, mul, norm, normAng, normDeg, samePt, segEnd, segStart, sub, TAU, v,
+  add, angleOf, bulgeToArc, cleanPolyPts, closestOnSeg, DEG, dist, dot, mul, norm, normAng, normDeg, samePt, segEnd, segStart, sub, TAU, v,
   type Seg,
 } from './geom';
 import { lineCircleParams, lineLineParams, segIntersect } from './intersect';
@@ -53,8 +53,11 @@ export function scaleEntity<T extends Entity>(e: T, base: Vec2, s: number): T {
       return { ...e, c: f(e.c), r: e.r * s };
     case 'arc':
       return { ...e, c: f(e.c), r: e.r * s };
-    case 'polyline':
-      return { ...e, pts: e.pts.map((q) => ({ ...q, ...f(q) })) };
+    case 'polyline': {
+      const sc = (w: number | undefined) => (w === undefined ? undefined : w * Math.abs(s));
+      const pts = e.pts.map((q) => ({ ...q, ...f(q), ...(q.sw !== undefined ? { sw: sc(q.sw) } : {}), ...(q.ew !== undefined ? { ew: sc(q.ew) } : {}) }));
+      return { ...e, pts, ...(e.width !== undefined ? { width: sc(e.width) } : {}) };
+    }
     case 'text':
       return { ...e, p: f(e.p), p2: e.p2 ? f(e.p2) : undefined, h: e.h * s };
     case 'dimension':
@@ -234,7 +237,11 @@ export function joinEntities(ents: Entity[], tol = 1e-6): { created: NewEntity[]
     const closed = samePt(segStart(chain[0]), segEnd(chain[chain.length - 1]), tol);
     const pts: PVertex[] = chain.map((s) => ({ ...segStart(s), b: s.kind === 'arc' ? Math.tan(s.sweep / 4) : 0 }));
     if (!closed) pts.push({ ...segEnd(chain[chain.length - 1]), b: 0 });
-    created.push({ type: 'polyline', ...baseProps(pieces[first].e), pts, closed });
+    const poly: NewEntity = { type: 'polyline', ...baseProps(pieces[first].e), pts, closed };
+    // 결합한 폴리선들의 고정 폭이 모두 같으면 유지
+    const widths = ids.map((id) => pieces.find((pc) => pc.id === id)!.e).map((x) => (x.type === 'polyline' ? (x.width ?? 0) : 0));
+    if (widths.every((w) => w === widths[0]) && widths[0]) poly.width = widths[0];
+    created.push(poly);
     used.push(...ids);
   }
   return { created, used, message: created.length ? undefined : '끝점이 서로 이어지는 선·호·폴리선이 없습니다.' };
@@ -244,7 +251,7 @@ export function joinEntities(ents: Entity[], tol = 1e-6): { created: NewEntity[]
 export function explodeEntity(e: Entity): NewEntity[] | null {
   const bp = baseProps(e);
   if (e.type === 'polyline') {
-    return entitySegs(e).map((s) => {
+    return entitySegs({ ...e, pts: cleanPolyPts(e.pts, e.closed) }).map((s) => {
       if (s.kind === 'line') return { type: 'line', ...bp, p1: s.a, p2: s.b } as NewEntity;
       let a0 = s.start, a1 = s.start + s.sweep;
       if (s.sweep < 0) [a0, a1] = [a1, a0];
@@ -295,6 +302,9 @@ export function polarArray(ents: Entity[], center: Vec2, n: number, fill: number
 }
 
 // ───────── 중복 정리 (OVERKILL) ─────────
+/** 중복 판정에 쓰는 속성 (레이어·색상·선종류가 다르면 중복이 아님 — AutoCAD OVERKILL 기본과 같음) */
+const propKey = (e: Entity) => `${e.layer.toUpperCase()}|${e.color ?? 256}|${(e.ltype ?? 'BYLAYER').toUpperCase()}`;
+
 function geomKey(e: Entity, q: (n: number) => string): string | null {
   const P = (p: Vec2) => `${q(p.x)},${q(p.y)}`;
   switch (e.type) {
@@ -307,6 +317,7 @@ function geomKey(e: Entity, q: (n: number) => string): string | null {
     case 'arc':
       return 'A' + P(e.c) + ';' + q(e.r) + ';' + q(normDeg(e.a0)) + ';' + q(normDeg(e.a1));
     case 'polyline': {
+      if (e.width || e.pts.some((p) => p.sw || p.ew)) return null; // 폭이 있는 폴리선은 판정 제외 (데이터 손실 방지)
       const f = e.pts.map((p) => P(p) + ':' + q(p.b)).join('|');
       const r = e.pts
         .slice()
@@ -330,7 +341,7 @@ export function findOverkill(ents: Entity[], tol = 1e-6): { duplicates: number[]
   for (const e of ents) {
     const k = geomKey(e, q);
     if (k === null) continue;
-    const key = e.layer.toUpperCase() + '#' + k;
+    const key = propKey(e) + '#' + k;
     if (seen.has(key)) duplicates.push(e.id);
     else seen.set(key, e.id);
   }
@@ -343,7 +354,7 @@ export function findOverkill(ents: Entity[], tol = 1e-6): { duplicates: number[]
     const La = Math.hypot(da.x, da.y);
     if (La < tol) continue;
     for (const b of lines) {
-      if (a === b || overlapped.includes(b.id)) continue;
+      if (a === b || overlapped.includes(b.id) || propKey(a) !== propKey(b)) continue;
       const db = sub(b.p2, b.p1);
       const Lb = Math.hypot(db.x, db.y);
       if (Lb > La + tol || Lb < tol) continue;
@@ -407,8 +418,15 @@ export function stretchEntity(e: Entity, r: BBox, d: Vec2): Entity | null {
     case 'arc': {
       const s = { x: e.c.x + e.r * Math.cos(e.a0 * DEG), y: e.c.y + e.r * Math.sin(e.a0 * DEG) };
       const t = { x: e.c.x + e.r * Math.cos(e.a1 * DEG), y: e.c.y + e.r * Math.sin(e.a1 * DEG) };
-      // 중심 또는 양 끝이 모두 창 안일 때만 이동 (한쪽 끝만 들어오면 형상 보존을 위해 그대로)
-      return inRect(e.c, r) || (inRect(s, r) && inRect(t, r)) ? moveEntity(e, d) : null;
+      const si = inRect(s, r), ti = inRect(t, r);
+      if (si && ti) return moveEntity(e, d);
+      if (!si && !ti) return null; // 끝점이 창 밖이면 이웃 객체와 끊기지 않도록 그대로 둠
+      // 한쪽 끝만 이동: 사이각(볼록 정도)을 유지한 채 새 두 끝점을 지나는 호로 다시 계산 (이웃과 연결 유지)
+      const sweep = (normDeg(e.a1 - e.a0) || 360) * DEG;
+      const ns = si ? { x: s.x + d.x, y: s.y + d.y } : s, nt = ti ? { x: t.x + d.x, y: t.y + d.y } : t;
+      const arc = bulgeToArc(ns, nt, Math.tan(sweep / 4));
+      if (!arc) return null;
+      return { ...e, c: arc.c, r: arc.r, a0: normDeg(arc.start / DEG), a1: normDeg((arc.start + arc.sweep) / DEG) };
     }
     case 'polyline':
       if (!e.pts.some((p) => inRect(p, r))) return null;

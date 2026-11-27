@@ -71,6 +71,14 @@ function transformEntity(e: Entity, m: Xf): Entity {
       return { ...e, type: 'polyline', pts: sampleSegs(e, 64).map((p) => ({ ...ap(m, p), b: 0 })), closed: true } as Entity;
     case 'arc':
       if (similar && det > 0) return { ...e, c: ap(m, e.c), r: e.r * sx, a0: e.a0 + rot, a1: e.a1 + rot };
+      if (similar) {
+        // 대칭(반전) 변환: 끝점을 변환해 시작/끝을 바꿈 → 정확한 원호 유지
+        const c = ap(m, e.c);
+        const ps = ap(m, { x: e.c.x + e.r * Math.cos(e.a0 * DEG), y: e.c.y + e.r * Math.sin(e.a0 * DEG) });
+        const pe = ap(m, { x: e.c.x + e.r * Math.cos(e.a1 * DEG), y: e.c.y + e.r * Math.sin(e.a1 * DEG) });
+        const ang = (p: Vec2) => (((Math.atan2(p.y - c.y, p.x - c.x) / DEG) % 360) + 360) % 360;
+        return { ...e, c, r: e.r * sx, a0: ang(pe), a1: ang(ps) };
+      }
       return { id: e.id, layer: e.layer, color: e.color, type: 'polyline', pts: sampleSegs(e).map((p) => ({ ...ap(m, p), b: 0 })), closed: false };
     case 'polyline':
       if (similar) return { ...e, pts: e.pts.map((p) => ({ ...ap(m, p), b: det < 0 ? -p.b : p.b })) };

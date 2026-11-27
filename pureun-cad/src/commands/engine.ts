@@ -10,7 +10,7 @@ import { gripEdit, gripPoints, type Grip } from '../core/grips';
 import { stripId } from '../core/edit';
 import type { BBox, Entity, Vec2 } from '../core/types';
 import { View } from '../render/view';
-import { BUILTIN, findCommand } from './registry';
+import { BUILTIN, findCommand, isCustomAlias } from './registry';
 import { DEFAULT_SETTINGS, type Ctx, type Req, type Resp, type Settings, type UiAction } from './types';
 
 interface ActiveCmd {
@@ -232,8 +232,9 @@ export class Engine {
     const name = input.trim().toUpperCase();
     if (!name) return;
     if (this.cmd) this.cancel(true);
-    if (name === 'UNDO' || BUILTIN.UNDO.includes(name)) return this.undo();
-    if (name === 'REDO') return this.redo();
+    const custom = isCustomAlias(name);
+    if (!custom && (name === 'UNDO' || BUILTIN.UNDO.includes(name))) return this.undo();
+    if (!custom && name === 'REDO') return this.redo();
     const def = findCommand(name);
     if (!def) {
       this.log(`알 수 없는 명령 "${input.trim()}". HELP 를 입력하면 명령 목록을 볼 수 있습니다.`);
@@ -298,6 +299,8 @@ export class Engine {
 
   /** 두 번 클릭: 문자·치수 문자 편집 */
   doubleClick(s: Vec2) {
+    // 두 번째 클릭이 그립을 눌러 그립 편집이 시작됐다면 취소하고 문자 편집으로
+    if (this.cmd?.name === '그립 편집') this.cancel(true);
     if (this.cmd) return;
     const id = this.pickAt(s);
     if (id === null) return;
@@ -306,7 +309,7 @@ export class Engine {
     this.setSelection([id]);
     const doc = this.doc;
     const cur = e.type === 'text' ? e.text : (e.textOverride ?? '');
-    this.log(`문자 편집 — 현재: "${cur}"${e.type === 'dimension' ? ' (치수: <> = 측정값, 비우면 측정값)' : ''}`);
+    this.log(`문자 편집 — 현재: "${cur}"${e.type === 'dimension' ? ' (치수: <> 입력 = 측정값으로 되돌림)' : ''}`);
     this.startGen('문자 편집', (function* () {
       const r = yield { kind: 'string', prompt: '새 문자 입력 (빈 Enter: 변경 없음)', def: cur };
       if (r.t !== 'str' || r.s === '' || r.s === cur) return;

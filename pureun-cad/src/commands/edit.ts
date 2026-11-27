@@ -6,7 +6,7 @@ import {
 import { entityBBox, entitySegs } from '../core/entity';
 import { dist, type Seg } from '../core/geom';
 import { breakEntity } from '../core/trim';
-import type { Entity } from '../core/types';
+import type { DxfPair, Entity, PreservedBlock } from '../core/types';
 import { selectObjects } from './modify';
 import type { CommandFn, Ctx, Req, Resp } from './types';
 
@@ -43,7 +43,7 @@ export const SCALE: CommandFn = function* (ctx) {
     prompt: '축척 비율 지정 (예: 2, 0.5) 또는 점 지정',
     base: b.p,
     preview: (p) => {
-      const f = dist(b.p, p) / 10;
+      const f = dist(b.p, p);
       return f > 0 ? ents.map((e) => stripId(scaleEntity(e, b.p, f))) : [];
     },
   };
@@ -202,7 +202,15 @@ export const EXPLODE: CommandFn = function* (ctx) {
 /** 보존된 블록 참조(INSERT)를 표시 형상 그대로 편집 가능한 객체로 바꿈 */
 function explodeBlocks(ctx: Ctx) {
   const doc = ctx.doc;
-  const targets = doc.preserved.filter((p) => p.dxfType === 'INSERT' && p.display?.length && doc.isEditable(p));
+  const cands = doc.preserved.filter((p) => p.dxfType === 'INSERT' && p.display?.length && doc.isEditable(p));
+  const skipped = new Map<string, number>();
+  const targets = cands.filter((p) => {
+    const why = insertExplodeIssue(p.pairs, doc.preservedBlocks);
+    if (why) skipped.set(why, (skipped.get(why) ?? 0) + 1);
+    return !why;
+  });
+  if (skipped.size)
+    ctx.log(`정확히 분해할 수 없어 원본 블록 참조를 유지한 것: ${[...skipped].map(([k, n]) => `${k} ${n}개`).join(', ')}`);
   if (!targets.length) {
     ctx.log('분해할 블록 참조가 없습니다(잠기거나 꺼진 레이어 제외).');
     return;
@@ -216,7 +224,28 @@ function explodeBlocks(ctx: Ctx) {
   const ids = new Set(targets.map((p) => p.id));
   tx.setPreserved(doc.preserved.filter((p) => !ids.has(p.id)));
   tx.commit();
-  ctx.log(`블록 참조 ${targets.length}개를 객체 ${n}개로 분해했습니다. (비균일 축척 블록의 원·호는 폴리선 근사)`);
+  ctx.log(`블록 참조 ${targets.length}개를 객체 ${n}개로 정확히 분해했습니다.`);
+}
+
+const EXACT_IN_BLOCK = new Set(['LINE', 'CIRCLE', 'ARC', 'LWPOLYLINE', 'POLYLINE', 'VERTEX', 'SEQEND', 'TEXT', 'ATTDEF', 'BLOCK', 'ENDBLK']);
+/** 블록 참조를 근사·손실 없이 분해할 수 없는 이유 (가능하면 null) */
+export function insertExplodeIssue(pairs: DxfPair[], blocks: PreservedBlock[]): string | null {
+  const g = (c: number) => pairs.find((p) => p.code === c)?.value;
+  const num = (c: number, d: number) => {
+    const v = Number(g(c));
+    return g(c) === undefined || !Number.isFinite(v) ? d : v;
+  };
+  const sx = num(41, 1), sy = num(42, 1);
+  if (Math.abs(Math.abs(sx) - Math.abs(sy)) > 1e-12 * Math.max(1, Math.abs(sx))) return '비균일 축척';
+  if (num(70, 1) * num(71, 1) > 1) return '배열 삽입(MINSERT)';
+  const name = (g(2) ?? '').trim().toUpperCase();
+  const blk = blocks.find((b) => b.name.toUpperCase() === name);
+  if (!blk) return '블록 정의 없음';
+  const types = blk.pairs.filter((p) => p.code === 0).map((p) => p.value.trim().toUpperCase());
+  const bad = types.find((t) => !EXACT_IN_BLOCK.has(t));
+  if (bad) return `블록 안 ${bad} 포함`;
+  if ((sx < 0 || sy < 0) && types.includes('TEXT')) return '대칭된 문자 포함';
+  return null;
 }
 
 export const BREAK: CommandFn = function* (ctx) {
@@ -225,13 +254,15 @@ export const BREAK: CommandFn = function* (ctx) {
   const e = ctx.doc.get(r.id)!;
   ctx.setSelection([e.id]);
   let first = r.p;
+  ctx.lastPoint = first; // '@' = 첫 번째 끊는 점
   const q = yield { kind: 'point', prompt: '두 번째 끊는 점 지정 (@: 같은 점에서 나눔)', keywords: [{ key: 'F', label: '첫 번째 점 다시(F)' }], noRubber: true };
   let second = q.t === 'point' ? q.p : null;
   if (q.t === 'kw') {
     const a = yield { kind: 'point', prompt: '첫 번째 끊는 점 지정' };
     if (a.t !== 'point') return;
     first = a.p;
-    const b = yield { kind: 'point', prompt: '두 번째 끊는 점 지정' };
+    ctx.lastPoint = first;
+    const b = yield { kind: 'point', prompt: '두 번째 끊는 점 지정 (@: 같은 점에서 나눔)' };
     if (b.t !== 'point') return;
     second = b.p;
   }
@@ -276,6 +307,14 @@ export const ARRAY: CommandFn = function* (ctx) {
     if (dy.t !== 'num') return;
     const dx = yield { kind: 'dist', prompt: `열 간격(오른쪽 +) <${ctx.fmt(dx0)}>`, def: dx0 };
     if (dx.t !== 'num') return;
+    if (int(rows.n) * int(cols.n) > 100000) {
+      ctx.log('배열 항목이 너무 많습니다(최대 100,000).');
+      return;
+    }
+    if ((int(rows.n) > 1 && dy.n === 0) || (int(cols.n) > 1 && dx.n === 0)) {
+      ctx.log('간격이 0이면 같은 위치에 중복 객체가 생깁니다. 간격을 입력하십시오.');
+      return;
+    }
     created = rectArray(ents, int(rows.n), int(cols.n), dy.n, dx.n);
   } else {
     const c = yield { kind: 'point', prompt: '배열의 중심점 지정' };
@@ -297,6 +336,17 @@ export const ARRAY: CommandFn = function* (ctx) {
       allowNone: true,
       noRubber: true,
     };
+    // 같은 위치에 겹치는 항목이 생기는지 확인 (예: 720°에 3개)
+    const full = Math.abs(Math.abs(f.n) - 360) < 1e-9;
+    const step = full ? f.n / int(n.n) : f.n / (int(n.n) - 1);
+    for (let k = 1; k < int(n.n); k++) {
+      const m = (((step * k) % 360) + 360) % 360;
+      if (m < 1e-9 || 360 - m < 1e-9) {
+        ctx.log('채울 각도와 개수 조합으로 같은 위치에 중복 항목이 생깁니다. 값을 바꾸십시오.');
+        return;
+      }
+    }
+    if (int(n.n) > 100000) return;
     created = polarArray(ents, c.p, int(n.n), f.n, !(rot.t === 'kw' && rot.k === 'N'));
   }
   const tx = ctx.doc.tx('ARRAY');
