@@ -13,7 +13,7 @@
   'use strict';
   const C = window.PCAM;
   const CHANGELOG = [
-    { v: 'V0.5', d: C.BUILD_DATE, items: ['새 가공: 바깥·안쪽 윤곽(측면 여러 바퀴·관통 절단), 평면(페이스밀), 모따기(바깥·안쪽·구멍 입구), 자유 형상 포켓(섬·관통)', '도면(DXF) 불러오기: 원은 지름별 구멍·탭(기초 드릴 지름이면 탭 추천), 닫힌 선은 외곽·포켓·섬으로 자동 분류', '화면: 패널 경계 끌어서 크기 조절·접기(기억), 작업 목록에서 Ctrl+C/V/D·Delete·F2·Alt+↑↓·오른쪽 버튼 메뉴·끌어서 순서, 삭제 후 [되돌리기]', '2D 위치 복사·붙여넣기(마우스 위치), 검증기: 다각형 영역·모따기 공구·진입 검사 확장'] },
+    { v: 'V0.5', d: C.BUILD_DATE, items: ['이미 가공된 형상 인식(깊이 기준 자동): 포켓 안 구멍·포켓 안 포켓·평면 뒤 가공은 그 바닥부터 깊이, 깎인 높이에서 시작', '포켓 중삭(한 번에/단 깊이씩)·바닥 정삭·측벽 정삭 분리, 진입 방식(헬리컬·램프·선가공 구멍), 모서리 릴리프 구멍', '다각(정다각형) 형상, 측벽 구배·입구 R·바닥 R(계단 근사, 검증기 판정)', '2D 크기 손잡이·단면도, 머리글 아이콘·탭 끌어 옮기기, 좌우 패널 자리 바꾸기, 다음 할 일 안내', '안전 검토 반영: 사실상 수직 하강·모따기 공구 오용 차단, 검증기 고속화, NC 줄 수 감소, DXF 보강', '새 가공: 바깥·안쪽 윤곽(측면 여러 바퀴·관통 절단), 평면(페이스밀), 모따기(바깥·안쪽·구멍 입구), 자유 형상 포켓(섬·관통)', '도면(DXF) 불러오기: 원은 지름별 구멍·탭(기초 드릴 지름이면 탭 추천), 닫힌 선은 외곽·포켓·섬으로 자동 분류', '화면: 패널 경계 끌어서 크기 조절·접기(기억), 작업 목록에서 Ctrl+C/V/D·Delete·F2·Alt+↑↓·오른쪽 버튼 메뉴·끌어서 순서, 삭제 후 [되돌리기]', '2D 위치 복사·붙여넣기(마우스 위치), 검증기: 다각형 영역·모따기 공구·진입 검사 확장'] },
     { v: 'V0.4', d: '2026-11-27', items: ['화면 전면 재설계: 작업 목록(소재 → 원점·NC → 가공) · 속성 패널 · 상태 표시줄 · 검증/G코드 서랍', '포켓 가공 추가: 사각(코너 R)·원형, 헬리컬 진입, 황삭(여유)·정삭, 공구·절입 자동', '3D 가공 시뮬레이션: 실제 NC 해석 결과로 소재를 깎아 표시, 회전·확대, 재생·구간 이동, 현재 X·Y·Z 표시', '깊이 단면도: 초기점·R점·소재 윗면·공구 끝 Z값을 한 그림에', '예상 가공 시간(추정)·작업지시서 인쇄, 평 엔드밀 공구 관리'] },
     { v: 'V0.3', d: '2026-11-27', items: ['구멍·탭 간편 입력: 지름·깊이 또는 나사 규격·탭 깊이만 넣으면 센터 → 드릴(사이클 자동) → 탭 공정 자동 구성', '없는 공구는 [공구 추가] 한 번으로 등록, 공정 이름 자동 표시(T번호·직경·가공)', '탭 공정 앞 오버라이드 100% 안내 주석 출력'] },
     { v: 'V0.2', d: '2026-11-27', items: ['기능별 모듈 구조: 공통 엔진·가공 모듈·공정 관리·포스트프로세서·검증·저장·그래픽 분리', '안전 강화: 소재 관통 급속/G01 이동, 탭 기초 구멍·절삭 조건(수정 NC 포함), 좌표계, G94, M29 주축 정지 검사'] },
@@ -1592,7 +1592,9 @@
       h += '<small>단위: ' + esc(st.res.units) + (st.res.scale !== 1 ? ' (×' + st.res.scale + ' 로 mm 환산)' : '') + ' · 도면 범위 ' + uf(C.r3(bb.x1 - bb.x0)) + ' × ' + uf(C.r3(bb.y1 - bb.y0)) + 'mm · 닫힌 윤곽 ' + st.cls.items.length + '개 · 원 ' + st.res.circles.length + '개</small>';
       st.res.warnings.forEach(w => { h += '<div class="note warn">⚠ ' + esc(w) + '</div>'; });
       h += '<div class="sect"><b>소재·원점</b>' + u.check(st.fit, v => { st.fit = v; openDXFDlg(); }, '소재 크기를 도면 범위 + 여유로 맞추고, 원점을 왼쪽 아래(LL)로') +
-        (st.fit ? u.fld('도면 둘레 소재 여유 (mm)', u.num(st.margin, v => { st.margin = Math.max(0, v); openDXFDlg(); })) : '<small>도면 좌표를 그대로 씁니다 (현재 원점 ' + esc(C.ORIGIN_LABEL[P.stock.origin]) + ' 기준).</small>') + '</div></div><div>';
+        (st.fit ? u.fld('도면 둘레 소재 여유 (mm)', u.num(st.margin, v => { st.margin = Math.max(0, v); openDXFDlg(); })) : '<small>도면 좌표를 그대로 씁니다 (현재 원점 ' + esc(C.ORIGIN_LABEL[P.stock.origin]) + ' 기준).</small>') +
+        u.fld('소재 두께 (mm)', u.num(st.sz === undefined ? P.stock.sz : st.sz, v => { st.sz = Math.max(0.1, v); })) +
+        (P.groups.length ? '<div class="note warn">현재 프로젝트에 가공 ' + P.groups.length + '개가 있습니다. 도면 가공은 뒤에 추가되고' + (st.fit ? ' 소재 크기·원점이 바뀝니다' : '') + '. 새 도면이면 먼저 [프로젝트] → 새 프로젝트를 만드세요.</div>' : '') + '</div></div><div>';
       if (st.cls.holes.length) {
         h += '<b>원 (지름별 묶음)</b><div class="tblwrap"><table class="tbl"><tr><th>지름</th><th>개수</th><th>가공</th><th>깊이</th></tr>';
         st.cls.holes.forEach((hg, k) => {
@@ -1618,6 +1620,7 @@
     const bb = C.GEOM.bbox(all);
     let dx = 0, dy = 0;
     mutate(() => {
+      if (st.sz !== undefined) P.stock.sz = C.r3(st.sz);
       if (st.fit) {
         P.stock.sx = C.r3(bb.x1 - bb.x0 + 2 * st.margin); P.stock.sy = C.r3(bb.y1 - bb.y0 + 2 * st.margin); P.stock.origin = 'LL';
         dx = -bb.x0 + st.margin; dy = -bb.y0 + st.margin; S.view.fitted = false;
