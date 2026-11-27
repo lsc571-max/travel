@@ -62,7 +62,8 @@
       if (s.toolChange) out('G43 Z' + fmt(set.initialZ) + ' H' + pad(t.no, 2) + (set.coolant ? ' M08' : ''));
       if (rigid && spinOn && !machine.rigidM03) { out('M05'); spinOn = false; } // FANUC: M29 는 주축 정지 상태에서 지령
       if (rigid) out('M29 S' + tp.rpm);
-      let first = 'G' + set.retract.slice(1) + ' ' + code + ' X' + fmt(h0.x) + ' Y' + fmt(h0.y) + ' Z' + fmt(tp.z) + ' R' + fmt(tp.r);
+      // [V0.5] 이미 깎인 면(포켓 바닥 등)에서 시작하는 구멍은 R점이 소재 윗면 아래 → 구멍 사이는 항상 초기점 복귀(G98)
+      let first = (s.top < 0 ? 'G98' : 'G' + set.retract.slice(1)) + ' ' + code + ' X' + fmt(h0.x) + ' Y' + fmt(h0.y) + ' Z' + fmt(tp.z) + ' R' + fmt(tp.r);
       if (code === 'G73' || code === 'G83') first += ' Q' + fmt(tp.q);
       if (code === 'G82') first += ' P' + tp.dwell;
       first += ' F' + fmtF(tp.feed);
@@ -82,8 +83,11 @@
     // 포켓 등 절삭 경로: 포켓마다 위치결정 → R점 → G01/G03 이동 → 초기점 상승
     function pathBlock(s, t, tp) {
       s.holes.forEach((h, k) => {
-        const def = P.OPS.get(s.type);
-        const pm = (def.moves || P.pocketMoves)(s, t, h, machine, project);
+        const def = P.OPS.get(s.type), top = s.top < 0 ? s.top : 0;
+        // [V0.5] 이미 깎인 면에서 시작: 그 면을 0 으로 경로를 만든 뒤 Z 를 옮김. 급속 재위치는 소재 윗면 위(Z1 이상)에서만
+        const s2 = top ? Object.assign({}, s, { z: r3(s.z - top), r: r3(s.r - top) }) : s;
+        let pm = (def.moves || P.pocketMoves)(s2, t, h, machine, project);
+        if (top) pm = Object.assign({}, pm, { moves: pm.moves.map(mv => Object.assign({}, mv, { z: mv.g === 0 ? Math.max(1, r3(mv.z + top)) : r3(mv.z + top) })) });
         if (k === 0) {
           if (!s.toolChange) out('G00 Z' + fmt(set.initialZ));
           out('G00 G90 ' + set.wcs + ' X' + fmt(pm.sx) + ' Y' + fmt(pm.sy) + ' S' + tp.rpm + ' M03'); spinOn = true;

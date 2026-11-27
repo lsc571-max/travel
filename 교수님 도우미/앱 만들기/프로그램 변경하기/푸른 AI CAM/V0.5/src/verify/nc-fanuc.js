@@ -92,6 +92,21 @@
     let wcsChecked = false;
     const zSafe = Math.max(1, ...(ctx.clamps || []).map(c => c.height + CLAMP_MARGIN)); // XY 미지정 상태 하강 한계
     const cutPts = []; // [V0.4] 엔드밀이 이미 깎은 점 (수직 하강 검사용)
+    // [V0.5] 깎인 점 공간 격자 (5mm 칸): 위치별 '이미 깎인 깊이' 조회
+    const cutGrid = new Map(), CG = 5;
+    const addCut = q => { if (cutPts.length >= 400000) return; cutPts.push(q); const k = Math.floor(q.x / CG) + ',' + Math.floor(q.y / CG); let a = cutGrid.get(k); if (!a) cutGrid.set(k, a = []); a.push(q); };
+    // (x, y) 에서 반경 rad 원 전체가 들어가는 깎인 원(공구 자국)들 중 가장 깊은 바닥. 없으면 Infinity (= 깎이지 않음)
+    const clearedTo = (x, y, rad) => {
+      let best = Infinity;
+      const gx = Math.floor(x / CG), gy = Math.floor(y / CG), span = 4;
+      for (let i = gx - span; i <= gx + span; i++) for (let j = gy - span; j <= gy + span; j++) {
+        const a = cutGrid.get(i + ',' + j); if (!a) continue;
+        for (const q of a) if (q.z < best && Math.hypot(q.x - x, q.y - y) + rad <= q.r - 0.05) best = q.z;
+      }
+      return best;
+    };
+    // 그 위치의 현재 윗면 높이 (깎인 바닥 또는 0)
+    const surfAt = (x, y, rad) => Math.min(0, clearedTo(x, y, rad));
     const s = { plane: null, feedMode: null, units: null, abs: true, motion: null, cycle: null, ret: 98, h: null, hNeed: true, tool: null, nextT: null, spin: false, S: 0, F: 0,
       m29: false, m29S: 0, x: null, y: null, z: Infinity, cz: null, cr: null, cq: null, cp: 0, initZ: null, cool: false, ended: false, wcs: null };
     let pct = 0, hasO = false, unitsWarned = false, sawMotion = false;
@@ -281,7 +296,9 @@
         if (!tool) E(ln, '공구가 장착되지 않은 상태에서 가공합니다.');
         if (s.hNeed || s.h === null) E(ln, '공구 길이 보정(G43 H) 없이 가공합니다.');
         if (s.initZ === null || s.initZ === Infinity) E(ln, '초기점 Z가 정해지지 않은 상태(공구 길이 보정 전)에서 고정 사이클을 시작합니다.');
-        if (s.cr <= 0) E(ln, 'R점 ' + fmt(s.cr) + ' 이(가) 소재 상면(Z0) 이하입니다 (급속으로 소재에 진입).');
+        // [V0.5] R점이 Z0 아래면: 그 자리가 R점보다 0.5mm 이상 아래까지 이미 깎였을 때만 허용 (포켓 바닥의 구멍 등)
+        const surf0 = surfAt(nx, ny, rad);
+        if (s.cr <= surf0 + (surf0 < 0 ? 0.5 - EPS : 0)) E(ln, 'R점 ' + fmt(s.cr) + ' 이(가) ' + (surf0 < 0 ? '이미 깎인 면 Z' + fmt(r3(surf0)) + ' 보다 0.5mm 이상 높지 않습니다' : '소재 상면(Z0) 이하입니다') + ' (급속으로 소재에 진입).');
         if (s.cz >= s.cr) E(ln, 'Z(' + fmt(s.cz) + ')가 R점(' + fmt(s.cr) + ')보다 높습니다.');
         if (s.initZ !== null && s.initZ !== Infinity && s.initZ < s.cr - EPS) E(ln, '초기점 Z' + fmt(s.initZ) + ' 이(가) R점보다 낮습니다.');
         if (s.cz < bottom - EPS) E(ln, '가공 Z' + fmt(s.cz) + ' 이(가) 소재 바닥 아래 허용 한계 Z' + fmt(bottom) + ' 를 넘습니다 (테이블/지그 충돌).');
@@ -294,7 +311,7 @@
           if (s.cycle !== 84 && tool.type === 'tap') E(ln, '탭 공구 T' + tool.no + ' 로 ' + code + ' 드릴 사이클 실행 (공구 파손).');
           if ((s.cycle === 73 || s.cycle === 83) && tool.type === 'center') W(ln, '센터 드릴로 펙 사이클을 사용합니다.');
           if (tool.type === 'endmill') E(ln, '엔드밀 T' + tool.no + ' 로 드릴 고정 사이클(' + code + ') 실행 — 엔드밀은 포켓 경로(G01/G03)로만 가공합니다.');
-          if (tool.flute > 0 && -s.cz > tool.flute + EPS) E(ln, '가공 깊이 ' + fmt(-s.cz) + ' 이(가) T' + tool.no + ' 유효 날 길이 ' + tool.flute + ' 를 초과합니다.');
+          if (tool.flute > 0 && surf0 - s.cz > tool.flute + EPS) E(ln, '가공 깊이 ' + fmt(-s.cz) + ' 이(가) T' + tool.no + ' 유효 날 길이 ' + tool.flute + ' 를 초과합니다.');
           if (s.cycle === 84) {
             const S = s.m29 ? s.m29S : s.S, want = S * toNum(tool.pitch, 0);
             if (!s.m29 && !s.spin) E(ln, '주축 정지 상태에서 일반 탭(G84) 실행 (M03 또는 M29 필요).');
@@ -315,7 +332,7 @@
         motions.push({ k: 'rapid', t: s.tool, x0: px, y0: py, z0, x1: nx, y1: ny, z1: z0, line: ln });
         motions.push({ k: 'rapid', t: s.tool, x0: nx, y0: ny, z0, x1: nx, y1: ny, z1: s.cr, line: ln });
         motions.push({ k: 'drill', t: s.tool, code, f: s.F, q: s.cycle === 73 || s.cycle === 83 ? s.cq : 0, x0: nx, y0: ny, z0: s.cr, x1: nx, y1: ny, z1: s.cz, line: ln });
-        if (tool && tool.type === 'drill') cutPts.push({ x: nx, y: ny, z: s.cz + tipLength(tool), r: tool.dia / 2 }); // [V0.5] 뚫린 구멍 (모따기 진입 확인용)
+        if (tool && tool.type === 'drill') addCut({ x: nx, y: ny, z: s.cz + tipLength(tool), r: tool.dia / 2 }); // [V0.5] 뚫린 구멍 (모따기 진입 확인용)
         s.z = s.ret === 98 ? s.initZ : s.cr;
         motions.push({ k: 'rapid', t: s.tool, x0: nx, y0: ny, z0: s.cz, x1: nx, y1: ny, z1: mz(s.z), line: ln });
         continue;
@@ -349,12 +366,12 @@
           else if (!MILL_TOOLS[tool.type]) E(ln, 'G0' + s.motion + ' 로 소재 상면(Z0) 아래 절삭 — 드릴·탭·센터 공구는 고정 사이클만 허용합니다 (G01 로 소재 상면 아래 이동 금지).');
           else {
             if (!s.spin) E(ln, '주축 정지 상태에서 절삭 이송합니다.');
-            if (tool.flute > 0 && -zLowMove > tool.flute + EPS) E(ln, '절삭 깊이 ' + fmt(-zLowMove) + ' 이(가) T' + tool.no + ' 날 길이 ' + tool.flute + ' 를 넘습니다.');
+            if (tool.flute > 0 && Math.min(0, clearedTo(tx, ty, rad)) - zLowMove > tool.flute + EPS && -zLowMove > tool.flute + EPS) E(ln, '절삭 깊이 ' + fmt(-zLowMove) + ' 이(가) T' + tool.no + ' 날 길이 ' + tool.flute + ' 를 넘습니다.');
             if (s.x !== null && s.y !== null) {
               const pts = sampleMove(s.x, s.y, s.z, tx, ty, tz, arc);
               // 수직 하강(XY 그대로 Z 만 내려감): 이미 깎인 곳이 아니면 차단 (헬리컬 지원 장비)
               const plunge = !arc && Math.abs(tx - s.x) < 1e-6 && Math.abs(ty - s.y) < 1e-6 && tz < s.z - EPS;
-              const outsideStock = tx + rad < sr.x0 || tx - rad > sr.x1 || ty + rad < sr.y0 || ty - rad > sr.y1; // 공구 전체가 소재 밖 = 공중
+              const outsideStock = tx + rad < sr.x0 || tx - rad > sr.x1 || ty + rad < sr.y0 || ty - rad > sr.y1 || clearedTo(tx, ty, effRad(tool, tz)) <= tz + 0.05; // 공구 전체가 소재 밖 = 공중, 또는 그 자리가 이미 그 깊이까지 깎임
               if (plunge && !outsideStock && tool.type === 'chamfer' && tz < -0.05) {
                 // 모따기 공구는 바닥 절삭이 거의 안 됨: 하강하는 자리가 이미 다른 공구로 충분히 깎였어야 함
                 const re = effRad(tool, tz);
@@ -363,7 +380,7 @@
                 const ok = cutPts.some(q => q.z <= tz + 0.3 && Math.hypot(q.x - tx, q.y - ty) <= rad * 0.6 + 1e-6);
                 if (!ok) E(ln, 'G01 로 Z' + fmt(tz) + ' 까지 수직 하강 — 깎이지 않은 소재로 곧장 들어갑니다 (엔드밀 파손 위험). 헬리컬 진입을 사용하세요.');
               }
-              pts.forEach(q => { if (q.z < -EPS && cutPts.length < 400000) cutPts.push({ x: q.x, y: q.y, z: q.z, r: effRad(tool, q.z) }); });
+              pts.forEach(q => { if (q.z < -EPS) addCut({ x: q.x, y: q.y, z: q.z, r: effRad(tool, q.z) }); });
               const bad = pts.find(p => p.z < -EPS && !regions.some(rg => regionOk(rg, p.x, p.y, p.z, tool)));
               if (bad) E(ln, 'G0' + s.motion + ' 로 소재 상면(Z0) 아래 절삭 — 가공 영역(포켓·윤곽·평면·모따기) 밖 또는 바닥 아래 (X' + fmt(bad.x) + ' Y' + fmt(bad.y) + ' Z' + fmt(bad.z) + ', G01 로 소재 상면 아래 과삭·충돌).');
             } else E(ln, 'XY 위치를 모르는 상태에서 절삭 이송합니다.');
@@ -384,7 +401,7 @@
           if (s.motion === 0 && zAt <= 0 && crossStock(s.x, s.y, tx, ty, rad)) E(ln, '소재 상면 높이 이하에서 급속 XY 이동 (소재 충돌).');
           if (s.x !== null && s.y !== null) moves.push({ x0: s.x, y0: s.y, x1: tx, y1: ty, z: zAt, rapid: s.motion === 0, arc });
         }
-        if (A.Z && s.motion === 0 && tz < s.z && tz < 1 - EPS && overStock(tx, ty, rad)) E(ln, '급속 이송(G00)으로 소재 상면 1mm 이내로 하강 (Z' + fmt(tz) + ').');
+        if (A.Z && s.motion === 0 && tz < s.z && tz < 1 - EPS && overStock(tx, ty, rad) && !(clearedTo(tx, ty, rad) <= tz - 1 + EPS)) E(ln, '급속 이송(G00)으로 소재 상면 1mm 이내로 하강 (Z' + fmt(tz) + ').');
         if (A.Z && (tx === null || ty === null) && tz < zSafe) E(ln, 'XY 위치를 모르는 상태(원점 복귀 후 등)에서 Z' + fmt(tz) + ' 까지 하강합니다 — 먼저 XY 를 지정하세요.');
         if (A.Z && zLow !== Infinity) clampHit(null, null, tx === null ? -1e9 : tx, ty === null ? -1e9 : ty, tz, rad, ln, 'Z 하강');
         if (tx !== null && ty !== null) motions.push({ k: s.motion === 0 ? 'rapid' : isArc ? 'arc' : 'feed', t: s.tool, f: s.F, x0: s.x === null ? tx : s.x, y0: s.y === null ? ty : s.y, z0: mz(s.z), x1: tx, y1: ty, z1: mz(tz), cx: arc ? arc.cx : undefined, cy: arc ? arc.cy : undefined, ccw: arc ? arc.ccw : undefined, line: ln });

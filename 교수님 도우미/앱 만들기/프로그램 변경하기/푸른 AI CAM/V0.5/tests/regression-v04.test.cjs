@@ -1,6 +1,7 @@
 // 변경 전후 비교: V0.4 vs V0.5 — 구멍·탭·사각/원형 포켓 프로젝트 1,000건
 // 검증 결과·G코드·독립 검증 결과가 같은지 확인 (V0.5 는 기존 가공을 바꾸지 않고 새 가공만 추가)
-// 허용하는 차이: NC 버전 주석, 포켓 깊이 ≥ 두께 오류의 안내 문구(관통 기능 안내), 소재 바닥 초과 안내 문구
+// 허용하는 차이: NC 버전 주석, 포켓 깊이 ≥ 두께 오류의 안내 문구(관통 기능 안내), 소재 바닥 초과 안내 문구,
+//   독립 검증기의 날 길이 판정을 '이미 깎인 면' 기준으로 (포켓 안 구멍만, 오류가 줄어드는 방향만 허용)
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -17,7 +18,7 @@ function rng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 10139
 
 test('V0.4 → V0.5 동일 결과 (구멍·탭·포켓): 1,000건', { skip: !has && 'V0.4 폴더 없음' }, () => {
   const R = rng(5505);
-  let gen = 0, pk = 0;
+  let gen = 0, pk = 0, relaxed = 0;
   for (let n = 0; n < 1000; n++) {
     const m = OLD.defaultMachine(); m.rigidM03 = R() < 0.3; m.helical = R() < 0.9;
     const p = OLD.newProject(m);
@@ -49,8 +50,12 @@ test('V0.4 → V0.5 동일 결과 (구멍·탭·포켓): 1,000건', { skip: !has
     assert.equal(norm(gb.text), norm(ga.text), 'G코드 #' + n);
     const ctx = (q, mm, C) => ({ stock: q.stock, machine: mm, clamps: q.clamps, settings: q.settings, pockets: C.pocketRegions(q, mm), expected: null });
     const ra = OLD.verifyNC(ga.text, ctx(pa, m, OLD)), rb = NEW.verifyNC(gb.text, ctx(pb, mb, NEW));
-    assert.deepEqual(rb.errors.map(e => e.msg.replace('포켓 영역 밖', '가공 영역(포켓·윤곽·평면·모따기) 밖')), ra.errors.map(e => e.msg.replace('포켓 영역 밖', '가공 영역(포켓·윤곽·평면·모따기) 밖')), '검증기 오류 #' + n);
+    // [V0.5 의도한 변경] 날 길이 검사는 '이미 깎인 면'(포켓 바닥 등)부터 잰다 → 포켓 안 구멍의 날 길이 오류만 줄어들 수 있음 (늘어나면 안 됨)
+    const flute = e => /유효 날 길이|날 길이 .* 를 넘습니다/.test(e.msg), nm = e => e.msg.replace('포켓 영역 밖', '가공 영역(포켓·윤곽·평면·모따기) 밖');
+    assert.deepEqual(rb.errors.filter(e => !flute(e)).map(nm), ra.errors.filter(e => !flute(e)).map(nm), '검증기 오류 #' + n);
+    assert.ok(rb.errors.filter(flute).length <= ra.errors.filter(flute).length, '날 길이 검사 강화·변경 금지 #' + n);
+    if (ra.errors.filter(flute).length !== rb.errors.filter(flute).length) relaxed++;
   }
   assert.ok(gen > 300 && pk > 200, 'G코드 ' + gen + ', 포켓 그룹 ' + pk);
-  console.log('  V0.4→V0.5 비교 1000건, G코드 ' + gen + '건 동일 (포켓 그룹 ' + pk + '개 포함)');
+  console.log('  V0.4→V0.5 비교 1000건, G코드 ' + gen + '건 동일 (포켓 그룹 ' + pk + '개 포함), 포켓 바닥 기준 날 길이 판정 ' + relaxed + '건');
 });

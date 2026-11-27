@@ -252,11 +252,14 @@
   // 프로젝트 전체의 밀링 허용 영역 (포켓·윤곽·평면·모따기 모듈이 각자 regions() 로 제공)
   function pocketRegions(project, machine) {
     const out = [], tm = machine ? P.toolMap(machine) : new Map();
+    // [V0.5] 먼저 가공된 바닥 기준(자동)이면 각 영역 바닥을 그 기준면만큼 내림 (계획과 같은 값)
+    const refMap = new Map();
+    if (machine && project.settings && project.settings.depthRef === 'auto') P.buildPlan(project, machine).steps.forEach(s => { if (s.ref) s.holes.forEach(h => refMap.set(h.gid + '|' + h.hid + '|' + s.type, s.ref)); });
     project.groups.forEach(g => g.ops.forEach(o => {
       const def = P.OPS.get(o.type);
       if (!def || !def.regions) return;
       const tool = tm.get(o.toolNo) || null;
-      g.holes.forEach(h => { if (P.isNum(h.x) && P.isNum(h.y)) def.regions(o, h, project.stock, tool).forEach(r => out.push(r)); });
+      g.holes.forEach(h => { if (P.isNum(h.x) && P.isNum(h.y)) def.regions(o, h, project.stock, tool).forEach(r => { const t = refMap.get(g.id + '|' + h.id + '|' + o.type); if (t) r.floorZ = P.r3(r.floorZ + t); out.push(r); }); });
     }));
     return out;
   }

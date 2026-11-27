@@ -31,7 +31,7 @@
   const SIM_RES = { l: 60000, m: 160000, h: 400000 };
   const TOOL_BAND = { center: '#14a37f', drill: '#2f6fed', tap: '#8b5cf6', endmill: '#ee8a10', facemill: '#5b7083', chamfer: '#d6336c' };
   const MILL_KINDS = ['pocket', 'contour', 'face', 'chamfer'];
-  const shapeTxt = sp => sp.shape === 'circle' ? '원형 Ø' + sp.dia : sp.shape === 'poly' ? '도면 형상' + (sp.poly && sp.poly.name ? ' ' + sp.poly.name : '') : '사각 ' + sp.w + '×' + sp.h + (sp.cr > 0 ? ' R' + sp.cr : '');
+ const shapeTxt = sp => sp.shape === 'circle' ? '원형 Ø' + sp.dia : sp.shape === 'poly' ? 'DXF 형상' + (sp.poly && sp.poly.name ? ' ' + sp.poly.name.replace(/^도면 /, '#') : '') : '사각 ' + sp.w + '×' + sp.h + (sp.cr > 0 ? ' R' + sp.cr : '');
 
   /* ---------------- 상태 ---------------- */
   let DB = null;           // 저장 데이터
@@ -113,7 +113,7 @@
   function toast(msg, kind, action) {
     if (kind === 'ok') document.querySelectorAll('#toasts .toast.err').forEach(x => x.remove()); // 해결된 오류 알림 정리
     const t = document.createElement('div'); t.className = 'toast ' + (kind || ''); t.textContent = msg;
-    if (action) { const b = document.createElement('button'); b.type = 'button'; b.textContent = action.label; b.onclick = () => { t.remove(); action.fn(); }; t.appendChild(b); }
+    if (action) { document.querySelectorAll('#toasts .toast.act').forEach(x => x.remove()); t.classList.add('act'); const b = document.createElement('button'); b.type = 'button'; b.textContent = action.label; b.onclick = () => { t.remove(); action.fn(); }; t.appendChild(b); }
     $('#toasts').appendChild(t); setTimeout(() => t.remove(), action ? 7000 : kind === 'err' ? 5000 : 2600);
   }
   function beep() {
@@ -250,11 +250,11 @@
     h += item(S.sel.kind === 'stock', 'i-stock', 'k-stock', '소재·고정', (C.MATERIALS[st.material] ? C.MATERIALS[st.material].label.split(' ')[0] : st.material) + ' ' + st.sx + '×' + st.sy + '×' + st.sz + (P.clamps.length ? ' · 클램프 ' + P.clamps.length : ''), okStock ? 'ok' : 'err', () => select('stock'));
     const zIss = S.V.issues.filter(i => i.cat === 10 && !i.ref);
     h += item(S.sel.kind === 'nc', 'i-nc', 'k-nc', '원점·NC 출력', set.wcs + ' · O' + String(P.programNo).padStart(4, '0') + ' · 초기점 Z' + set.initialZ, zIss.some(i => i.level === 'error') ? 'err' : zIss.some(i => i.level === 'warn') ? 'warn' : 'ok', () => select('nc'));
-    h += '<div class="sect-t">가공 <small>(위에서부터)</small></div>';
+    h += '<div class="sect-t">가공 <small>(위에서부터)</small></div>' + (P.groups.length ? '<div class="treehint">끌어서 순서 · 오른쪽 버튼 메뉴 · Ctrl+C/V/D · Delete · F2 이름</div>' : '');
     if (!P.groups.length) h += '<div class="note info">아래에서 가공을 추가하거나 도면(DXF)을 불러오세요. 공구와 조건은 자동으로 정해집니다.</div>';
     P.groups.forEach(g => {
       const k = KIND[kindOf(g)];
-      const qa = '<span class="qa">' + u.btn(ico('i-copy'), () => dupGroup(g), '', 'title="복제 (Ctrl+D)" aria-label="복제"') + u.btn(ico('i-trash'), () => delGroup(g), '', 'title="삭제 (Delete)" aria-label="삭제"') + '</span>';
+      const qa = '<span class="qa">' + u.btn(ico('i-copy'), () => dupGroup(g), '', 'title="복제 (Ctrl+D)" aria-label="복제"') + u.btn(ico('i-trash'), () => delGroup(g), '', 'title="삭제 (Delete)" aria-label="삭제"') + u.btn('⋯', (e, b) => { const r = b.getBoundingClientRect(); groupMenu(g, r.left, r.bottom + 4); }, 'more', 'title="메뉴 (오른쪽 버튼·Shift+F10)" aria-label="메뉴" aria-haspopup="menu"') + '</span>';
       h += item(S.sel.kind === 'group' && S.sel.gid === g.id, k.ico, k.cls, g.name, groupSummary(g), groupStatus(g), () => select('group', g.id), qa, g.color, g.id);
     });
     h += '<div class="addrow">' +
@@ -265,7 +265,7 @@
       u.btn(ico('i-contour') + '+ 윤곽', () => addGroup('contour'), 'addbtn k-contour', 'title="부품 바깥(또는 안쪽) 윤곽 따라 깎기, 관통 절단 가능"') +
       u.btn(ico('i-face') + '+ 평면', () => addGroup('face'), 'addbtn k-face', 'title="소재 윗면 고르기 (페이스밀)"') +
       u.btn(ico('i-chamfer') + '+ 모따기', () => addGroup('chamfer'), 'addbtn k-chamfer', 'title="모서리 C 모따기 (바깥·안쪽·구멍 입구)"') + '</div>' +
-      u.btn(ico('i-dxf') + '도면(DXF) 불러오기 — 구멍·윤곽·포켓 자동 인식', () => importDXF(), 'dxfbtn', 'title="CAD 에서 저장한 DXF 파일의 원·닫힌 선을 읽어 가공을 만듭니다"');
+      u.btn(ico('i-dxf') + '도면(DXF) 불러오기', () => importDXF(), 'dxfbtn', 'title="CAD 에서 저장한 DXF 파일의 원·닫힌 선을 읽어 구멍·탭·윤곽·포켓을 자동으로 만듭니다"');
     // 요약
     const holes = P.groups.reduce((s, g) => s + g.holes.length, 0);
     const tools = new Set(S.V.plan.steps.map(s => s.toolNo));
@@ -275,10 +275,17 @@
     $('#tree').innerHTML = h;
   }
   /* ---------- [V0.5] 작업 목록 편집: 복사·붙여넣기·복제·삭제·순서 ---------- */
-  const pasteOffset = g => (kindOf(g) === 'face' ? 0 : 10);
-  function cloneGroup(g, dx) {
-    const n = C.clone(g); n.id = C.uid('g'); n.name = (g.name + ' 복사').slice(0, 40);
-    n.holes = n.holes.map(h => ({ id: C.uid('h'), x: C.r3(h.x + dx), y: C.r3(h.y) }));
+  // 붙여넣기 위치: +X, −X, +Y, −Y 10mm 중 모든 위치가 소재 안에 남는 첫 방향 (없으면 제자리 + 안내)
+  function pasteOffset(g) {
+    if (kindOf(g) === 'face') return { dx: 0, dy: 0, txt: '' };
+    const r = C.stockRect(P.stock);
+    for (const [dx, dy, t] of [[10, 0, 'X+10'], [-10, 0, 'X−10'], [0, 10, 'Y+10'], [0, -10, 'Y−10']]) if (g.holes.every(h => h.x + dx >= r.x0 && h.x + dx <= r.x1 && h.y + dy >= r.y0 && h.y + dy <= r.y1)) return { dx, dy, txt: t + 'mm 위치' };
+    return { dx: 0, dy: 0, txt: '같은 위치 (옮길 자리가 없음 — 위치를 수정하세요)' };
+  }
+  function copyName(name) { const base = name.replace(/ \(\d+\)$/, ''); let k = 2; while (P.groups.some(g => g.name === base + ' (' + k + ')')) k++; return (base + ' (' + k + ')').slice(0, 40); }
+  function cloneGroup(g, off) {
+    const n = C.clone(g); n.id = C.uid('g'); n.name = copyName(g.name);
+    n.holes = n.holes.map(h => ({ id: C.uid('h'), x: C.r3(h.x + off.dx), y: C.r3(h.y + off.dy) }));
     n.ops = n.ops.map(o => Object.assign(o, { id: C.uid('o') }));
     return n;
   }
@@ -287,7 +294,7 @@
     mutate(() => { P.groups.splice(i, 0, n); S.sel = { kind: 'group', gid: n.id, hid: null }; });
     toast(msg, 'ok', { label: '되돌리기', fn: undo });
   }
-  function dupGroup(g) { if (!g) return; const d = pasteOffset(g); insertGroup(cloneGroup(g, d), g, '"' + g.name + '" 복제' + (d ? ' — 위치를 X+' + d + 'mm 옮겼습니다' : '')); }
+  function dupGroup(g) { if (!g) return; const d = pasteOffset(g); insertGroup(cloneGroup(g, d), g, '"' + g.name + '" 복제' + (d.txt ? ' — ' + d.txt : '')); }
   function copyGroup(g) { if (!g) return; S.clip = { type: 'group', data: C.clone(g) }; toast('"' + g.name + '" 복사 — Ctrl+V 로 붙여넣기'); }
   function delGroup(g) {
     if (!g) return;
@@ -304,7 +311,7 @@
   function pasteClip() {
     const c = S.clip;
     if (!c) return toast('복사한 항목이 없습니다. 목록에서 가공을 고르고 Ctrl+C 를 누르세요.', 'err');
-    if (c.type === 'group') { const d = pasteOffset(c.data); insertGroup(cloneGroup(c.data, d), curGroup(), '"' + c.data.name + '" 붙여넣기' + (d ? ' — X+' + d + 'mm 위치' : '')); return; }
+    if (c.type === 'group') { const d = pasteOffset(c.data); insertGroup(cloneGroup(c.data, d), curGroup(), '"' + c.data.name + '" 붙여넣기' + (d.txt ? ' — ' + d.txt : '')); return; }
     // 위치(구멍·형상 기준점) 붙여넣기: 2D 화면 위 마우스 위치, 없으면 X+10mm
     const g = curGroup() || P.groups.find(x => x.id === c.gid);
     if (!g) return toast('붙여넣을 가공을 목록에서 고르세요.', 'err');
@@ -329,6 +336,11 @@
     const r = m.getBoundingClientRect();
     m.style.left = Math.min(x, window.innerWidth - r.width - 6) + 'px'; m.style.top = Math.min(y, window.innerHeight - r.height - 6) + 'px';
     const first = m.querySelector('button:not(:disabled)'); if (first) first.focus();
+    m.addEventListener('keydown', e => {
+      const bs = [...m.querySelectorAll('button:not(:disabled)')], i = bs.indexOf(document.activeElement);
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); bs[(i + (e.key === 'ArrowDown' ? 1 : bs.length - 1)) % bs.length].focus(); }
+      else if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); closeMenu(); }
+    });
   }
   function groupMenu(g, x, y) {
     const i = P.groups.indexOf(g);
@@ -346,7 +358,20 @@
       { label: '삭제', key: 'Delete', fn: () => delGroup(g), danger: true }
     ]);
   }
-  function renameGroup(g) { select('group', g.id); setTimeout(() => { const el = $('#propHead input[type=text]'); if (el) { el.focus(); el.select(); } }, 30); }
+  // 이름 바꾸기: 작업 목록 안에서 바로 (Enter 저장, Esc 취소, 다른 곳 누르면 저장)
+  function renameGroup(g) {
+    if (!g) return;
+    if (S.sel.gid !== g.id) select('group', g.id);
+    const it = document.querySelector('#tree .titem[data-gid="' + g.id + '"]'), b = it && it.querySelector('.tx b');
+    if (!b) return;
+    const inp = document.createElement('input'); inp.type = 'text'; inp.value = g.name; inp.maxLength = 40; inp.className = 'rename'; inp.setAttribute('aria-label', '가공 이름');
+    b.replaceWith(inp); inp.focus(); inp.select();
+    let done = false;
+    const finish = save => { if (done) return; done = true; const v = inp.value.trim().slice(0, 40); if (save && v && v !== g.name) mutate(() => { g.name = v; }); else renderAll(); requestAnimationFrame(() => { const t = document.querySelector('#tree .titem[data-gid="' + g.id + '"]'); if (t) t.focus(); }); };
+    inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); finish(true); } else if (e.key === 'Escape') { e.preventDefault(); finish(false); } });
+    inp.addEventListener('click', e => e.stopPropagation());
+    inp.addEventListener('blur', () => finish(true));
+  }
   // 끌어서 순서 바꾸기 + 오른쪽 버튼 (작업 목록에 한 번만 연결)
   function initTreeEvents() {
     const tree = $('#tree');
@@ -456,7 +481,7 @@
         u.color(g.color, v => mutate(() => { g.color = v; })) +
         u.btn('↑', () => mutate(() => { if (i > 0) P.groups.splice(i - 1, 0, P.groups.splice(i, 1)[0]); }), 'ibtn sm', 'title="순서 위로" aria-label="순서 위로" ' + (i ? '' : 'disabled')) +
         u.btn('↓', () => mutate(() => { if (i < P.groups.length - 1) P.groups.splice(i + 1, 0, P.groups.splice(i, 1)[0]); }), 'ibtn sm', 'title="순서 아래로" aria-label="순서 아래로" ' + (i < P.groups.length - 1 ? '' : 'disabled')) +
-        u.btn(ico('i-x'), () => { if (confirm('"' + g.name + '" (위치 ' + g.holes.length + '개)를 삭제할까요?')) mutate(() => { P.groups.splice(i, 1); S.sel = { kind: 'stock', gid: null, hid: null }; }); }, 'ibtn sm danger', 'title="삭제" aria-label="이 가공 삭제"');
+        u.btn(ico('i-x'), () => delGroup(g), 'ibtn sm danger', 'title="삭제 (Delete)" aria-label="이 가공 삭제"');
       body = groupBody(u, g);
     } else if (S.sel.kind === 'nc') {
       head = '<span class="ico k-nc">' + ico('i-nc') + '</span><b style="flex:1">원점·NC 출력 설정</b>';
@@ -559,8 +584,12 @@
     if (mode === cur) return;
     if (mode === 'custom') { mutate(() => { g.spec = null; }); return; }
     if (!g.spec && g.ops.length && !confirm('직접 구성한 공정 ' + g.ops.length + '개를 지우고 간편 입력으로 다시 구성할까요?')) return;
+    if (mode === 'face' && g.holes.length > 1 && !confirm('평면 가공은 위치가 1개뿐입니다. 나머지 위치 ' + (g.holes.length - 1) + '개를 지울까요?')) return;
     mutate(() => {
+      const old = g.spec;
       g.spec = newSpecFor(mode); if (g.color === KIND[cur].color) g.color = KIND[mode].color;
+      // 포켓·윤곽·모따기 사이 전환은 형상(모양·크기·도면 형상)을 그대로 이어받음
+      if (old && ['pocket', 'contour', 'chamfer'].includes(old.kind) && ['pocket', 'contour', 'chamfer'].includes(mode)) ['shape', 'w', 'h', 'cr', 'dia', 'poly'].forEach(k => { if (old[k] !== undefined) g.spec[k] = C.clone(old[k]); });
       if (MILL_KINDS.includes(mode) && !g.holes.length) { const r = C.stockRect(P.stock); g.holes.push({ id: C.uid('h'), x: C.r3((r.x0 + r.x1) / 2), y: C.r3((r.y0 + r.y1) / 2) }); }
       if (mode === 'face' && g.holes.length > 1) g.holes = g.holes.slice(0, 1);
     });
@@ -1808,6 +1837,7 @@
       else if (!typing && !dlg && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') { e.preventDefault(); if (S.sel.kind === 'group') dupGroup(curGroup()); }
       else if (!typing && !dlg && (e.key === 'Delete' || e.key === 'Backspace') && S.sel.kind === 'group') { e.preventDefault(); delGroup(curGroup()); }
       else if (!typing && !dlg && e.key === 'F2' && S.sel.kind === 'group') { e.preventDefault(); renameGroup(curGroup()); }
+      else if (!typing && !dlg && (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) && S.sel.kind === 'group') { e.preventDefault(); const it = $('#tree .titem.sel'), r = it ? it.getBoundingClientRect() : { left: 100, bottom: 200 }; groupMenu(curGroup(), r.left + 40, r.bottom - 8); }
       else if (!typing && !dlg && e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && S.sel.kind === 'group') { e.preventDefault(); moveGroup(curGroup(), e.key === 'ArrowUp' ? -1 : 1); requestAnimationFrame(() => { const it = $('#tree .titem.sel'); if (it) it.focus(); }); }
       else if (!typing && !dlg && !e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && e.target.closest && e.target.closest('#tree')) {
         const items = [...document.querySelectorAll('#tree .titem')], i = items.indexOf(e.target.closest('.titem')), nx = items[i + (e.key === 'ArrowUp' ? -1 : 1)];

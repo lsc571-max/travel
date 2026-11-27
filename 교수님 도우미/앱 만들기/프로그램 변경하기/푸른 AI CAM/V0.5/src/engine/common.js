@@ -160,7 +160,7 @@
       schema: 1, id: uid('p'), name: '새 프로젝트', programNo: 1, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
       machineId: machine ? machine.id : null,
       stock: { material: 'S45C', sx: 150, sy: 100, sz: 20, origin: 'LL', under: 0 },
-      settings: { initialZ: 50, retract: 'G98', wcs: 'G54', coolant: true, m01: true, seqNo: false, toolOrder: 'tool', pathOrder: 'nearest' },
+      settings: { initialZ: 50, retract: 'G98', wcs: 'G54', coolant: true, m01: true, seqNo: false, toolOrder: 'tool', pathOrder: 'nearest', depthRef: 'auto' }, // [V0.5] depthRef: 'auto' = 먼저 가공된 면 기준
       clamps: [], groups: []
     };
   }

@@ -113,7 +113,7 @@
           if (x0 < sr.x0 - EPS || x1 > sr.x1 + EPS || y0 < sr.y0 - EPS || y1 > sr.y1 + EPS) add('error', 2, pn + ' (X' + fmt(h.x) + ' Y' + fmt(h.y) + '): 포켓(' + r3(2 * pext.ex) + '×' + r3(2 * pext.ey) + ')이 소재 밖으로 벗어납니다.', ref);
           else { const wall = Math.min(x0 - sr.x0, sr.x1 - x1, y0 - sr.y0, sr.y1 - y1); if (wall < 1) add('warn', 2, pn + ': 소재 가장자리까지 남는 벽 두께가 ' + r3(wall) + 'mm 로 얇습니다.', ref); }
           project.clamps.forEach((c, ci) => { const cr = clampRect(c, 1); if (x0 <= cr.x1 && x1 >= cr.x0 && y0 <= cr.y1 && y1 >= cr.y0) add('error', 10, pn + ': 클램프 ' + (ci + 1) + ' 영역과 겹칩니다 (공구 충돌).', ref); });
-          allHoles.push({ g, h, rad: pext.circle ? pext.ex : Math.hypot(pext.ex, pext.ey), hi, ref, hn: pn }); // 사각은 모서리까지 (보수적)
+          allHoles.push({ g, h, rad: pext.circle ? pext.ex : Math.hypot(pext.ex, pext.ey), hi, ref, hn: pn, mill: true }); // 사각은 모서리까지 (보수적)
           return;
         }
         if (h.x - cutRad < sr.x0 - EPS || h.x + cutRad > sr.x1 + EPS || h.y - cutRad < sr.y0 - EPS || h.y + cutRad > sr.y1 + EPS)
@@ -159,6 +159,7 @@
     if (xs.length && (Math.max(...xs) - Math.min(...xs) > machine.travel.x || Math.max(...ys) - Math.min(...ys) > machine.travel.y)) add('error', 1, '홀 분포 범위가 장비 X/Y 행정을 초과합니다.');
 
     // 3. 중복·간섭 홀 (공간 해시로 대량 홀도 빠르게 검사)
+    const autoRef = project.settings.depthRef === 'auto';
     let maxRad = 0;
     allHoles.forEach((a, k) => { a.k = k; if (a.rad > maxRad) maxRad = a.rad; });
     const cell = Math.max(20, maxRad * 4), grid = new Map();
@@ -171,6 +172,8 @@
           if (b.k <= a.k) return;
           const dist = Math.hypot(a.h.x - b.h.x, a.h.y - b.h.y);
           const same = a.g === b.g;
+          // [V0.5] 자동 기준(새 프로젝트): 포켓 안 구멍·포켓 안 포켓은 정상 → 밀링 그룹이 끼면 중복·겹침 검사 제외
+          if (autoRef && !same && (a.mill || b.mill)) return;
           if (dist < 0.01) {
             nDup++;
             if (nDup <= 50) add('error', 3, a.hn + ' 과 ' + b.hn + ' 의 위치가 같습니다 (' + (same ? '중복 홀' : '그룹 간 중복 홀') + ').', b.ref);
@@ -193,6 +196,15 @@
     if (project.clamps.length && set.initialZ < maxClamp + CLAMP_MARGIN) add('error', 10, '초기점 Z' + set.initialZ + ' 가 클램프 최고 높이 ' + maxClamp + ' + 여유 ' + CLAMP_MARGIN + 'mm 보다 낮습니다 (이동 중 충돌).');
 
     const plan = P.buildPlan(project, machine);
+    // [V0.5] 먼저 가공된 바닥 기준으로 옮겨진 공정의 절대 깊이 검사 (소재 바닥·날 길이)
+    plan.steps.forEach(s => {
+      if (!(s.ref < 0 || s.top < 0)) return;
+      const ref = s.refs[0] ? { gid: s.refs[0].gid } : null, nm = '[공정 ' + s.idx + ' ' + P.OPS.get(s.type).label + ']';
+      const thruOk = s.depthInfo && P.OPS.get(s.type).mill; // 관통 밀링은 각 모듈이 하부 여유로 검사
+      if (!thruOk && s.z < -(st.sz + under) - EPS) add('error', 8, nm + ' 먼저 가공된 바닥(Z' + fmt(s.ref) + ') 기준 깊이를 더하면 공구 끝 Z' + fmt(s.z) + ' 가 소재 바닥 아래로 내려갑니다. 깊이를 줄이세요.', ref);
+      if (s.tool && s.tool.flute > 0 && (s.top || 0) - s.z > s.tool.flute + EPS) add('error', 8, nm + ' 시작면 Z' + fmt(s.top || 0) + ' 에서 Z' + fmt(s.z) + ' 까지 ' + r3((s.top || 0) - s.z) + 'mm 가 T' + s.tool.no + ' 날 길이 ' + s.tool.flute + 'mm 를 넘습니다.', ref);
+      if (s.ref < 0) add('info', 8, nm + ' 다른 가공의 바닥 Z' + fmt(s.ref) + ' 를 기준으로 깊이를 계산했습니다' + (s.top < 0 ? ' (시작 Z' + fmt(s.top) + ', 빈 공간 공회전 생략)' : ' (그 가공보다 먼저 하므로 윗면에서 시작)') + '.', ref);
+    });
     if (!plan.steps.length) add('error', 11, '가공할 홀/공정이 없습니다.');
     plan.info.forEach(m => add('info', 11, m));
     if (set.retract === 'G99' && project.clamps.length) {

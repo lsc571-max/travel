@@ -86,19 +86,35 @@
       if (ok) ordered = sorted; else info.push('공구 교환 최소화 시 그룹 내부 공정 순서가 바뀌므로 그룹 순서대로 가공합니다.');
     }
     const steps = [];
+    const surf = project.settings.depthRef === 'auto' ? surfaces(project, machine, ordered) : null;
+    const expanded = [];
+    // [V0.5] 위치마다 '깊이 기준면(완성 형상의 바닥)' 과 '시작면(이미 깎인 면)' 이 다르면 공정을 나눔
     ordered.forEach(i => {
+      if (!surf) { expanded.push({ i, holes: i.g.holes, ref: 0, start: 0 }); return; }
+      const bucket = new Map();
+      i.g.holes.forEach(h => { const t = surf(i, h), k = t.ref + '|' + t.start; if (!bucket.has(k)) bucket.set(k, { i, holes: [], ref: t.ref, start: t.start }); bucket.get(k).holes.push(h); });
+      bucket.forEach(b => expanded.push(b));
+    });
+    expanded.forEach(e => {
+      const i = e.i;
       const def = P.OPS.get(i.op.type);
-      const d = P.opDepth(i.op, i.tool, project.stock);
+      const d0 = P.opDepth(i.op, i.tool, project.stock);
+      const d = e.ref || e.start ? Object.assign({}, d0, { z: r3(d0.z + e.ref) }) : d0;
       const c = P.opConditions(i.op, i.tool, project.stock.material, machine);
       const params = {
-        type: i.op.type, toolNo: i.op.toolNo, z: d.z, r: r3(toNum(i.op.r, 3)),
+        type: i.op.type, toolNo: i.op.toolNo, z: d.z, r: r3(toNum(i.op.r, 3) + e.start),
         q: def.ui.q ? r3(toNum(i.op.q, 0)) : 0,
         dwell: def.ui.dwell ? Math.round(toNum(i.op.dwell, 0)) : 0,
         rpm: c.rpm, feed: c.feed
       };
+      if (e.start) params.top = e.start; // [V0.5] 시작면 (이미 깎인 면, 0 이면 생략 → 이전 버전과 같은 계획)
+      if (e.ref) params.ref = e.ref;
       if (def.params) { params.pk = {}; Object.keys(def.params).forEach(k => { params.pk[k] = typeof def.params[k] === 'number' ? r3(toNum(i.op[k], def.params[k])) : i.op[k]; }); }
       const key = JSON.stringify(params);
-      const holes = i.g.holes.map(h => ({ x: h.x, y: h.y, gid: i.g.id, hid: h.id }));
+      // [V0.5] 공정 위치 오프셋(at): 포켓 진입 선가공 구멍·모서리 릴리프 구멍 등
+      const offs = Array.isArray(i.op.at) && i.op.at.length ? i.op.at : [[0, 0]];
+      const holes = [];
+      e.holes.forEach(h => offs.forEach(o => holes.push({ x: o[0] ? r3(h.x + o[0]) : h.x, y: o[1] ? r3(h.y + o[1]) : h.y, gid: i.g.id, hid: h.id })));
       const last = steps[steps.length - 1];
       if (last && last.key === key) { last.holes.push(...holes); last.refs.push({ gid: i.g.id, opId: i.op.id }); }
       else steps.push(Object.assign({ key, tool: i.tool, holes, refs: [{ gid: i.g.id, opId: i.op.id }], depthInfo: d }, params));
@@ -119,5 +135,93 @@
     return { steps, info };
   }
 
-  Object.assign(P, { defaultBundles, findToolBySpec, specMatches, specText, applyBundle, opsToBundle, checkBundleFit, buildPlan });
+  /* ---------------- [V0.5] 먼저 가공된 면 (깊이 기준면·시작면) ----------------
+   * 완성 형상 기준: 다른 가공(포켓·평면·윤곽)의 바닥 안에 있는 구멍·포켓은 그 바닥에서부터 깊이를 잰다 (도면 치수 방식).
+   * 시작면: 가공 순서상 그 위치가 이미 깎였으면 R점·진입을 그 면에서 시작한다 (빈 공간 공회전 방지).
+   *   - 같은 그룹(같은 형상의 황삭·정삭·선가공 구멍)은 서로 기준이 되지 않는다.
+   *   - 포함 판정: 구멍은 공구 원(반경 + 0.3mm)이, 포켓은 윤곽 전체가 영역 안에 있어야 함 (벽에 걸치면 원래 윗면 기준)
+   */
+  function regionPaths(rg, tool) {
+    const G = P.GEOM;
+    if (!rg.kind) return rg.shape === 'circle' ? [G.toPath(G.circlePoly(rg.cx, rg.cy, rg.dia / 2))] : [G.toPath(G.rrectPoly(rg.cx, rg.cy, rg.w, rg.h, rg.cr))];
+    if (rg.kind === 'face') return [G.toPath([[rg.x0, rg.y0], [rg.x1, rg.y0], [rg.x1, rg.y1], [rg.x0, rg.y1]])];
+    if (rg.kind === 'area') return [G.toPath(G.ccw(rg.outer))].concat(rg.islands.map(a => G.toPath(G.cw(a))));
+    if (rg.kind === 'inside') return [G.toPath(G.ccw(rg.part))];
+    // 바깥 윤곽: 부품 바깥 띠 (부품 ~ 가장 바깥 공구 끝)
+    return G.offsetEx([G.toPath(G.ccw(rg.part))], rg.dMax + (tool ? tool.dia / 2 : 0)).map(e => e.outer).concat([G.toPath(G.cw(rg.part))]);
+  }
+  function surfaces(project, machine, ordered) {
+    const G = P.GEOM, tm = toolMap(machine), st = project.stock;
+    // 그룹별 밀링 영역 (위치마다), 상대 바닥(관통 포함)
+    const feats = [];
+    project.groups.forEach(g => {
+      const mills = g.ops.filter(o => { const d = P.OPS.get(o.type); return d && d.regions && d.mill !== 'chamfer'; });
+      if (!mills.length) return;
+      const op = mills.reduce((a, b) => (P.opDepth(b, tm.get(b.toolNo), st).z < P.opDepth(a, tm.get(a.toolNo), st).z ? b : a));
+      const def = P.OPS.get(op.type), tool = tm.get(op.toolNo) || null;
+      g.holes.forEach(h => {
+        if (!P.isNum(h.x) || !P.isNum(h.y)) return;
+        const rg = def.regions(op, h, st, tool)[0], paths = regionPaths(rg, tool);
+        const pl = paths.map(G.fromPath);
+        feats.push({ g, h, rel: P.opDepth(op, tool, st).z, paths, pl, kind: def.mill, abs: null });
+      });
+    });
+    const shapeOf = (i, h) => {
+      const def = P.OPS.get(i.op.type);
+      if (def.mill === 'face') return null;
+      if (def.mill && i.op.shape) { const reg = P.GEOM.shapeRegion(i.op); return { poly: G.ccw(reg.outer).map(p => [p[0] + h.x, p[1] + h.y]) }; }
+      const off = Array.isArray(i.op.at) && i.op.at.length ? i.op.at : [[0, 0]], r = (i.tool ? i.tool.dia / 2 : 1) + 0.3;
+      return { disks: off.map(o => [h.x + o[0], h.y + o[1], r]) };
+    };
+    const inside = (f, sh) => {
+      if (sh.disks) return sh.disks.every(d => G.inPaths(f.paths, d[0], d[1]) && G.distToPts(f.pl, d[0], d[1]) >= d[2]);
+      const pts = sh.poly, n = pts.length;
+      for (let k = 0; k < n; k++) {
+        const a = pts[k], b = pts[(k + 1) % n], L = Math.hypot(b[0] - a[0], b[1] - a[1]), m = Math.max(1, Math.ceil(L));
+        for (let j = 0; j < m; j++) { const x = a[0] + (b[0] - a[0]) * j / m, y = a[1] + (b[1] - a[1]) * j / m; if (!G.inPaths(f.paths, x, y) || G.distToPts(f.pl, x, y) < 0.2) return false; }
+      }
+      return true;
+    };
+    // 기준면: 다른 그룹 영역 중 포함하는 가장 깊은 완성 바닥 (영역 자신의 바닥도 같은 규칙으로 절대값화, 반복 안정화)
+    const refOf = (g, sh) => { let t = 0; if (!sh) return 0; feats.forEach(f => { if (f.g !== g && f.abs !== null && f.abs < t - 1e-9 && inside(f, sh)) t = f.abs; }); return t; };
+    feats.forEach(f => { f.abs = f.rel; });
+    for (let it = 0; it < 6; it++) {
+      let changed = false;
+      feats.forEach(f => {
+        const own = ordered.find(i => i.g === f.g && P.OPS.get(i.op.type).mill);
+        const sh = own ? shapeOf(own, f.h) : null, t = refOf(f.g, sh), a = r3(t + f.rel);
+        if (Math.abs(a - f.abs) > 1e-9) { f.abs = a; changed = true; }
+      });
+      if (!changed) break;
+    }
+    // 시작면: 순서상 앞서 끝난(그 그룹의 공정이 하나 이상 지난) 다른 그룹 영역
+    const pos = new Map(); ordered.forEach((i, k) => { if (!pos.has(i.g.id)) pos.set(i.g.id, []); pos.get(i.g.id).push(k); });
+    const memo = new Map();
+    return function (i, h) {
+      const key = i.idx + '|' + h.id;
+      if (memo.has(key)) return memo.get(key);
+      const sh = shapeOf(i, h);
+      let ref = 0, start = 0;
+      if (sh) {
+        ref = refOf(i.g, sh);
+        const k = ordered.indexOf(i);
+        feats.forEach(f => {
+          if (f.g === i.g || !(f.abs < start - 1e-9)) return;
+          const done = (pos.get(f.g.id) || []).filter(x => x < k);
+          if (!done.length || !inside(f, sh)) return;
+          // 그 그룹에서 지금까지 실제로 깎인 바닥 (황삭만 끝났으면 바닥 여유만큼 위)
+          let floor = 0;
+          done.forEach(x => { const o = ordered[x].op, t = ordered[x].tool, dd = P.opDepth(o, t, st), af = /Rough$|Semi$/.test(o.type) ? toNum(o.allowFloor, 0) : 0; floor = Math.min(floor, dd.z + af); });
+          const fl = r3(f.abs - f.rel + floor); // 그 영역의 기준면 + 실제 깎인 상대 바닥
+          if (fl < start) start = fl;
+        });
+        start = Math.max(start, ref); // 시작면은 완성 바닥보다 깊을 수 없음
+      }
+      const res = { ref: r3(ref), start: r3(start) };
+      memo.set(key, res);
+      return res;
+    };
+  }
+
+  Object.assign(P, { localSurfaces: surfaces, defaultBundles, findToolBySpec, specMatches, specText, applyBundle, opsToBundle, checkBundleFit, buildPlan });
 })(typeof globalThis !== 'undefined' ? globalThis : this);

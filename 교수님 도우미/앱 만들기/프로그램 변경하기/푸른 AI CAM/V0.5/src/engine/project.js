@@ -39,7 +39,8 @@
       settings: {
         initialZ: toNum(st.initialZ, 50), retract: st.retract === 'G99' ? 'G99' : 'G98', wcs: /^G5[4-9]$/.test(st.wcs) ? st.wcs : 'G54',
         coolant: st.coolant !== false, m01: st.m01 !== false, seqNo: !!st.seqNo, toolOrder: st.toolOrder === 'group' ? 'group' : 'tool',
-        pathOrder: ['input', 'nearest', 'zigzag'].includes(st.pathOrder) ? st.pathOrder : 'nearest'
+        pathOrder: ['input', 'nearest', 'zigzag'].includes(st.pathOrder) ? st.pathOrder : 'nearest',
+        depthRef: st.depthRef === 'auto' ? 'auto' : 'top' // [V0.5] 이전 버전 파일(값 없음)은 기존대로 Z0 기준
       },
       clamps: Array.isArray(p.clamps) ? p.clamps.slice(0, 50).map(c => ({ id: typeof c.id === 'string' ? c.id : uid('c'), x: toNum(c.x, 0), y: toNum(c.y, 0), w: toNum(c.w, 10), h: toNum(c.h, 10), height: toNum(c.height, 30) })) : [],
       groups: Array.isArray(p.groups) ? p.groups.slice(0, 200).map((g, i) => ({
