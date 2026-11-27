@@ -1,0 +1,33 @@
+{
+  "_설명": "빌드·테스트 공통 로드 순서. 새 가공 모듈은 ops/ 에 파일을 추가하고 core 목록의 planned.js 앞에 넣는다.",
+  "core": [
+    "engine/common.js",
+    "ops/registry.js",
+    "ops/hole-common.js",
+    "ops/center.js",
+    "ops/drill.js",
+    "ops/peck.js",
+    "ops/deep.js",
+    "ops/tap-common.js",
+    "ops/tap.js",
+    "ops/rigid.js",
+    "ops/pocket.js",
+    "ops/planned.js",
+    "engine/project.js",
+    "engine/patterns.js",
+    "process/plan.js",
+    "process/hole-wizard.js",
+    "process/pocket-wizard.js",
+    "post/registry.js",
+    "post/fanuc.js",
+    "verify/model.js",
+    "verify/nc-fanuc.js",
+    "sim/stock-sim.js"
+  ],
+  "ui": [
+    "ui/storage.js",
+    "ui/graphics.js",
+    "ui/view3d.js",
+    "ui/app.js"
+  ]
+}
