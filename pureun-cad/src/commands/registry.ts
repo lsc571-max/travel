@@ -1,7 +1,7 @@
 // 명령어 목록과 별칭 (AutoCAD 기본 별칭과 같게 유지)
 import { DIMALIGNED, DIMDIAMETER, DIMLINEAR, DIMRADIUS, DIST, ID, LIST } from './dim';
 import { ARC, CIRCLE, LINE, PLINE, RECTANG, TEXT } from './draw';
-import { ARRAY, BREAK, CAMCHECK, CHAMFER, EXPLODE, EXTEND, FILLET, JOIN, MIRROR, OVERKILL, SCALE } from './edit';
+import { ARRAY, BREAK, CAMCHECK, CHAMFER, EXPLODE, EXTEND, FILLET, JOIN, MIRROR, OVERKILL, SCALE, STRETCH } from './edit';
 import { COPY, ERASE, MOVE, OFFSET, ROTATE, TRIM } from './modify';
 import type { CommandDef, CommandFn, UiAction } from './types';
 
@@ -60,6 +60,7 @@ export const COMMANDS: CommandDef[] = [
   { name: 'MIRROR', aliases: ['MI'], label: '대칭', fn: MIRROR, usesSelection: true },
   { name: 'SCALE', aliases: ['SC'], label: '축척', fn: SCALE, usesSelection: true },
   { name: 'EXTEND', aliases: ['EX'], label: '연장', fn: EXTEND },
+  { name: 'STRETCH', aliases: ['S'], label: '신축', fn: STRETCH },
   { name: 'FILLET', aliases: ['F'], label: '모깎기', fn: FILLET },
   { name: 'CHAMFER', aliases: ['CHA'], label: '모따기', fn: CHAMFER },
   { name: 'BREAK', aliases: ['BR'], label: '끊기', fn: BREAK },
@@ -117,4 +118,23 @@ export function suggestCommands(prefix: string, limit = 8): CommandDef[] {
     .slice(0, limit)
     .map(([c]) => c);
 }
-export const findCommand = (s: string) => byName.get(s.trim().toUpperCase());
+/** 사용자 별칭 (acad.pgp 형식 "별칭, *명령"). 기본 별칭보다 우선 */
+const custom = new Map<string, CommandDef>();
+export function setCustomAliases(text: string): string[] {
+  const errors: string[] = [];
+  custom.clear();
+  text.split(/\r?\n/).forEach((line, i) => {
+    const t = line.replace(/;.*$/, '').trim();
+    if (!t) return;
+    const m = /^([^,\s]+)\s*,\s*\*?\s*([A-Za-z]+)$/.exec(t);
+    if (!m) return errors.push(`${i + 1}행: 형식 오류 "${t}" (예: KK, *LINE)`);
+    const def = byName.get(m[2].toUpperCase());
+    if (!def) return errors.push(`${i + 1}행: 알 수 없는 명령 "${m[2]}"`);
+    custom.set(m[1].toUpperCase(), def);
+  });
+  return errors;
+}
+export const findCommand = (s: string) => {
+  const k = s.trim().toUpperCase();
+  return custom.get(k) ?? byName.get(k);
+};

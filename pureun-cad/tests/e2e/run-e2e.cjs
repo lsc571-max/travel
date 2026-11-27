@@ -581,6 +581,20 @@ async function waitServer() {
       await page.keyboard.press('Escape');
     });
 
+    await test('V1 STRETCH: 사각형 오른쪽 변을 걸치기 창으로 감싸 10 늘림', async () => {
+      await reset();
+      await cmd('REC');
+      await cmd('0,0');
+      await cmd('@40,20');
+      await cmd('S');
+      await cmd('35,-5');
+      await cmd('45,25');
+      await cmd('40,0');
+      await cmd('@10,0');
+      const p = (await ents())[0];
+      eq(p.pts.map((q) => [q.x, q.y]), [[0, 0], [50, 0], [50, 20], [0, 20]]);
+    });
+
     await test('V1 가공 검사·중복 정리', async () => {
       await reset();
       await cmd('L');

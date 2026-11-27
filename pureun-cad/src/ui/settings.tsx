@@ -9,6 +9,7 @@ import { idbDel } from '../storage/idb';
 import { APP_NAME, APP_VERSION, BUILD_DATE, CHANGES } from '../version';
 import { Icon } from './icons';
 import { Modal } from './Modal';
+import { setCustomAliases } from '../commands/registry';
 
 export function saveSettings(eng: Engine) {
   try {
@@ -105,6 +106,21 @@ export function SettingsDialog({ eng, onClose, onShare, onVersion }: { eng: Engi
           ))}
         </div>
         <div className="row">
+          <label>극좌표 추적 (F10) / 간격</label>
+          <input type="checkbox" checked={s.polar} onChange={(e) => set({ polar: e.target.checked, ortho: e.target.checked ? false : s.ortho })} />
+          <select value={s.polarInc} onChange={(e) => set({ polarInc: Number(e.target.value) })}>
+            {[5, 10, 15, 22.5, 30, 45, 90].map((v) => (
+              <option key={v} value={v}>
+                {v}°
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="row">
+          <label>동적 입력 툴팁 (F12)</label>
+          <input type="checkbox" checked={s.dyn} onChange={(e) => set({ dyn: e.target.checked })} />
+        </div>
+        <div className="row">
           <label>선택 상자 / 스냅 범위(px)</label>
           <input type="number" min={2} max={30} value={s.pickbox} onChange={(e) => set({ pickbox: num(e.target.value, 2, 30) })} style={{ width: 70 }} />
           <input type="number" min={4} max={40} value={s.aperture} onChange={(e) => set({ aperture: num(e.target.value, 4, 40) })} style={{ width: 70 }} />
@@ -138,6 +154,7 @@ export function SettingsDialog({ eng, onClose, onShare, onVersion }: { eng: Engi
           <span className="small">도면은 외부 서버로 전송되지 않습니다</span>
         </div>
       </div>
+      <AliasEditor />
       <div className="section">
         <h4>공유 · 버전</h4>
         <div className="row">
@@ -528,5 +545,49 @@ export function VersionDialog({ onClose }: { onClose: () => void }) {
       <p className="small">업데이트 방식: 웹앱(PWA) — 배포 주소에 새 버전이 올라가면 이 화면에서 확인 후 적용합니다. 자동 설치형 업데이트는 지원하지 않습니다.</p>
       {state && <p className="msg">{state}</p>}
     </Modal>
+  );
+}
+
+export const ALIAS_KEY = 'pureun-cad.aliases';
+/** 사용자 명령 별칭 (acad.pgp 형식) */
+function AliasEditor() {
+  const [text, setText] = useState(() => {
+    try {
+      return localStorage.getItem(ALIAS_KEY) ?? '';
+    } catch {
+      return '';
+    }
+  });
+  const [msg, setMsg] = useState('');
+  const apply = () => {
+    const errs = setCustomAliases(text);
+    if (errs.length) return setMsg(errs.join('\n'));
+    try {
+      localStorage.setItem(ALIAS_KEY, text);
+    } catch {
+      /* 저장 불가 */
+    }
+    setMsg('적용했습니다.');
+  };
+  return (
+    <div className="section">
+      <h4>사용자 명령 별칭 (acad.pgp 형식)</h4>
+      <p className="small">한 줄에 하나씩 "별칭, *명령" — 예: <span className="kbd">KK, *LINE</span> <span className="kbd">FF, *FILLET</span>. 기본 별칭보다 우선합니다. ; 뒤는 주석.</p>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => e.stopPropagation()}
+        rows={4}
+        spellCheck={false}
+        style={{ width: '100%', fontFamily: 'Consolas, monospace', background: 'var(--input)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 4 }}
+        aria-label="사용자 명령 별칭"
+      />
+      <div className="row">
+        <button className="btn" onClick={apply}>
+          별칭 적용
+        </button>
+        {msg && <span className={msg.startsWith('적용') ? 'small' : 'err'} style={{ whiteSpace: 'pre-wrap' }}>{msg}</span>}
+      </div>
+    </div>
   );
 }

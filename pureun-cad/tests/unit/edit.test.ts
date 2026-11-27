@@ -109,3 +109,28 @@ describe('ARRAY / OVERKILL / CAM 검사', () => {
     expect(r.zeroLength).toEqual([3]);
   });
 });
+
+import { findCommand, setCustomAliases, suggestCommands } from '../../src/commands/registry';
+describe('명령 별칭·자동완성', () => {
+  it('pgp 형식 사용자 별칭, 오류 보고, 한글 명령명', () => {
+    expect(setCustomAliases('KK, *LINE\n; 주석\nFF,*FILLET')).toEqual([]);
+    expect(findCommand('kk')?.name).toBe('LINE');
+    expect(findCommand('FF')?.name).toBe('FILLET');
+    expect(setCustomAliases('ZZ, *NOPE')[0]).toContain('알 수 없는 명령');
+    expect(findCommand('모깎기')?.name).toBe('FILLET');
+    expect(suggestCommands('F')[0].name).toBe('FILLET');
+    setCustomAliases('');
+  });
+});
+import { stretchEntity } from '../../src/core/edit';
+describe('STRETCH', () => {
+  it('창 안 끝점만 이동, 폴리선 정점 이동', () => {
+    const r = { minX: 8, minY: -1, maxX: 12, maxY: 11 };
+    const l = stretchEntity(L(0, 0, 10, 0), r, { x: 5, y: 0 }) as Line;
+    expect([l.p1, l.p2]).toEqual([{ x: 0, y: 0 }, { x: 15, y: 0 }]);
+    const sq: Entity = { id: 1, type: 'polyline', layer: '0', closed: true, pts: [{ x: 0, y: 0, b: 0 }, { x: 10, y: 0, b: 0 }, { x: 10, y: 10, b: 0 }, { x: 0, y: 10, b: 0 }] };
+    const p = stretchEntity(sq, r, { x: 5, y: 0 }) as Extract<Entity, { type: 'polyline' }>;
+    expect(p.pts.map((q) => q.x)).toEqual([0, 15, 15, 0]);
+    expect(stretchEntity(L(0, 0, 1, 0), r, { x: 5, y: 0 })).toBeNull();
+  });
+});

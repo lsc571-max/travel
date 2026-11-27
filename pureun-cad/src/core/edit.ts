@@ -7,7 +7,7 @@ import {
   type Seg,
 } from './geom';
 import { lineCircleParams, lineLineParams, segIntersect } from './intersect';
-import type { Entity, NewEntity, PVertex, Vec2 } from './types';
+import type { BBox, Entity, NewEntity, PVertex, Vec2 } from './types';
 
 export const stripId = (e: Entity): NewEntity => {
   const { id: _id, ...rest } = e;
@@ -390,4 +390,33 @@ export function camCheck(ents: Entity[], tol = 1e-6): CamReport {
   for (const x of ends) count.set(key(x.p), (count.get(key(x.p)) ?? 0) + 1);
   const openEnds = ends.filter((x) => count.get(key(x.p)) === 1).map((x) => x.p);
   return { openEnds, zeroLength, openPolylines };
+}
+
+// ───────── 신축 (STRETCH) ─────────
+const inRect = (p: Vec2, r: BBox) => p.x >= r.minX && p.x <= r.maxX && p.y >= r.minY && p.y <= r.maxY;
+
+/** 걸치기 창 안에 있는 정의점만 d만큼 옮김. 창 안 점이 없으면 null */
+export function stretchEntity(e: Entity, r: BBox, d: Vec2): Entity | null {
+  const mv = (p: Vec2) => (inRect(p, r) ? { x: p.x + d.x, y: p.y + d.y } : p);
+  switch (e.type) {
+    case 'line':
+      if (!inRect(e.p1, r) && !inRect(e.p2, r)) return null;
+      return { ...e, p1: mv(e.p1), p2: mv(e.p2) };
+    case 'circle':
+      return inRect(e.c, r) ? moveEntity(e, d) : null;
+    case 'arc': {
+      const s = { x: e.c.x + e.r * Math.cos(e.a0 * DEG), y: e.c.y + e.r * Math.sin(e.a0 * DEG) };
+      const t = { x: e.c.x + e.r * Math.cos(e.a1 * DEG), y: e.c.y + e.r * Math.sin(e.a1 * DEG) };
+      // 중심 또는 양 끝이 모두 창 안일 때만 이동 (한쪽 끝만 들어오면 형상 보존을 위해 그대로)
+      return inRect(e.c, r) || (inRect(s, r) && inRect(t, r)) ? moveEntity(e, d) : null;
+    }
+    case 'polyline':
+      if (!e.pts.some((p) => inRect(p, r))) return null;
+      return { ...e, pts: e.pts.map((p) => (inRect(p, r) ? { ...p, x: p.x + d.x, y: p.y + d.y } : p)) };
+    case 'text':
+      return inRect(e.p, r) ? moveEntity(e, d) : null;
+    case 'dimension':
+      if (![e.p1, e.p2, e.loc].some((p) => inRect(p, r))) return null;
+      return { ...e, p1: mv(e.p1), p2: mv(e.p2), loc: mv(e.loc) };
+  }
 }

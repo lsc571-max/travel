@@ -1,7 +1,7 @@
 // V1 편집 명령: MIRROR, SCALE, EXTEND, FILLET, CHAMFER, JOIN, EXPLODE, BREAK, ARRAY, OVERKILL, CAMCHECK
 import {
   camCheck, chamferLines, explodeEntity, extendEntity, filletLines, findOverkill, joinEntities, mirrorEntity, polarArray, rectArray,
-  scaleEntity, stripId,
+  scaleEntity, stretchEntity, stripId,
 } from '../core/edit';
 import { entityBBox, entitySegs } from '../core/entity';
 import { dist, type Seg } from '../core/geom';
@@ -339,4 +339,43 @@ export const CAMCHECK: CommandFn = function* (ctx) {
       (r.zeroLength.length + dup.duplicates.length + dup.overlapped.length ? ' — 문제 객체를 선택해 두었습니다 (OVERKILL로 정리).' : ''),
   );
   if (!r.openEnds.length && !r.zeroLength.length && !dup.duplicates.length && !dup.overlapped.length) ctx.log('가공 검사: 문제가 없습니다. 모든 윤곽이 닫혀 있습니다.');
+};
+
+export const STRETCH: CommandFn = function* (ctx) {
+  ctx.setSelection([]);
+  const a = yield { kind: 'point', prompt: '걸치기 창의 첫 번째 구석 지정 (늘릴 부분을 감싸기)' };
+  if (a.t !== 'point') return;
+  const rectOf = (p: { x: number; y: number }) => ({ minX: Math.min(a.p.x, p.x), minY: Math.min(a.p.y, p.y), maxX: Math.max(a.p.x, p.x), maxY: Math.max(a.p.y, p.y) });
+  const b = yield {
+    kind: 'point',
+    prompt: '반대 구석 지정',
+    noRubber: true,
+    preview: (p) => [{ type: 'polyline', layer: '0', closed: true, pts: [ { x: a.p.x, y: a.p.y, b: 0 }, { x: p.x, y: a.p.y, b: 0 }, { x: p.x, y: p.y, b: 0 }, { x: a.p.x, y: p.y, b: 0 } ] }],
+  };
+  if (b.t !== 'point') return;
+  const r = rectOf(b.p);
+  const ents = ctx.doc.query(r).map((id) => ctx.doc.get(id)!).filter((e) => ctx.doc.isEditable(e));
+  const affected = ents.filter((e) => stretchEntity(e, r, { x: 0, y: 0 }));
+  if (!affected.length) {
+    ctx.log('창 안에 늘릴 점이 있는 객체가 없습니다.');
+    return;
+  }
+  ctx.setSelection(affected.map((e) => e.id));
+  const base = yield { kind: 'point', prompt: `기준점 지정 (${affected.length}개 객체)` };
+  if (base.t !== 'point') return;
+  const to = yield {
+    kind: 'point',
+    prompt: '두 번째 점 지정',
+    base: base.p,
+    preview: (p) => affected.map((e) => stretchEntity(e, r, { x: p.x - base.p.x, y: p.y - base.p.y })).filter((x): x is Entity => !!x).map(stripId),
+  };
+  ctx.setSelection([]);
+  if (to.t !== 'point') return;
+  const d = { x: to.p.x - base.p.x, y: to.p.y - base.p.y };
+  const tx = ctx.doc.tx('STRETCH');
+  for (const e of affected) {
+    const n = stretchEntity(e, r, d);
+    if (n) tx.update(n);
+  }
+  tx.commit();
 };

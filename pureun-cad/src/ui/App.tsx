@@ -12,13 +12,13 @@ import { aciColor } from '../render/aci';
 import { idbGet, idbSet } from '../storage/idb';
 import { APP_NAME, APP_VERSION } from '../version';
 import { CanvasView } from './CanvasView';
-import { suggestCommands } from '../commands/registry';
+import { setCustomAliases, suggestCommands } from '../commands/registry';
 import { HelpDialog, HoleDialog, LayerDialog, MessageDialog, SaveDialog, type SaveChoice } from './dialogs';
 import { clearSaveHandle, pickOpenFile, saveText } from './files';
 import { Icon } from './icons';
 import { Modal } from './Modal';
 import { PropertiesPanel, setCurrent } from './PropertiesPanel';
-import { SettingsDialog, ShareDialog, VersionDialog } from './settings';
+import { ALIAS_KEY, SettingsDialog, ShareDialog, VersionDialog } from './settings';
 
 type DialogState =
   | null
@@ -49,6 +49,11 @@ function createEngine() {
     /* 기본 설정 사용 */
   }
   eng.applySettings();
+  try {
+    setCustomAliases(localStorage.getItem(ALIAS_KEY) ?? '');
+  } catch {
+    /* 별칭 없음 */
+  }
   // 자동 테스트·성능 측정용 핸들 (비밀정보 없음)
   Object.assign(window, { __pureunCad: { eng, runBenchmark } });
   return eng;
@@ -160,6 +165,7 @@ const MENUS: { label: string; items: ([string, string, string?] | '-')[] }[] = [
       ['대칭', 'MIRROR', 'MI'],
       ['축척', 'SCALE', 'SC'],
       ['연장', 'EXTEND', 'EX'],
+      ['신축', 'STRETCH', 'S'],
       ['모깎기', 'FILLET', 'F'],
       ['모따기', 'CHAMFER', 'CHA'],
       ['끊기', 'BREAK', 'BR'],
