@@ -200,9 +200,12 @@
     plan.steps.forEach(s => {
       if (!(s.ref < 0 || s.top < 0)) return;
       const ref = s.refs[0] ? { gid: s.refs[0].gid } : null, nm = '[공정 ' + s.idx + ' ' + P.OPS.get(s.type).label + ']';
-      const thruOk = s.depthInfo && P.OPS.get(s.type).mill; // 관통 밀링은 각 모듈이 하부 여유로 검사
-      if (!thruOk && s.z < -(st.sz + under) - EPS) add('error', 8, nm + ' 먼저 가공된 바닥(Z' + fmt(s.ref) + ') 기준 깊이를 더하면 공구 끝 Z' + fmt(s.z) + ' 가 소재 바닥 아래로 내려갑니다. 깊이를 줄이세요.', ref);
+      // 관통 공정은 기준면을 더하지 않으므로(소재 바닥 기준) 각 모듈이 하부 여유로 검사
+      if (s.z < -(st.sz + under) - EPS) add('error', 8, nm + ' 먼저 가공된 바닥(Z' + fmt(s.ref) + ') 기준 깊이를 더하면 공구 끝 Z' + fmt(s.z) + ' 가 소재 바닥 아래로 내려갑니다. 깊이를 줄이세요.', ref);
       if (s.tool && s.tool.flute > 0 && (s.top || 0) - s.z > s.tool.flute + EPS) add('error', 8, nm + ' 시작면 Z' + fmt(s.top || 0) + ' 에서 Z' + fmt(s.z) + ' 까지 ' + r3((s.top || 0) - s.z) + 'mm 가 T' + s.tool.no + ' 날 길이 ' + s.tool.flute + 'mm 를 넘습니다.', ref);
+      // [V0.5 검토] 기준 바닥(포켓 등)이 아직 깎이지 않았는데 그 바닥 기준으로 깊게 들어감 → 순서 경고
+      if (s.ref < (s.top || 0) - 2.05 && P.OPS.get(s.type).role !== 'spot' && !P.OPS.get(s.type).mill) add('warn', 8, nm + ' 기준이 되는 바닥(Z' + fmt(s.ref) + ')이 아직 가공되지 않았는데 이 공정이 먼저 윗면부터 뚫습니다. 포켓·평면을 먼저 가공하도록 목록 순서를 바꾸세요.', ref);
+      if (s.ref < (s.top || 0) - 2.05 && P.OPS.get(s.type).mill) add('error', 8, nm + ' 기준이 되는 바닥(Z' + fmt(s.ref) + ')이 아직 가공되지 않았는데 이 밀링 공정이 먼저 윗면부터 깊게 깎습니다. 바깥 포켓·평면을 먼저 가공하도록 목록 순서를 바꾸세요.', ref);
       if (s.ref < 0) add('info', 8, nm + ' 다른 가공의 바닥 Z' + fmt(s.ref) + ' 를 기준으로 깊이를 계산했습니다' + (s.top < 0 ? ' (시작 Z' + fmt(s.top) + ', 빈 공간 공회전 생략)' : ' (그 가공보다 먼저 하므로 윗면에서 시작)') + '.', ref);
     });
     if (!plan.steps.length) add('error', 11, '가공할 홀/공정이 없습니다.');

@@ -111,5 +111,17 @@
     const sol = new CL.Paths(); c.Execute(CL.ClipType.ctDifference, sol, CL.PolyFillType.pftNonZero, CL.PolyFillType.pftNonZero);
     return sol.map(p => Math.abs(CL.Clipper.Area(p)) / (SC * SC)).filter(a => a > 1e-3).sort((a, b) => b - a);
   }
-  P.GEOM = Object.freeze({ unreachable, ngonPoly, SC, ARC_TOL, ok: !!CL, toPath, fromPath, area, ccw, cw, bbox, perimeter, circlePoly, rrectPoly, shapeRegion, regionPaths, offsetEx, exPaths, offsetPts, inPaths, segDist, distToPts, cleanRegion, overlapArea });
+  // [V0.5 검토] 단계 사이 '한 번에 깊게 깎을 살': 이번 단계(벽 여유 aw)가 깎는 곳 − 앞 단계(벽 여유 pw)가 깎은 곳.
+  // 정상이면 벽을 따라 (pw − aw) 두께 띠(뾰족한 모서리는 몇 배)뿐 → 2(pw − aw)+0.05 만큼 줄이면 사라짐. 남으면 앞 단계가 못 들어간 좁은 곳(목·섬 틈)
+  function stageExtra(paths, rt, pw, aw) {
+    const cut = d => [].concat(...offsetEx([].concat(...offsetEx(paths, -(rt + d)).map(exPaths)), rt).map(exPaths));
+    const A = cut(aw), B = cut(pw);
+    if (!A.length) return 0;
+    const c = new CL.Clipper(); c.AddPaths(A, CL.PolyType.ptSubject, true); if (B.length) c.AddPaths(B, CL.PolyType.ptClip, true);
+    const sol = new CL.Paths(); c.Execute(CL.ClipType.ctDifference, sol, CL.PolyFillType.pftNonZero, CL.PolyFillType.pftNonZero);
+    if (!sol.length) return 0;
+    const core = offsetEx(sol, -(2.5 * Math.max(0, pw - aw) + 0.05)); // 뾰족한 모서리 띠(두께가 몇 배)는 지움
+    return core.reduce((s, e) => s + Math.abs(CL.Clipper.Area(e.outer)) / (SC * SC), 0);
+  }
+  P.GEOM = Object.freeze({ unreachable, stageExtra, ngonPoly, SC, ARC_TOL, ok: !!CL, toPath, fromPath, area, ccw, cw, bbox, perimeter, circlePoly, rrectPoly, shapeRegion, regionPaths, offsetEx, exPaths, offsetPts, inPaths, segDist, distToPts, cleanRegion, overlapArea });
 })(typeof globalThis !== 'undefined' ? globalThis : this);

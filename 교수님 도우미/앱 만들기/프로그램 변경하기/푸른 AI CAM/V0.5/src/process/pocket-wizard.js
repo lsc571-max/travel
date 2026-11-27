@@ -63,7 +63,7 @@
       // [V0.5 검토] 자유 형상: 좁은 목이 남지 않는 가장 큰 공구 우선
       const reach = t => geo.shape !== 'poly' || !(P.GEOM.unreachable(P.GEOM.regionPaths(P.GEOM.shapeRegion(geo), 0, 0), t.dia / 2, 0).some(a => a > Math.max(1, 1.2 * t.dia * t.dia / 4)));
       // 진입 불가로 남기는 좁은 곳이 없는 공구 우선 (자유 형상)
-      const clean = t => geo.shape !== 'poly' || (() => { const r = P.pocketMoves({ pk: Object.assign({}, P.POCKET_PARAMS, geo, { type: 'pocketRough', allowWall: spec.allowWall, allowFloor: spec.allowFloor, stepover: spec.stepover, stepdown: 1, entry: spec.entry }), type: 'pocketRough', z: -1, r: 3, feed: 100 }, t, { x: 0, y: 0 }, machine); return !r.error && !(r.warn && r.warn.length); })();
+      const clean = t => geo.shape !== 'poly' || (() => { const r = P.pocketMoves({ pk: Object.assign({}, P.POCKET_PARAMS, geo, { type: 'pocketRough', allowWall: spec.allowWall, allowFloor: spec.allowFloor, stepover: spec.stepover, stepdown: 1, entry: spec.entry }), type: 'pocketRough', z: -1, r: 3, feed: 100 }, t, { x: 0, y: 0 }, machine); return !r.error && !(r.warn && r.warn.length) && !(P.GEOM.stageExtra(P.GEOM.regionPaths(P.GEOM.shapeRegion(geo), 0, 0), t.dia / 2, spec.allowWall, 0) > Math.max(1.5, 0.3 * t.dia * t.dia / 4)); })();
       tool = ems.find(t => fitW(t) && fitR(t) && reach(t) && clean(t)) || ems.find(t => fitW(t) && fitR(t) && reach(t)) || ems.find(t => fitW(t) && fitR(t)) || null;
       if (!tool) {
         tool = ems.find(fitW) || null;
@@ -124,36 +124,40 @@
   /* ---------- [V0.5] 선가공 구멍·모서리 릴리프 구멍 ----------
    * 선가공(entry 'drill'): 진입점에 엔드밀 지름 이상(없으면 50% 이상) 드릴로 첫 단계 바닥(깊이 − 바닥 여유)까지 끝을 맞춰 뚫음
    * 모서리 릴리프(relief, 사각): 코너 R 이 공구 반경보다 작을 때 네 모서리에 구멍을 뚫어 직각 모서리 확보.
-   *   구멍 반경 ρ ≥ 0.586·공구 반경이면 엔드밀이 남기는 모서리 살(R=공구 반경)이 모두 구멍 안에 들어감.
+   *   구멍 반경 ρ ≥ 공구 반경/√2 (≈0.707) 이면 엔드밀이 남기는 모서리 살(R=공구 반경)이 모두 구멍 안에 들어감.
    *   중심 = 모서리에서 (ρ/√2, ρ/√2) 안쪽 → 구멍이 모서리 꼭짓점을 지남. 깊이 = 포켓 깊이(직경부 기준)
    */
   function preDrills(spec, machine, stock, tool, depth, ex, ey, notes, missing) {
     const out = [], drills = (machine.tools || []).filter(t => t.type === 'drill' && t.dia > 0).sort((a, b) => a.dia - b.dia);
     const ct = (machine.tools || []).filter(t => t.type === 'center').sort((a, b) => a.no - b.no)[0] || null;
-    const add = (dt, at, extra, why) => {
-      if (ct) { const depthC = Math.max(0.1, Math.floor(Math.min(dt.dia + 0.4, ct.dia * 0.9) / 2 / Math.tan(toNum(ct.angle, 90) / 2 * Math.PI / 180) * 10) / 10); out.push(P.newOp('center', ct.no, Object.assign({ depth: depthC, r: 3, auto: true }, at ? { at } : {}))); }
+    const add = (dt, at, extra, why, maxC) => {
+      // [V0.5 검토] 센터 깊이는 포켓 바닥(황삭 바닥)을 넘지 않게
+      if (ct) { const depthC = Math.max(0.1, Math.min(Math.floor((maxC || Infinity) * 10) / 10, Math.floor(Math.min(dt.dia + 0.4, ct.dia * 0.9) / 2 / Math.tan(toNum(ct.angle, 90) / 2 * Math.PI / 180) * 10) / 10)); out.push(P.newOp('center', ct.no, Object.assign({ depth: depthC, r: 3, auto: true }, at ? { at } : {}))); }
       const tipD = extra.depthMode === 'full' ? extra.depth + P.tipLength(dt) : extra.depth;
       const cyc = tipD / dt.dia > 3 ? 'peck' : 'drill';
       out.push(P.newOp(cyc, dt.no, Object.assign({ r: 3, q: Math.max(0.1, Math.floor(dt.dia * 10) / 10), auto: true }, extra, at ? { at } : {})));
       notes.push({ level: 'info', msg: why + ': T' + dt.no + ' Ø' + dt.dia + ' 드릴' + (ct ? ' (센터 T' + ct.no + ' 먼저)' : '') + ', 끝 깊이 ' + r3(tipD) + 'mm' });
     };
     if (spec.entry === 'drill' && spec.rough) {
-      const dt = drills.find(t => t.dia >= tool.dia - 1e-9 && t.dia <= tool.dia * 1.6) || drills.filter(t => t.dia >= 0.5 * tool.dia - 1e-9 && t.dia < tool.dia).pop();
+      // [V0.5 검토] 드릴 구멍이 포켓 벽(측벽 여유)을 넘지 않게: 반경 ≤ 진입점에서 벽까지 − 측벽 여유 − 0.1
+      const G = P.GEOM, reg = G.shapeRegion(P.specGeo(spec)), room = G.distToPts([reg.outer].concat(reg.islands || []), ex, ey) - spec.allowWall - 0.1;
+      const fits = t => t.dia / 2 <= room + 1e-9;
+      const dt = drills.find(t => fits(t) && t.dia >= tool.dia - 1e-9 && t.dia <= tool.dia * 1.6) || drills.filter(t => fits(t) && t.dia >= 0.5 * tool.dia - 1e-9 && t.dia < tool.dia).pop();
       const tip = r3(depth - spec.allowFloor);
       if (!dt) { missing.push({ type: 'drill', dia: Math.ceil(tool.dia), why: '포켓 선가공 구멍' }); notes.push({ level: 'error', msg: '선가공 구멍용 드릴(Ø' + Math.ceil(tool.dia) + ' 정도)이 없습니다. [공구 추가]를 누르세요.' }); }
-      else add(dt, (spec.shape === 'poly' || spec.shape === 'ngon') && (ex || ey) ? [[ex, ey]] : null, { depth: tip, depthMode: 'tip' }, '선가공 구멍(진입점)');
+      else add(dt, (spec.shape === 'poly' || spec.shape === 'ngon') && (ex || ey) ? [[ex, ey]] : null, { depth: tip, depthMode: 'tip' }, '선가공 구멍(진입점)', tip);
     }
     if (spec.relief && spec.rough) {
       if (spec.shape !== 'rect') notes.push({ level: 'warn', msg: '모서리 릴리프 구멍은 사각 포켓에만 넣습니다.' });
       else if (spec.cr >= tool.dia / 2 - 1e-9) notes.push({ level: 'info', msg: '코너 R' + spec.cr + ' 이 공구 반경 이상이라 모서리 릴리프 구멍이 필요 없습니다.' });
       else {
-        const need = 2 * 0.586 * tool.dia / 2;
+        const need = Math.SQRT2 * tool.dia / 2; // 구멍 반경 ≥ 공구 반경/√2 이면 모서리 살이 남지 않음
         const dt = drills.find(t => t.dia >= need - 1e-9 && t.dia <= tool.dia * 1.2 + 1e-9);
         if (!dt) { const want = Math.max(1, Math.ceil(need * 2) / 2); missing.push({ type: 'drill', dia: want, why: '모서리 릴리프 구멍' }); notes.push({ level: 'error', msg: '모서리 릴리프용 드릴(Ø' + want + ' 이상)이 없습니다. [공구 추가]를 누르세요.' }); }
         else {
           const rr = dt.dia / 2 / Math.SQRT2, ax = r3(spec.w / 2 - rr), ay = r3(spec.h / 2 - rr);
           const extra = spec.thru ? { thru: true, brk: spec.brk, depth: 10 } : { depth: r3(spec.depth), depthMode: 'full' };
-          add(dt, [[ax, ay], [-ax, ay], [-ax, -ay], [ax, -ay]], extra, '모서리 릴리프 구멍 4개');
+          add(dt, [[ax, ay], [-ax, ay], [-ax, -ay], [ax, -ay]], extra, '모서리 릴리프 구멍 4개', spec.thru ? undefined : spec.depth);
           notes.push({ level: 'warn', msg: '릴리프 구멍은 벽 밖으로 ' + r3(dt.dia / 2 - rr) + 'mm 파고들고, 끝 원뿔이 바닥 아래로 내려갑니다 (도면에서 허용되는지 확인).' });
         }
       }

@@ -99,7 +99,9 @@
       const i = e.i;
       const def = P.OPS.get(i.op.type);
       const d0 = P.opDepth(i.op, i.tool, project.stock);
-      const d = e.ref || e.start ? Object.assign({}, d0, { z: r3(d0.z + e.ref) }) : d0;
+      // [V0.5 검토] 관통 공정은 소재 바닥 기준 깊이(기준면을 더하지 않음). 센터 드릴(자리 표시)은 실제로 깎인 면(시작면) 기준
+      const addRef = i.op.thru ? 0 : def.role === 'spot' ? e.start : e.ref;
+      const d = e.ref || e.start ? Object.assign({}, d0, { z: r3(d0.z + addRef) }) : d0;
       const c = P.opConditions(i.op, i.tool, project.stock.material, machine);
       const params = {
         type: i.op.type, toolNo: i.op.toolNo, z: d.z, r: r3(toNum(i.op.r, 3) + e.start),

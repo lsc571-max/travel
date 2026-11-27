@@ -10942,7 +10942,19 @@ DEALINGS IN THE SOFTWARE.
     const sol = new CL.Paths(); c.Execute(CL.ClipType.ctDifference, sol, CL.PolyFillType.pftNonZero, CL.PolyFillType.pftNonZero);
     return sol.map(p => Math.abs(CL.Clipper.Area(p)) / (SC * SC)).filter(a => a > 1e-3).sort((a, b) => b - a);
   }
-  P.GEOM = Object.freeze({ unreachable, ngonPoly, SC, ARC_TOL, ok: !!CL, toPath, fromPath, area, ccw, cw, bbox, perimeter, circlePoly, rrectPoly, shapeRegion, regionPaths, offsetEx, exPaths, offsetPts, inPaths, segDist, distToPts, cleanRegion, overlapArea });
+  // [V0.5 검토] 단계 사이 '한 번에 깊게 깎을 살': 이번 단계(벽 여유 aw)가 깎는 곳 − 앞 단계(벽 여유 pw)가 깎은 곳.
+  // 정상이면 벽을 따라 (pw − aw) 두께 띠(뾰족한 모서리는 몇 배)뿐 → 2(pw − aw)+0.05 만큼 줄이면 사라짐. 남으면 앞 단계가 못 들어간 좁은 곳(목·섬 틈)
+  function stageExtra(paths, rt, pw, aw) {
+    const cut = d => [].concat(...offsetEx([].concat(...offsetEx(paths, -(rt + d)).map(exPaths)), rt).map(exPaths));
+    const A = cut(aw), B = cut(pw);
+    if (!A.length) return 0;
+    const c = new CL.Clipper(); c.AddPaths(A, CL.PolyType.ptSubject, true); if (B.length) c.AddPaths(B, CL.PolyType.ptClip, true);
+    const sol = new CL.Paths(); c.Execute(CL.ClipType.ctDifference, sol, CL.PolyFillType.pftNonZero, CL.PolyFillType.pftNonZero);
+    if (!sol.length) return 0;
+    const core = offsetEx(sol, -(2.5 * Math.max(0, pw - aw) + 0.05)); // 뾰족한 모서리 띠(두께가 몇 배)는 지움
+    return core.reduce((s, e) => s + Math.abs(CL.Clipper.Area(e.outer)) / (SC * SC), 0);
+  }
+  P.GEOM = Object.freeze({ unreachable, stageExtra, ngonPoly, SC, ARC_TOL, ok: !!CL, toPath, fromPath, area, ccw, cw, bbox, perimeter, circlePoly, rrectPoly, shapeRegion, regionPaths, offsetEx, exPaths, offsetPts, inPaths, segDist, distToPts, cleanRegion, overlapArea });
 })(typeof globalThis !== 'undefined' ? globalThis : this);
 
 /* ==== engine/dxf.js ==== */
@@ -11772,7 +11784,10 @@ DEALINGS IN THE SOFTWARE.
                   }
                   an = an.parent;
                 }
-                if (!done) leafErr = '진입할 공간이 너무 좁습니다 (헬리컬·램프가 사실상 수직 하강). 더 작은 엔드밀이나 [선가공 구멍] 진입을 쓰세요.';
+                if (!done && o.relax) { // 앞 단계가 판 바닥 위(여유 높이만)에서 내려가는 정삭 단계: 잎 윤곽 램프 (검증기가 다시 확인)
+                  if (cur) B.push(0, pts[0][0], pts[0][1], zClear, 0);
+                  B.push(1, pts[0][0], pts[0][1], zPrev, Fr); B.ramp(pts, zPrev, z, Fr);
+                } else if (!done) leafErr = '진입할 공간이 너무 좁습니다 (헬리컬·램프가 사실상 수직 하강). 더 작은 엔드밀이나 [선가공 구멍] 진입을 쓰세요.';
               }
             } else {
               if (cur) B.push(0, pts[0][0], pts[0][1], zClear, 0);
@@ -11987,7 +12002,7 @@ DEALINGS IN THE SOFTWARE.
       const fast = st.pw != null ? [].concat(...G.offsetEx(reg, -(rt + st.pw)).map(G.exPaths)) : null;
       const r = MC.clearRegion(reg, {
         rt, aw: st.aw, step: Math.min(so, 0.95 * rt), zs: fl, zEntry: 0.5, zClear, F, Fr, tol: 0.02,
-        helical: machine.helical !== false && pk.entry !== 'ramp', stepdown: toNum(pk.stepdown, 1),
+        helical: machine.helical !== false && pk.entry !== 'ramp', stepdown: toNum(pk.stepdown, 1), relax: st.pf != null,
         fastPaths: fast && fast.length ? fast : null, zFast: st.pf != null ? Math.min(0.5, r3(-(depth - st.pf) + 0.2)) : 0.5,
         pre: pk.entry === 'drill' ? { x: c.x + toNum(pk.ex, 0), y: c.y + toNum(pk.ey, 0) } : null
       });
@@ -12046,7 +12061,7 @@ DEALINGS IN THE SOFTWARE.
     // 램프 진입: 가장 안쪽 루프를 따라 3° 경사
     const inner = geo.loops[0];
     const rampPts = entry === 'ramp' ? G.ccw(inner.type === 'circle' ? G.circlePoly(cx, cy, inner.rad) : G.rrectPoly(cx, cy, 2 * inner.a, 2 * inner.b, inner.r)) : null;
-    if (rampPts && (() => { const b = G.bbox([rampPts]); return Math.max(b.x1 - b.x0, b.y1 - b.y0) < rt; })()) return { sx: c.x, sy: c.y, moves: [], error: '램프 진입 공간이 너무 좁습니다.' };
+    if (rampPts && st.pf == null && (() => { const b = G.bbox([rampPts]); return Math.max(b.x1 - b.x0, b.y1 - b.y0) < rt; })()) return { sx: c.x, sy: c.y, moves: [], error: '램프 진입 공간이 너무 좁습니다.' };
     const ep = useHelix ? [cx + rh, cy] : rampPts ? rampPts[0] : [cx, cy]; // 진입점
     const outer = geo.loops[geo.loops.length - 1];
     const plo = pre ? pre.loops[pre.loops.length - 1] : null;
@@ -12155,7 +12170,11 @@ DEALINGS IN THE SOFTWARE.
       if (cleaned.length !== 1) add('error', 5, on + ': 자유 형상 윤곽이 서로 꼬여 있거나 여러 조각입니다 (도면을 확인하세요).');
       const res = pocketMoves({ pk: op, type: op.type, z: -d.depth, r: op.r, feed: 100 }, tool, { x: 0, y: 0 }, machine);
       if (res.error) add('error', 5, on + ': ' + res.error);
-      else if (res.warn && res.warn.length && kind === 'rough') res.warn.forEach(w => add('warn', 5, on + ': ' + w));
+      else if (kind !== 'rough' && kind !== 'floor') {
+        const ins = profInset(op, d.depth), ex = G.stageExtra(G.regionPaths(G.shapeRegion(op), 0, 0), rt, toNum(op.allowWall, 0) + ins, sg.aw + ins);
+        if (ex > Math.max(1.5, 0.3 * rt * rt)) add('error', 5, on + ': 앞 단계(측벽 여유 ' + toNum(op.allowWall, 0) + ')의 공구가 들어가지 못한 좁은 곳(약 ' + r3(ex) + 'mm² 이상)을 이 공정이 전체 깊이로 한 번에 깎게 됩니다 (공구 파손 위험). 측벽 여유를 줄이거나 더 작은 엔드밀을 쓰세요.');
+      }
+      if (!res.error && res.warn && res.warn.length && kind === 'rough') res.warn.forEach(w => add('warn', 5, on + ': ' + w));
       if (!res.error && toNum(op.stepover, 50) / 100 * tool.dia > 0.95 * rt + 1e-9) add('info', 9, on + ': 자유 형상은 남는 살이 없도록 경로 간격을 공구 반경의 95%(' + r3(0.95 * rt) + 'mm) 이하로 자동 제한합니다.');
       if (mw > 0 && tool.dia > 0.8 * mw) add('warn', 5, on + ': 공구가 포켓의 가장 넓은 곳에 비해 큽니다.');
       // [V0.5 검토] 공구보다 좁은 목·뾰족한 모서리: 깎이지 않고 남는 부분 안내 (모서리 R 수준을 넘는 것만)
@@ -12208,10 +12227,13 @@ DEALINGS IN THE SOFTWARE.
       // 선가공 구멍: 같은 그룹의 앞 공정 중 진입점에 뚫는 드릴 (지름 ≥ 엔드밀 50%, 끝이 첫 단계 바닥까지)
       const ex = op.shape === 'poly' ? toNum(op.ex, 0) : 0, ey = op.shape === 'poly' ? toNum(op.ey, 0) : 0, zNeed = sg.levels.filter(L => !L.wall).reduce((m, L) => Math.min(m, L.z), 0);
       const tmap = P.toolMap(machine);
-      const has = ops.slice(0, oi).some(o => { const def = P.OPS.get(o.type), t = tmap.get(o.toolNo); if (!def || def.role !== 'drill' || !t || !(t.dia >= 0.5 * tool.dia - EPS)) return false; const at = Array.isArray(o.at) && o.at.length ? o.at : [[0, 0]]; const dd = P.opDepth(o, t, st); return at.some(a => Math.abs(a[0] - ex) < 0.01 && Math.abs(a[1] - ey) < 0.01) && dd.z <= zNeed + 0.3 + EPS; });
+      const reg = G.shapeRegion(op), room = G.distToPts([reg.outer].concat(reg.islands || []), ex, ey) - toNum(op.allowWall, 0);
+      let wide = null;
+      const has = ops.slice(0, oi).some(o => { const def = P.OPS.get(o.type), t = tmap.get(o.toolNo); if (!def || def.role !== 'drill' || !t || !(t.dia >= 0.5 * tool.dia - EPS)) return false; const at = Array.isArray(o.at) && o.at.length ? o.at : [[0, 0]]; const dd = P.opDepth(o, t, st); const hit = at.some(a => Math.abs(a[0] - ex) < 0.01 && Math.abs(a[1] - ey) < 0.01) && dd.z <= zNeed + 0.3 + EPS; if (hit && t.dia / 2 > room + EPS) wide = t; return hit; });
+      if (wide) add('error', 5, on + ': 선가공 드릴 Ø' + wide.dia + ' 이 진입점에서 벽(측벽 여유 포함)까지 ' + r3(room) + 'mm 보다 커서 벽을 파고듭니다. 더 작은 드릴을 쓰세요.');
       if (!has) add('error', 5, on + ': 진입 방식이 [선가공 구멍]인데, 같은 그룹 앞 공정에 진입점(X' + r3(ex) + ' Y' + r3(ey) + ')을 Z' + r3(zNeed) + ' 까지 뚫는 드릴(엔드밀 지름의 50% 이상)이 없습니다.');
     }
-    if (op.entry === 'ramp' && op.shape !== 'poly' && mw > 0 && 2 * (rt + aw) < mw - 0.02) {
+    if (op.entry === 'ramp' && kind === 'rough' && op.shape !== 'poly' && mw > 0 && 2 * (rt + aw) < mw - 0.02) {
       const gr = loopsFor(op, rt, aw, Math.max(0.05, Math.min(STEPOVER_MAX, toNum(op.stepover, 50)) / 100) * tool.dia), il = gr && gr.loops[0];
       const ext = il ? (il.type === 'circle' ? 2 * il.rad : 2 * Math.max(il.a, il.b)) : 0;
       if (ext < rt) add('error', 5, on + ': 램프 진입 경로가 너무 짧아 사실상 수직 하강입니다. 헬리컬이나 [선가공 구멍] 진입을 쓰세요.');
@@ -12270,7 +12292,7 @@ DEALINGS IN THE SOFTWARE.
       const def = P.OPS.get(o.type);
       if (!def || !def.regions) return;
       const tool = tm.get(o.toolNo) || null;
-      g.holes.forEach(h => { if (P.isNum(h.x) && P.isNum(h.y)) def.regions(o, h, project.stock, tool).forEach(r => { const t = refMap.get(g.id + '|' + h.id + '|' + o.type); if (t) { r.floorZ = P.r3(r.floorZ + t); r.top = t; } out.push(r); }); });
+      g.holes.forEach(h => { if (P.isNum(h.x) && P.isNum(h.y)) def.regions(o, h, project.stock, tool).forEach(r => { const t = o.thru ? 0 : refMap.get(g.id + '|' + h.id + '|' + o.type); if (t) { r.floorZ = P.r3(r.floorZ + t); r.top = t; } out.push(r); }); });
     }));
     return out;
   }
@@ -12939,7 +12961,9 @@ DEALINGS IN THE SOFTWARE.
       const i = e.i;
       const def = P.OPS.get(i.op.type);
       const d0 = P.opDepth(i.op, i.tool, project.stock);
-      const d = e.ref || e.start ? Object.assign({}, d0, { z: r3(d0.z + e.ref) }) : d0;
+      // [V0.5 검토] 관통 공정은 소재 바닥 기준 깊이(기준면을 더하지 않음). 센터 드릴(자리 표시)은 실제로 깎인 면(시작면) 기준
+      const addRef = i.op.thru ? 0 : def.role === 'spot' ? e.start : e.ref;
+      const d = e.ref || e.start ? Object.assign({}, d0, { z: r3(d0.z + addRef) }) : d0;
       const c = P.opConditions(i.op, i.tool, project.stock.material, machine);
       const params = {
         type: i.op.type, toolNo: i.op.toolNo, z: d.z, r: r3(toNum(i.op.r, 3) + e.start),
@@ -13335,7 +13359,7 @@ DEALINGS IN THE SOFTWARE.
       // [V0.5 검토] 자유 형상: 좁은 목이 남지 않는 가장 큰 공구 우선
       const reach = t => geo.shape !== 'poly' || !(P.GEOM.unreachable(P.GEOM.regionPaths(P.GEOM.shapeRegion(geo), 0, 0), t.dia / 2, 0).some(a => a > Math.max(1, 1.2 * t.dia * t.dia / 4)));
       // 진입 불가로 남기는 좁은 곳이 없는 공구 우선 (자유 형상)
-      const clean = t => geo.shape !== 'poly' || (() => { const r = P.pocketMoves({ pk: Object.assign({}, P.POCKET_PARAMS, geo, { type: 'pocketRough', allowWall: spec.allowWall, allowFloor: spec.allowFloor, stepover: spec.stepover, stepdown: 1, entry: spec.entry }), type: 'pocketRough', z: -1, r: 3, feed: 100 }, t, { x: 0, y: 0 }, machine); return !r.error && !(r.warn && r.warn.length); })();
+      const clean = t => geo.shape !== 'poly' || (() => { const r = P.pocketMoves({ pk: Object.assign({}, P.POCKET_PARAMS, geo, { type: 'pocketRough', allowWall: spec.allowWall, allowFloor: spec.allowFloor, stepover: spec.stepover, stepdown: 1, entry: spec.entry }), type: 'pocketRough', z: -1, r: 3, feed: 100 }, t, { x: 0, y: 0 }, machine); return !r.error && !(r.warn && r.warn.length) && !(P.GEOM.stageExtra(P.GEOM.regionPaths(P.GEOM.shapeRegion(geo), 0, 0), t.dia / 2, spec.allowWall, 0) > Math.max(1.5, 0.3 * t.dia * t.dia / 4)); })();
       tool = ems.find(t => fitW(t) && fitR(t) && reach(t) && clean(t)) || ems.find(t => fitW(t) && fitR(t) && reach(t)) || ems.find(t => fitW(t) && fitR(t)) || null;
       if (!tool) {
         tool = ems.find(fitW) || null;
@@ -13396,36 +13420,40 @@ DEALINGS IN THE SOFTWARE.
   /* ---------- [V0.5] 선가공 구멍·모서리 릴리프 구멍 ----------
    * 선가공(entry 'drill'): 진입점에 엔드밀 지름 이상(없으면 50% 이상) 드릴로 첫 단계 바닥(깊이 − 바닥 여유)까지 끝을 맞춰 뚫음
    * 모서리 릴리프(relief, 사각): 코너 R 이 공구 반경보다 작을 때 네 모서리에 구멍을 뚫어 직각 모서리 확보.
-   *   구멍 반경 ρ ≥ 0.586·공구 반경이면 엔드밀이 남기는 모서리 살(R=공구 반경)이 모두 구멍 안에 들어감.
+   *   구멍 반경 ρ ≥ 공구 반경/√2 (≈0.707) 이면 엔드밀이 남기는 모서리 살(R=공구 반경)이 모두 구멍 안에 들어감.
    *   중심 = 모서리에서 (ρ/√2, ρ/√2) 안쪽 → 구멍이 모서리 꼭짓점을 지남. 깊이 = 포켓 깊이(직경부 기준)
    */
   function preDrills(spec, machine, stock, tool, depth, ex, ey, notes, missing) {
     const out = [], drills = (machine.tools || []).filter(t => t.type === 'drill' && t.dia > 0).sort((a, b) => a.dia - b.dia);
     const ct = (machine.tools || []).filter(t => t.type === 'center').sort((a, b) => a.no - b.no)[0] || null;
-    const add = (dt, at, extra, why) => {
-      if (ct) { const depthC = Math.max(0.1, Math.floor(Math.min(dt.dia + 0.4, ct.dia * 0.9) / 2 / Math.tan(toNum(ct.angle, 90) / 2 * Math.PI / 180) * 10) / 10); out.push(P.newOp('center', ct.no, Object.assign({ depth: depthC, r: 3, auto: true }, at ? { at } : {}))); }
+    const add = (dt, at, extra, why, maxC) => {
+      // [V0.5 검토] 센터 깊이는 포켓 바닥(황삭 바닥)을 넘지 않게
+      if (ct) { const depthC = Math.max(0.1, Math.min(Math.floor((maxC || Infinity) * 10) / 10, Math.floor(Math.min(dt.dia + 0.4, ct.dia * 0.9) / 2 / Math.tan(toNum(ct.angle, 90) / 2 * Math.PI / 180) * 10) / 10)); out.push(P.newOp('center', ct.no, Object.assign({ depth: depthC, r: 3, auto: true }, at ? { at } : {}))); }
       const tipD = extra.depthMode === 'full' ? extra.depth + P.tipLength(dt) : extra.depth;
       const cyc = tipD / dt.dia > 3 ? 'peck' : 'drill';
       out.push(P.newOp(cyc, dt.no, Object.assign({ r: 3, q: Math.max(0.1, Math.floor(dt.dia * 10) / 10), auto: true }, extra, at ? { at } : {})));
       notes.push({ level: 'info', msg: why + ': T' + dt.no + ' Ø' + dt.dia + ' 드릴' + (ct ? ' (센터 T' + ct.no + ' 먼저)' : '') + ', 끝 깊이 ' + r3(tipD) + 'mm' });
     };
     if (spec.entry === 'drill' && spec.rough) {
-      const dt = drills.find(t => t.dia >= tool.dia - 1e-9 && t.dia <= tool.dia * 1.6) || drills.filter(t => t.dia >= 0.5 * tool.dia - 1e-9 && t.dia < tool.dia).pop();
+      // [V0.5 검토] 드릴 구멍이 포켓 벽(측벽 여유)을 넘지 않게: 반경 ≤ 진입점에서 벽까지 − 측벽 여유 − 0.1
+      const G = P.GEOM, reg = G.shapeRegion(P.specGeo(spec)), room = G.distToPts([reg.outer].concat(reg.islands || []), ex, ey) - spec.allowWall - 0.1;
+      const fits = t => t.dia / 2 <= room + 1e-9;
+      const dt = drills.find(t => fits(t) && t.dia >= tool.dia - 1e-9 && t.dia <= tool.dia * 1.6) || drills.filter(t => fits(t) && t.dia >= 0.5 * tool.dia - 1e-9 && t.dia < tool.dia).pop();
       const tip = r3(depth - spec.allowFloor);
       if (!dt) { missing.push({ type: 'drill', dia: Math.ceil(tool.dia), why: '포켓 선가공 구멍' }); notes.push({ level: 'error', msg: '선가공 구멍용 드릴(Ø' + Math.ceil(tool.dia) + ' 정도)이 없습니다. [공구 추가]를 누르세요.' }); }
-      else add(dt, (spec.shape === 'poly' || spec.shape === 'ngon') && (ex || ey) ? [[ex, ey]] : null, { depth: tip, depthMode: 'tip' }, '선가공 구멍(진입점)');
+      else add(dt, (spec.shape === 'poly' || spec.shape === 'ngon') && (ex || ey) ? [[ex, ey]] : null, { depth: tip, depthMode: 'tip' }, '선가공 구멍(진입점)', tip);
     }
     if (spec.relief && spec.rough) {
       if (spec.shape !== 'rect') notes.push({ level: 'warn', msg: '모서리 릴리프 구멍은 사각 포켓에만 넣습니다.' });
       else if (spec.cr >= tool.dia / 2 - 1e-9) notes.push({ level: 'info', msg: '코너 R' + spec.cr + ' 이 공구 반경 이상이라 모서리 릴리프 구멍이 필요 없습니다.' });
       else {
-        const need = 2 * 0.586 * tool.dia / 2;
+        const need = Math.SQRT2 * tool.dia / 2; // 구멍 반경 ≥ 공구 반경/√2 이면 모서리 살이 남지 않음
         const dt = drills.find(t => t.dia >= need - 1e-9 && t.dia <= tool.dia * 1.2 + 1e-9);
         if (!dt) { const want = Math.max(1, Math.ceil(need * 2) / 2); missing.push({ type: 'drill', dia: want, why: '모서리 릴리프 구멍' }); notes.push({ level: 'error', msg: '모서리 릴리프용 드릴(Ø' + want + ' 이상)이 없습니다. [공구 추가]를 누르세요.' }); }
         else {
           const rr = dt.dia / 2 / Math.SQRT2, ax = r3(spec.w / 2 - rr), ay = r3(spec.h / 2 - rr);
           const extra = spec.thru ? { thru: true, brk: spec.brk, depth: 10 } : { depth: r3(spec.depth), depthMode: 'full' };
-          add(dt, [[ax, ay], [-ax, ay], [-ax, -ay], [ax, -ay]], extra, '모서리 릴리프 구멍 4개');
+          add(dt, [[ax, ay], [-ax, ay], [-ax, -ay], [ax, -ay]], extra, '모서리 릴리프 구멍 4개', spec.thru ? undefined : spec.depth);
           notes.push({ level: 'warn', msg: '릴리프 구멍은 벽 밖으로 ' + r3(dt.dia / 2 - rr) + 'mm 파고들고, 끝 원뿔이 바닥 아래로 내려갑니다 (도면에서 허용되는지 확인).' });
         }
       }
@@ -13715,7 +13743,7 @@ DEALINGS IN THE SOFTWARE.
           if (Math.abs(mv.z - lastZ) > 1e-9) line += ' Z' + fmt(mv.z);
           if (mv.g === 2 || mv.g === 3) line += ' I' + fmt(mv.i) + ' J' + fmt(mv.j);
           if (mv.g !== 0 && mv.f !== lastF) { line += ' F' + fmtF(mv.f); lastF = mv.f; }
-          out(line); lastZ = mv.z;
+          if (line !== 'G00') out(line); lastZ = mv.z; // 바뀐 축이 없는 급속은 생략
           if (mv.g !== 0) cuts.push({ t: t.no, x: mv.x, y: mv.y, z: mv.z });
         });
         out('G00 Z' + fmt(set.initialZ));
@@ -13949,9 +13977,12 @@ DEALINGS IN THE SOFTWARE.
     plan.steps.forEach(s => {
       if (!(s.ref < 0 || s.top < 0)) return;
       const ref = s.refs[0] ? { gid: s.refs[0].gid } : null, nm = '[공정 ' + s.idx + ' ' + P.OPS.get(s.type).label + ']';
-      const thruOk = s.depthInfo && P.OPS.get(s.type).mill; // 관통 밀링은 각 모듈이 하부 여유로 검사
-      if (!thruOk && s.z < -(st.sz + under) - EPS) add('error', 8, nm + ' 먼저 가공된 바닥(Z' + fmt(s.ref) + ') 기준 깊이를 더하면 공구 끝 Z' + fmt(s.z) + ' 가 소재 바닥 아래로 내려갑니다. 깊이를 줄이세요.', ref);
+      // 관통 공정은 기준면을 더하지 않으므로(소재 바닥 기준) 각 모듈이 하부 여유로 검사
+      if (s.z < -(st.sz + under) - EPS) add('error', 8, nm + ' 먼저 가공된 바닥(Z' + fmt(s.ref) + ') 기준 깊이를 더하면 공구 끝 Z' + fmt(s.z) + ' 가 소재 바닥 아래로 내려갑니다. 깊이를 줄이세요.', ref);
       if (s.tool && s.tool.flute > 0 && (s.top || 0) - s.z > s.tool.flute + EPS) add('error', 8, nm + ' 시작면 Z' + fmt(s.top || 0) + ' 에서 Z' + fmt(s.z) + ' 까지 ' + r3((s.top || 0) - s.z) + 'mm 가 T' + s.tool.no + ' 날 길이 ' + s.tool.flute + 'mm 를 넘습니다.', ref);
+      // [V0.5 검토] 기준 바닥(포켓 등)이 아직 깎이지 않았는데 그 바닥 기준으로 깊게 들어감 → 순서 경고
+      if (s.ref < (s.top || 0) - 2.05 && P.OPS.get(s.type).role !== 'spot' && !P.OPS.get(s.type).mill) add('warn', 8, nm + ' 기준이 되는 바닥(Z' + fmt(s.ref) + ')이 아직 가공되지 않았는데 이 공정이 먼저 윗면부터 뚫습니다. 포켓·평면을 먼저 가공하도록 목록 순서를 바꾸세요.', ref);
+      if (s.ref < (s.top || 0) - 2.05 && P.OPS.get(s.type).mill) add('error', 8, nm + ' 기준이 되는 바닥(Z' + fmt(s.ref) + ')이 아직 가공되지 않았는데 이 밀링 공정이 먼저 윗면부터 깊게 깎습니다. 바깥 포켓·평면을 먼저 가공하도록 목록 순서를 바꾸세요.', ref);
       if (s.ref < 0) add('info', 8, nm + ' 다른 가공의 바닥 Z' + fmt(s.ref) + ' 를 기준으로 깊이를 계산했습니다' + (s.top < 0 ? ' (시작 Z' + fmt(s.top) + ', 빈 공간 공회전 생략)' : ' (그 가공보다 먼저 하므로 윗면에서 시작)') + '.', ref);
     });
     if (!plan.steps.length) add('error', 11, '가공할 홀/공정이 없습니다.');

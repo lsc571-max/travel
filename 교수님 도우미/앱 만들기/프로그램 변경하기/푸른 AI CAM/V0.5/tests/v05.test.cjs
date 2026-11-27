@@ -307,3 +307,26 @@ test('이미 가공된 형상 인식: 포켓 안 구멍·단 포켓·평면 후 
   const V2 = C.validateProject(r2.p, r2.m);
   assert.ok(V2.plan.steps.every(s => !s.ref && !s.top));
 });
+
+test('[2차 검토] 관통은 기준면을 더하지 않음 · 좁은 틈 전체 깊이 정삭 차단 · 선가공 센터 깊이·드릴 크기 제한', () => {
+  // 평면 1mm 뒤 관통 윤곽: 끝 Z = −(두께 + 관통 여유), 기준면(−1)을 더하지 않음
+  const r = build([{ spec: C.newMillSpec('face', { depth: 1 }) }, { spec: C.newMillSpec('contour', { w: 100, h: 60, cr: 5, thru: true, brk: 1 }) }], { under: 3 });
+  const ct = r.V.plan.steps.filter(s => /^contour/.test(s.type));
+  assert.ok(ct.length && ct.every(s => s.z === -21), ct.map(s => s.z).join());
+  // 섬과 벽 틈이 공구 + 측벽 여유보다 좁으면: 공구 지정 시 측벽 정삭 차단, 자동이면 작은 공구 선택
+  const outer = [[-30, -20], [30, -20], [30, 20], [-30, 20]]; // 섬 위쪽과 벽 사이 틈 10.2mm (Ø10 + 여유 0.2×2 보다 좁음)
+  const poly = { outer, islands: [[[-20, -12], [20, -12], [20, 9.8], [-20, 9.8]]] };
+  const forced = build([{ spec: C.newPocketSpec({ shape: 'poly', poly, depth: 8, toolNo: 16 }) }]);
+  assert.ok(errs(forced.V).some(m => /들어가지 못한 좁은 곳/.test(m)), JSON.stringify(errs(forced.V)));
+  const auto = build([{ spec: C.newPocketSpec({ shape: 'poly', poly, depth: 8 }) }]);
+  assert.deepEqual(errs(auto.V), []); assert.deepEqual(auto.vr.errors, []);
+  assert.ok(C.toolMap(auto.m).get(auto.p.groups[0].ops[0].toolNo).dia < 10);
+  // 얕은 포켓 선가공: 센터 드릴이 황삭 바닥을 넘지 않음
+  const sh = build([{ spec: C.newPocketSpec({ shape: 'rect', w: 14, h: 12, cr: 3, depth: 1.5, entry: 'drill' }) }]);
+  const cen = sh.p.groups[0].ops.find(o => o.type === 'center');
+  assert.ok(cen && cen.depth <= 1.4 + 1e-9, cen && cen.depth);
+  // 좁은 포켓: 벽을 넘는 큰 드릴은 고르지 않음
+  const nr = build([{ spec: C.newPocketSpec({ shape: 'rect', w: 8.6, h: 30, cr: 3, depth: 4, entry: 'drill', toolNo: 18 }) }]);
+  const dr = nr.p.groups[0].ops.find(o => o.type === 'drill' || o.type === 'peck');
+  if (dr) assert.ok(C.toolMap(nr.m).get(dr.toolNo).dia / 2 <= 4.3 - 0.2 - 0.1 + 1e-9);
+});

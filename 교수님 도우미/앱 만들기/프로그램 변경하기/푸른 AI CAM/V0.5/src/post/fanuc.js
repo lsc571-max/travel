@@ -102,7 +102,7 @@
           if (Math.abs(mv.z - lastZ) > 1e-9) line += ' Z' + fmt(mv.z);
           if (mv.g === 2 || mv.g === 3) line += ' I' + fmt(mv.i) + ' J' + fmt(mv.j);
           if (mv.g !== 0 && mv.f !== lastF) { line += ' F' + fmtF(mv.f); lastF = mv.f; }
-          out(line); lastZ = mv.z;
+          if (line !== 'G00') out(line); lastZ = mv.z; // 바뀐 축이 없는 급속은 생략
           if (mv.g !== 0) cuts.push({ t: t.no, x: mv.x, y: mv.y, z: mv.z });
         });
         out('G00 Z' + fmt(set.initialZ));

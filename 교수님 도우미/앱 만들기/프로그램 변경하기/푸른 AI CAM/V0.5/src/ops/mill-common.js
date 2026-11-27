@@ -238,7 +238,10 @@
                   }
                   an = an.parent;
                 }
-                if (!done) leafErr = '진입할 공간이 너무 좁습니다 (헬리컬·램프가 사실상 수직 하강). 더 작은 엔드밀이나 [선가공 구멍] 진입을 쓰세요.';
+                if (!done && o.relax) { // 앞 단계가 판 바닥 위(여유 높이만)에서 내려가는 정삭 단계: 잎 윤곽 램프 (검증기가 다시 확인)
+                  if (cur) B.push(0, pts[0][0], pts[0][1], zClear, 0);
+                  B.push(1, pts[0][0], pts[0][1], zPrev, Fr); B.ramp(pts, zPrev, z, Fr);
+                } else if (!done) leafErr = '진입할 공간이 너무 좁습니다 (헬리컬·램프가 사실상 수직 하강). 더 작은 엔드밀이나 [선가공 구멍] 진입을 쓰세요.';
               }
             } else {
               if (cur) B.push(0, pts[0][0], pts[0][1], zClear, 0);
