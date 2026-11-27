@@ -209,3 +209,101 @@ test('가져온 자유 형상 데이터 방어: 점이 3개 미만·숫자 아�
   const prj = C.normalizeProject({ groups: [{ name: 'x', holes: [{ id: 'h', x: 1, y: 1 }], ops: [{ type: 'pocketRough', toolNo: 16, shape: 'poly', poly: 'bad' }] }] });
   assert.equal(prj.groups[0].ops[0].shape, 'rect');
 });
+
+/* ---------- [V0.5 2차] 포켓 단계(중삭·바닥/측벽 정삭)·진입 방식·모서리 릴리프 ---------- */
+test('포켓 단계·진입 무작위 40건: 모델·검증기 오류 0, 영역 밖 과삭 없음, 최종 바닥 정확·남는 살 없음', () => {
+  const R = rng(7707);
+  let checked = 0;
+  for (let n = 0; n < 40; n++) {
+    const shape = ['rect', 'circle', 'poly'][n % 3];
+    const geo = shape === 'rect' ? { w: 24 + Math.round(R() * 30), h: 18 + Math.round(R() * 20), cr: Math.round(R() * 6) } : shape === 'circle' ? { dia: 20 + Math.round(R() * 30) } : { poly: { outer: star(13 + 8 * R(), R, 6 + Math.floor(R() * 6)), islands: R() < 0.4 ? [[[-2, -2], [2, -2], [2, 2], [-2, 2]]] : [] } };
+    const spec = C.newPocketSpec(Object.assign({ shape, depth: 3 + Math.round(R() * 6), semi: R() < 0.6, semiStep: R() < 0.5 ? 0 : [0.5, 1, 1.5][n % 3], semiWall: 0.1, semiFloor: 0.05, wallStep: R() < 0.5 ? 0 : 2, entry: ['helix', 'ramp', 'drill'][Math.floor(R() * 3)], finishMode: R() < 0.8 ? 'split' : 'both' }, geo));
+    const r = build([{ spec }]);
+    const e = errs(r.V);
+    if (e.length) { assert.ok(e.every(m => /공구|진입|좁|커서|폭|드릴/.test(m)), '예상 밖 모델 오류 #' + n + ' ' + e.join(' | ')); continue; }
+    assert.deepEqual(r.vr.errors, [], '검증기 #' + n + ' ' + JSON.stringify(r.vr.errors.slice(0, 2)));
+    assert.equal(r.vr.match, true);
+    const types = r.p.groups[0].ops.map(o => o.type);
+    if (spec.semi) assert.ok(types.includes('pocketSemi'), types.join());
+    if (spec.finishMode === 'split') assert.ok(types.includes('pocketFloor') && types.includes('pocketWall'), types.join());
+    if (spec.entry === 'drill') assert.ok(types.includes('drill') || types.includes('peck'), types.join());
+    const sim = simOf(r), em = r.p.groups[0].ops.find(o => o.type === 'pocketRough'), tool = C.toolMap(r.m).get(em.toolNo), rt = tool.dia / 2;
+    const reg = G.regionPaths(G.shapeRegion(em), 75, 50), regPl = reg.map(G.fromPath);
+    const opening = [].concat(...G.offsetEx([].concat(...G.offsetEx(reg, -rt).map(G.exPaths)), rt - 0.35).map(G.exPaths));
+    const drilled = r.p.groups[0].ops.some(o => o.type === 'drill' || o.type === 'peck');
+    for (let j = 0; j < sim.ny; j += 2) for (let i = 0; i < sim.nx; i += 2) {
+      const x = sim.x0 + i * sim.dx, y = sim.y0 + j * sim.dx, h = sim.h[j * sim.nx + i];
+      if (!G.inPaths(reg, x, y) && G.distToPts(regPl, x, y) > 0.3) assert.ok(h > -1e-6, '#' + n + ' 영역 밖 과삭 (' + x.toFixed(2) + ',' + y.toFixed(2) + ') h=' + h);
+      if (!drilled && h < -spec.depth - 0.03) assert.fail('#' + n + ' 바닥 아래 과삭 h=' + h);
+      if (opening.length && G.inPaths(opening, x, y) && !(drilled && h < -spec.depth)) assert.ok(Math.abs(h + spec.depth) <= 0.03, '#' + n + ' 최종 바닥 아님 (' + x.toFixed(2) + ',' + y.toFixed(2) + ') h=' + h);
+    }
+    checked++;
+  }
+  assert.ok(checked >= 28, '검사한 경우 ' + checked);
+});
+
+test('포켓 중삭: 단 깊이씩(측벽만) / 한 번에, 여유 순서가 틀리면 차단', () => {
+  const r = build([{ spec: C.newPocketSpec({ shape: 'rect', w: 40, h: 30, cr: 4, depth: 8, semi: true, semiStep: 1, semiWall: 0.1, semiFloor: 0.05 }) }]);
+  assert.deepEqual(errs(r.V), []);
+  const g = r.p.groups[0], semi = g.ops.find(o => o.type === 'pocketSemi');
+  assert.equal(semi.leaveWall, 0.1); assert.equal(semi.allowWall, 0.2);
+  const st = C.pocketStage('pocketSemi', semi, 8);
+  assert.equal(st.levels.length, 8); // 7.95 / 1 → 8단
+  assert.ok(st.levels.slice(0, 7).every(L => L.wall) && !st.levels[7].wall, '마지막 단만 전체 면');
+  // 다음 단계(바닥 정삭)의 앞 단계 여유가 중삭 여유와 다르면 차단
+  g.spec = null; g.ops.find(o => o.type === 'pocketFloor').allowWall = 0.2;
+  assert.ok(errs(C.validateProject(r.p, r.m)).some(m => /남긴 여유/.test(m)));
+  const one = build([{ spec: C.newPocketSpec({ shape: 'circle', dia: 30, depth: 6, semi: true, semiStep: 0 }) }]);
+  assert.deepEqual(errs(one.V), []); assert.deepEqual(one.vr.errors, []);
+  assert.equal(C.pocketStage('pocketSemi', one.p.groups[0].ops[1], 6).levels.length, 1);
+});
+
+test('포켓 진입: 선가공 구멍(드릴 끝 = 황삭 바닥)·램프·모서리 릴리프 구멍', () => {
+  const d = build([{ spec: C.newPocketSpec({ shape: 'rect', w: 14, h: 12, cr: 3, depth: 6, entry: 'drill' }) }]);
+  assert.deepEqual(errs(d.V), []); assert.deepEqual(d.vr.errors, []);
+  const dr = d.p.groups[0].ops.find(o => o.type === 'drill' || o.type === 'peck');
+  assert.equal(dr.depthMode, 'tip'); assert.equal(dr.depth, 5.9);
+  assert.ok(!/^G03/m.test(d.gen.text.split('POCKET ROUGH')[1].split('POCKET FLOOR')[0]), '선가공 구멍 진입이면 황삭에 헬리컬 없음');
+  // 드릴을 지우면 모델이 차단, NC 를 고쳐 드릴을 빼면 검증기가 수직 하강을 차단
+  const g = d.p.groups[0]; g.spec = null; g.ops = g.ops.filter(o => o.type !== 'drill' && o.type !== 'peck');
+  assert.ok(errs(C.validateProject(d.p, d.m)).some(m => /선가공 구멍/.test(m)));
+  const L = d.gen.text.split('\n'), a = L.findIndex(l => /^\(OP\d+ (PECK )?DRILL T/.test(l)), b = L.findIndex((l, i) => i > a && /^\(OP/.test(l));
+  const cut = L.slice(0, a).concat(L.slice(b));
+  assert.ok(C.verifyNC(cut.join('\n'), d.ctx({ expected: null })).errors.some(e => /수직 하강/.test(e.msg)));
+  const rp = build([{ spec: C.newPocketSpec({ shape: 'rect', w: 30, h: 20, cr: 3, depth: 6, entry: 'ramp' }) }]);
+  assert.deepEqual(errs(rp.V), []); assert.deepEqual(rp.vr.errors, []);
+  const rf = build([{ spec: C.newPocketSpec({ shape: 'rect', w: 40, h: 30, cr: 0, depth: 6, relief: true }) }]);
+  assert.deepEqual(errs(rf.V), []); assert.deepEqual(rf.vr.errors, []);
+  const sim = simOf(rf, 400000);
+  [[94.7, 64.7], [55.3, 64.7], [55.3, 35.3], [94.7, 35.3]].forEach(([x, y]) => assert.ok(C.SIM.heightAt(sim, x, y) <= -6 + 0.03, '모서리 (' + x + ',' + y + ') 깎임'));
+});
+
+test('이미 가공된 형상 인식: 포켓 안 구멍·단 포켓·평면 후 가공은 그 바닥에서 시작, 깊이는 완성 바닥 기준', () => {
+  const groups = [
+    { spec: C.newMillSpec('face', { depth: 0.5 }) },
+    { spec: C.newPocketSpec({ shape: 'rect', w: 60, h: 40, cr: 5, depth: 10 }) },
+    { spec: C.newPocketSpec({ shape: 'rect', w: 20, h: 14, cr: 4, depth: 4 }), at: [[60, 50]] },
+    { spec: C.newHoleSpec ? C.newHoleSpec('drill', { dia: 6.8, depth: 5, depthMode: 'full' }) : { kind: 'drill', dia: 6.8, depth: 5, depthMode: 'full', thru: false, brk: 1, center: true, cycle: 'auto' }, at: [[90, 50], [10, 10]] }
+  ];
+  const r = build(groups);
+  assert.equal(r.p.settings.depthRef, 'auto');
+  assert.deepEqual(errs(r.V), []);
+  assert.deepEqual(r.vr.errors, []); assert.equal(r.vr.match, true);
+  const steps = r.V.plan.steps;
+  const pk = steps.find(s => s.type === 'pocketRough' && s.holes.some(h => h.x === 75));
+  assert.equal(pk.ref, -0.5); // 평면 바닥에서 깊이를 잼
+  const inner = steps.find(s => s.type === 'pocketRough' && s.holes.some(h => h.x === 60));
+  assert.equal(inner.ref, -10.5); assert.ok(inner.top <= -10.3 && inner.top >= -10.5, 'inner top ' + inner.top);
+  const drIn = steps.find(s => s.type === 'drill' || s.type === 'peck' ? s.holes.some(h => h.x === 90) : false);
+  const drOut = steps.find(s => (s.type === 'drill' || s.type === 'peck') && s.holes.some(h => h.x === 10));
+  assert.ok(drIn && drOut && drIn !== drOut, '포켓 안·밖 구멍은 다른 공정');
+  assert.equal(drIn.ref, -10.5); assert.ok(drIn.r <= -10.5 + 3 + 1e-9, 'R점은 포켓 바닥 위 ' + drIn.r);
+  assert.ok(Math.abs(drIn.z - drOut.z - (-10)) < 1e-6, '포켓 안 구멍은 포켓 깊이만큼 더 깊음 ' + drIn.z + ' ' + drOut.z);
+  // 시뮬레이션: 포켓 안 구멍의 직경부 바닥 = 평면 0.5 + 포켓 10 + 8
+  const sim = simOf(r, 400000);
+  assert.ok(C.SIM.heightAt(sim, 90, 50) <= -15.5 + 0.05);
+  // 이전 버전 파일(깊이 기준 없음)은 Z0 기준 그대로
+  const r2 = build(groups); r2.p.settings.depthRef = 'top';
+  const V2 = C.validateProject(r2.p, r2.m);
+  assert.ok(V2.plan.steps.every(s => !s.ref && !s.top));
+});

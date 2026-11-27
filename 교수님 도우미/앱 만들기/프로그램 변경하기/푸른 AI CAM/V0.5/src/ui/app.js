@@ -1434,7 +1434,7 @@
 
   /* ---------------- [V0.5] 도면(DXF) 불러오기 ---------------- */
   const DXF_ACT = { contour: ['바깥 윤곽', 'var(--c-contour)'], pocket: ['포켓', 'var(--c-pocket)'], inner: ['안쪽 윤곽(관통 창)', '#0b6f80'], island: ['섬 (남김)', '#7c8a99'], none: ['사용 안 함', '#b7c0ca'] };
-  const HOLE_ACT = { drill: ['구멍(드릴)', 'var(--c-drill)'], tap: ['탭', 'var(--c-tap)'], cpocket: ['원형 포켓', 'var(--c-pocket)'], none: ['사용 안 함', '#b7c0ca'] };
+  const HOLE_ACT = { drill: ['구멍(드릴)', 'var(--c-drill)'], tap: ['탭', 'var(--c-tap)'], cpocket: ['원형 포켓', 'var(--c-pocket)'], outline: ['외곽 윤곽 (부품 바깥)', 'var(--c-contour)'], none: ['사용 안 함', '#b7c0ca'] };
   function importDXF() { pickFile('.dxf,.DXF', txt => openDXF(txt)); }
   // 지름이 보통 나사 기초 드릴과 같으면 탭으로 추천
   function tapFor(dia) { for (const r of C.METRIC_COARSE) { const t = C.tapDrill(r[0], r[1]); if (t && Math.abs(t.dia - dia) <= 0.051) return { d: r[0], p: r[1] }; } return null; }
@@ -1444,7 +1444,14 @@
     if (!res.loops.length && !res.circles.length) return toast('도면에서 닫힌 윤곽이나 원을 찾지 못했습니다.', 'err');
     const cls = C.DXF.classify(res), sz = P.stock.sz;
     const st = { res, cls, fit: true, margin: 2, items: cls.items.map((it, k) => ({ act: it.depth === 0 ? (k === 0 && cls.items.length > 1 ? 'contour' : (cls.items.length === 1 ? 'contour' : 'pocket')) : it.depth % 2 === 1 ? 'pocket' : 'island', depth: C.r3(it.depth === 0 ? Math.min(10, sz / 2) : Math.min(5, sz / 2)) })),
-      holes: cls.holes.map(hg => { const tp = tapFor(hg.dia); return { act: hg.dia > 20 ? 'cpocket' : tp ? 'tap' : 'drill', tap: tp, depth: C.r3(Math.min(10, sz - 1)) }; }) };
+      holes: cls.holes.map(hg => {
+        const tp = tapFor(hg.dia);
+        // [V0.5 검토] 큰 원 하나가 다른 원·윤곽을 모두 감싸면 부품 외곽(둥근 플랜지 등) → 외곽 윤곽 추천
+        const c = hg.pts[0], R = hg.dia / 2, inC = p => Math.hypot(p[0] - c[0], p[1] - c[1]) < R - 1e-6;
+        const others = res.circles.filter(o => Math.abs(o.r * 2 - hg.dia) > 1e-6 || o.cx !== c[0] || o.cy !== c[1]);
+        const wraps = hg.pts.length === 1 && hg.dia > 20 && (others.length || cls.items.length) && others.every(o => inC([o.cx, o.cy])) && cls.items.every(it => it.pts.every(inC));
+        return { act: wraps ? 'outline' : hg.dia > 20 ? 'cpocket' : tp ? 'tap' : 'drill', tap: tp, depth: C.r3(wraps ? Math.min(10, sz / 2) : Math.min(10, sz - 1)) };
+      }) };
     // 바깥 윤곽 안에 들어 있는 1단계 윤곽만 포켓, 바깥 윤곽이 없으면 맨 바깥도 포켓
     S.dxf = st;
     openDXFDlg();
@@ -1471,7 +1478,7 @@
       if (st.cls.holes.length) {
         h += '<b>원 (지름별 묶음)</b><div class="tblwrap"><table class="tbl"><tr><th>지름</th><th>개수</th><th>가공</th><th>깊이</th></tr>';
         st.cls.holes.forEach((hg, k) => {
-          const a = st.holes[k], opts = [['drill', '구멍(드릴) Ø' + hg.dia]].concat(a.tap ? [['tap', '탭 M' + a.tap.d + (a.tap.p ? '' : '')]] : []).concat([['cpocket', '원형 포켓'], ['none', '사용 안 함']]);
+          const a = st.holes[k], opts = [['drill', '구멍(드릴) Ø' + hg.dia]].concat(a.tap ? [['tap', '탭 M' + a.tap.d + (a.tap.p ? '' : '')]] : []).concat([['cpocket', '원형 포켓'], ['outline', '외곽 윤곽'], ['none', '사용 안 함']]);
           h += '<tr><td><i class="swatch" style="background:' + HOLE_ACT[a.act][1] + '"></i>Ø' + hg.dia + '</td><td>' + hg.pts.length + '</td><td>' + u.select(a.act, opts, v => { a.act = v; openDXFDlg(); }) + '</td><td>' + u.num(a.depth, v => { a.depth = v; }) + '</td></tr>';
         });
         h += '</table></div><small>지름이 나사 기초 드릴과 같으면 탭을 추천합니다 (예: Ø6.8 → M8).</small>';
@@ -1505,6 +1512,7 @@
         if (a.act === 'drill') mk('drill', '구멍 Ø' + hg.dia, C.newHoleSpec('drill', { dia: hg.dia, depth: a.depth }), hg.pts);
         else if (a.act === 'tap' && a.tap) mk('tap', '탭 M' + a.tap.d, C.newHoleSpec('tap', { tapD: a.tap.d, tapP: a.tap.p, tapDepth: a.depth }), hg.pts);
         else if (a.act === 'cpocket') mk('pocket', '원형 포켓 Ø' + hg.dia, C.newPocketSpec({ shape: 'circle', dia: hg.dia, depth: a.depth }), hg.pts);
+        else if (a.act === 'outline') mk('contour', '외곽 Ø' + hg.dia, C.newMillSpec('contour', { shape: 'circle', dia: hg.dia, side: 'out', depth: a.depth }), hg.pts);
       });
       // 닫힌 윤곽: 형상은 기준점(범위 중심) 상대 좌표
       st.cls.items.forEach((it, k) => {

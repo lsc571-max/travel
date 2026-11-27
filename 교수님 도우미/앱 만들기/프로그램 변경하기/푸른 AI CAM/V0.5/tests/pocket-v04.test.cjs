@@ -195,7 +195,7 @@ test('[검토 1] 정삭의 남김 여유가 황삭과 다르면 차단 (정삭 �
   const r = build([{ spec: { shape: 'rect', w: 40, h: 30, cr: 5, depth: 5 } }]);
   const g = r.p.groups[0]; g.spec = null; g.ops[0].allowFloor = 2; // 직접 구성으로 황삭 바닥 여유만 변경
   const V = C.validateProject(r.p, r.m);
-  assert.ok(errs(V).some(m => /남김 여유가 같은/.test(m)), JSON.stringify(errs(V)));
+  assert.ok(errs(V).some(m => /남김 여유가 같은|남긴 여유/.test(m)), JSON.stringify(errs(V)));
 });
 test('[검토 1] 검증기: 깎이지 않은 소재로 엔드밀 수직 하강 차단 (헬리컬 삭제한 수정 NC)', () => {
   const r = build([{ spec: { shape: 'rect', w: 40, h: 30, cr: 5, depth: 5 } }]);

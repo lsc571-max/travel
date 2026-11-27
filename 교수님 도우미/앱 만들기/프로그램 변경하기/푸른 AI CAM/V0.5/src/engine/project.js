@@ -68,7 +68,7 @@
   function holeDiaForGroup(group, tools) {
     let d = 0;
     // 포켓 그룹은 포켓 크기(사각은 긴 변)를 대표 직경으로 사용
-    group.ops.forEach(op => { if (op.type === 'pocketRough' || op.type === 'pocketFinish') { const e = P.pocketExtent(op); d = Math.max(d, 2 * Math.max(e.ex, e.ey)); } });
+    group.ops.forEach(op => { const df = P.OPS.get(op.type); if (df && df.mill === 'pocket') { const e = P.pocketExtent(op); d = Math.max(d, 2 * Math.max(e.ex, e.ey)); } });
     if (d) return d;
     group.ops.forEach(op => { const t = tools.get(op.toolNo); if (t && t.dia > d && !isSpot(op.type)) d = t.dia; });
     if (!d) group.ops.forEach(op => { const t = tools.get(op.toolNo); if (t && t.dia > d) d = t.dia; });

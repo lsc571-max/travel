@@ -1,6 +1,7 @@
 // 변경 전후 비교: V0.4 vs V0.5 — 구멍·탭·사각/원형 포켓 프로젝트 1,000건
 // 검증 결과·G코드·독립 검증 결과가 같은지 확인 (V0.5 는 기존 가공을 바꾸지 않고 새 가공만 추가)
 // 허용하는 차이: NC 버전 주석, 포켓 깊이 ≥ 두께 오류의 안내 문구(관통 기능 안내), 소재 바닥 초과 안내 문구,
+//   작은 헬리컬(반경 < 공구 반경 25%) 포켓은 비교 제외(V0.5 가 차단·작은 공구 선택),
 //   독립 검증기의 날 길이 판정을 '이미 깎인 면' 기준으로 (포켓 안 구멍만, 오류가 줄어드는 방향만 허용)
 'use strict';
 const test = require('node:test');
@@ -18,7 +19,7 @@ function rng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 10139
 
 test('V0.4 → V0.5 동일 결과 (구멍·탭·포켓): 1,000건', { skip: !has && 'V0.4 폴더 없음' }, () => {
   const R = rng(5505);
-  let gen = 0, pk = 0, relaxed = 0;
+  let gen = 0, pk = 0, relaxed = 0, safer = 0;
   for (let n = 0; n < 1000; n++) {
     const m = OLD.defaultMachine(); m.rigidM03 = R() < 0.3; m.helical = R() < 0.9;
     const p = OLD.newProject(m);
@@ -40,6 +41,9 @@ test('V0.4 → V0.5 동일 결과 (구멍·탭·포켓): 1,000건', { skip: !has
     const pa = JSON.parse(JSON.stringify(p)), pb = NEW.normalizeProject(JSON.parse(JSON.stringify(p)));
     const mb = NEW.normalizeMachine(JSON.parse(JSON.stringify(m)));
     pb.groups.forEach(g => { if (g.spec) NEW.applyHoleSpec(g, mb, pb.stock); });
+    // [V0.5 의도한 변경] 헬리컬 반경이 공구 반경의 25% 미만인 포켓(사실상 수직 하강)은 V0.5 가 막거나 더 작은 공구를 고름 → 비교 제외 (건수 기록)
+    const tmOld = OLD.toolMap(m);
+    if (m.helical && pa.groups.some(g => g.ops.some(o => { if (o.type !== 'pocketRough' && o.type !== 'pocketFinish') return false; const t = tmOld.get(o.toolNo); if (!t) return false; const rt = t.dia / 2, aw = o.type === 'pocketRough' ? o.allowWall : 0; const fit = (o.shape === 'circle' ? o.dia / 2 : Math.min(o.w, o.h) / 2) - rt - aw; return fit > 0 && Math.min(0.5 * rt, fit) < 0.25 * rt; }))) { safer++; continue; }
     const va = OLD.validateProject(pa, m), vb = NEW.validateProject(pb, mb);
     const key = v => v.issues.filter(i => i.level !== 'info').map(i => i.level + '|' + i.cat + '|' + fixMsg(i.msg)).sort();
     assert.deepEqual(key(vb), key(va), '검증 결과 #' + n);
@@ -57,5 +61,5 @@ test('V0.4 → V0.5 동일 결과 (구멍·탭·포켓): 1,000건', { skip: !has
     if (ra.errors.filter(flute).length !== rb.errors.filter(flute).length) relaxed++;
   }
   assert.ok(gen > 300 && pk > 200, 'G코드 ' + gen + ', 포켓 그룹 ' + pk);
-  console.log('  V0.4→V0.5 비교 1000건, G코드 ' + gen + '건 동일 (포켓 그룹 ' + pk + '개 포함), 포켓 바닥 기준 날 길이 판정 ' + relaxed + '건');
+  console.log('  V0.4→V0.5 비교 1000건, G코드 ' + gen + '건 동일 (포켓 그룹 ' + pk + '개 포함), 포켓 바닥 기준 날 길이 판정 ' + relaxed + '건, 작은 헬리컬 차단으로 제외 ' + safer + '건');
 });

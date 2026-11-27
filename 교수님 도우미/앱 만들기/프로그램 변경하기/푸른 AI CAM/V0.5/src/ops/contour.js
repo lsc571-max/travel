@@ -96,7 +96,14 @@
         B.loop(first.pts, z, F);
         for (let k = 1; k < pl.passes.length; k++) {
           const cur = B.cur, rot = MC.rotateAt(pl.passes[k].pts, cur.x, cur.y);
-          B.push(1, rot.pts[0][0], rot.pts[0][1], z, F); // 다음 바퀴로 (부품 쪽으로 한 간격)
+          if (keepOff(cur.x, cur.y, rot.pts[0][0], rot.pts[0][1])) B.push(1, rot.pts[0][0], rot.pts[0][1], z, F); // 다음 바퀴로 (부품 쪽으로 한 간격)
+          else {
+            // [V0.5 검토] 다른 조각(좁은 목으로 나뉜 안쪽 윤곽 등): 올라가서 그 조각 위로 이동 후 램프 진입
+            const st = pl.passes[k].pts;
+            B.push(0, cur.x, cur.y, zClear, 0); B.push(0, st[0][0], st[0][1], zClear, 0);
+            B.push(1, st[0][0], st[0][1], zPrev, Fr); B.ramp(st, zPrev, z, Fr);
+            B.loop(st, z, F); continue;
+          }
           B.loop(rot.pts, z, F);
         }
         // 단 끝: 진입점으로 돌아감 (부품을 건드리지 않는 직선일 때만), 아니면 R점으로 상승
@@ -148,6 +155,13 @@
     const pl = tool.dia > 0 ? plan(op, tool, { x: 0, y: 0 }, finish) : { error: '공구 직경 오류' };
     if (pl.error) add('error', 5, on + ': ' + pl.error);
     else if (!pl.S && machine.helical !== false) add('info', 9, on + ': 진입 헬리컬 공간이 없어 첫 바퀴를 따라 경사(3°)로 진입합니다.');
+    if (!pl.error && op.side === 'in') {
+      // [V0.5 검토] 안쪽 윤곽이 공구보다 좁은 목으로 나뉘면 목 부분이 남음
+      const pieces = new Set(pl.passes.map(q => q.d)).size < pl.passes.length;
+      const left = G.unreachable([G.toPath(G.ccw(G.shapeRegion(op).outer))], tool.dia / 2, 0).filter(a => a > Math.max(1, 1.2 * tool.dia * tool.dia / 4));
+      if (pieces || left.length) add('warn', 5, on + ': 공구 Ø' + tool.dia + ' 보다 좁은 곳이 있어 ' + (pieces ? '안쪽 윤곽이 여러 조각으로 나뉘어 따로 진입하고, ' : '') + '좁은 목·모서리 ' + (left.length || 1) + '곳이 깎이지 않고 남습니다. 더 작은 엔드밀을 쓰세요.');
+    }
+    if (!pl.error && op.self === undefined && G.cleanRegion({ outer: G.shapeRegion(op).outer, islands: [] }).length !== 1) add('error', 5, on + ': 윤곽 선이 서로 꼬여 있습니다 (자기 교차). 도면을 확인하세요.');
     if (finish) {
       const same = o => o.type === 'contourRough' && o.shape === op.shape && o.side === op.side && !!o.thru === !!op.thru && JSON.stringify(o.poly || null) === JSON.stringify(op.poly || null) && ['w', 'h', 'cr', 'dia', 'depth', 'brk'].every(k => Math.abs(toNum(o[k], 0) - toNum(op[k], 0)) < 1e-6);
       if (!ops.slice(0, oi).some(same)) add('error', 5, on + ': 정삭 앞에 같은 윤곽(모양·크기·방향·깊이)의 황삭 공정이 없습니다.');

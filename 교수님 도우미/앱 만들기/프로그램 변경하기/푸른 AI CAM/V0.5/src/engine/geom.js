@@ -52,8 +52,8 @@
 
   /* ---------- 오프셋 ---------- */
   // paths(Clipper 경로들, 바깥=반시계·구멍=시계) 를 delta(mm) 만큼 오프셋 → ExPolygon 목록 [{ outer, holes }]
-  function offsetEx(paths, delta) {
-    const co = new CL.ClipperOffset(2, ARC_TOL * SC);
+  function offsetEx(paths, delta, tol) {
+    const co = new CL.ClipperOffset(2, (tol || ARC_TOL) * SC); // [V0.5 검토] tol: 원호 근사 허용 오차 (황삭은 크게 → NC 줄 수 감소)
     co.AddPaths(paths, CL.JoinType.jtRound, CL.EndType.etClosedPolygon);
     const tree = new CL.PolyTree();
     co.Execute(tree, delta * SC);
@@ -90,5 +90,12 @@
     return sol.reduce((s, p) => s + Math.abs(CL.Clipper.Area(p)), 0) / (SC * SC);
   }
 
-  P.GEOM = Object.freeze({ SC, ARC_TOL, ok: !!CL, toPath, fromPath, area, ccw, cw, bbox, perimeter, circlePoly, rrectPoly, shapeRegion, regionPaths, offsetEx, exPaths, offsetPts, inPaths, segDist, distToPts, cleanRegion, overlapArea });
+  // [V0.5 검토] 공구가 닿지 않는 부분: 영역 − (영역을 d 만큼 줄였다가 rt 만큼 다시 넓힌 것). 조각별 면적(mm²)
+  function unreachable(paths, rt, aw) {
+    const open = [].concat(...offsetEx([].concat(...offsetEx(paths, -(rt + aw)).map(exPaths)), rt + aw).map(exPaths));
+    const c = new CL.Clipper(); c.AddPaths(paths, CL.PolyType.ptSubject, true); if (open.length) c.AddPaths(open, CL.PolyType.ptClip, true);
+    const sol = new CL.Paths(); c.Execute(CL.ClipType.ctDifference, sol, CL.PolyFillType.pftNonZero, CL.PolyFillType.pftNonZero);
+    return sol.map(p => Math.abs(CL.Clipper.Area(p)) / (SC * SC)).filter(a => a > 1e-3).sort((a, b) => b - a);
+  }
+  P.GEOM = Object.freeze({ unreachable, SC, ARC_TOL, ok: !!CL, toPath, fromPath, area, ccw, cw, bbox, perimeter, circlePoly, rrectPoly, shapeRegion, regionPaths, offsetEx, exPaths, offsetPts, inPaths, segDist, distToPts, cleanRegion, overlapArea });
 })(typeof globalThis !== 'undefined' ? globalThis : this);

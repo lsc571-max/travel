@@ -54,6 +54,7 @@
     const { op, tool, d, st, on, add, project } = ctx;
     H.validateConditions(ctx);
     if (!(d.depth > 0)) add('error', 8, on + ': 평면 깊이가 0 이하입니다.');
+    if (ctx.g && ctx.g.holes && ctx.g.holes.length > 1) add('warn', 8, on + ': 평면 가공에 위치가 ' + ctx.g.holes.length + '개 있어 소재 전체 평면을 ' + ctx.g.holes.length + '번 반복합니다. 위치는 1개면 됩니다.');
     else if (d.depth > 10 + EPS) add('warn', 8, on + ': 평면 깊이 ' + d.depth + 'mm — 깊습니다. 여러 단으로 나뉘어 시간이 오래 걸립니다.');
     if (d.depth >= st.sz - EPS) add('error', 8, on + ': 평면 깊이가 소재 두께 이상입니다.');
     const sd = toNum(op.stepdown, NaN), so = toNum(op.stepover, NaN);
