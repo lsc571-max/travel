@@ -196,6 +196,8 @@ export function App() {
   const inputRef = useRef<HTMLInputElement>(null);
   const histRef = useRef<HTMLDivElement>(null);
   const recall = useRef<{ list: string[]; i: number }>({ list: [], i: -1 });
+  /** 열어 온 원본 파일 이름 (첫 저장 시 원본과 다른 이름을 제안하여 원본 보호) */
+  const openedOriginal = useRef<string | null>(null);
 
   const flash = (m: string) => {
     setToast(m);
@@ -209,6 +211,7 @@ export function App() {
         const r = readDxf(bytes);
         eng.cancel(true);
         eng.doc.load({ ...r, fileName: name });
+        openedOriginal.current = name;
         eng.setSelection([]);
         clearSaveHandle();
         eng.zoomExtents();
@@ -226,8 +229,10 @@ export function App() {
       try {
         const { text, report } = writeDxf(eng.doc, choice);
         const base = eng.doc.fileName.replace(/\.dxf$/i, '');
-        const name = await saveText(text, `${base}.dxf`, reuse);
+        const suggested = openedOriginal.current === eng.doc.fileName ? `${base}_수정.dxf` : `${base}.dxf`;
+        const name = await saveText(text, suggested, reuse);
         if (!name) return;
+        openedOriginal.current = null;
         eng.doc.fileName = name;
         eng.doc.modified = false;
         const notes: string[] = [];
@@ -273,6 +278,7 @@ export function App() {
           if (!confirmDiscard()) return;
           eng.cancel(true);
           eng.doc.clear();
+          openedOriginal.current = null;
           clearSaveHandle();
           eng.view.fit({ minX: 0, minY: 0, maxX: 297, maxY: 210 });
           eng.redrawAll();
@@ -428,7 +434,7 @@ export function App() {
           </div>
         ))}
         <span className="spacer" />
-        <span className="small" style={{ marginRight: 8, maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span className="small filename" style={{ marginRight: 8, maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {eng.doc.fileName}
           {eng.doc.modified ? ' *' : ''}
         </span>

@@ -92,6 +92,7 @@ button:focus-visible {
 .menu > button {
   background: none;
   border: 0;
+  white-space: nowrap;
   padding: 4px 10px;
   border-radius: 4px;
   cursor: pointer;
@@ -498,8 +499,24 @@ button:focus-visible {
   .props {
     display: none;
   }
-  .brand {
+  .brand,
+  .filename {
     display: none;
+  }
+  .menubar {
+    padding: 0 2px;
+    gap: 0;
+  }
+  .menu > button {
+    padding: 4px 4px;
+    font-size: 12px;
+  }
+  .menu-list {
+    min-width: 200px;
+  }
+  .menu:nth-last-of-type(-n + 3) .menu-list {
+    left: auto;
+    right: 0;
   }
   .status .coord {
     min-width: 0;

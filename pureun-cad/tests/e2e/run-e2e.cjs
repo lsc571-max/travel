@@ -318,6 +318,49 @@ async function waitServer() {
       console.log('   ezdxf:', audit.trim().split('\n').pop());
     });
 
+    await test('실무 도면(flange_R2000.dxf, 한글 CP949): 열기 → 볼트 구멍 8-Ø14→Ø13.5 일괄 변경 → 잠금 보호 → 저장·감사', async () => {
+      await ev(() => (window.__pureunCad.eng.doc.modified = false));
+      const [fc] = await Promise.all([page.waitForEvent('filechooser'), cmd('OPEN')]);
+      await fc.setFiles(path.join(ROOT, 'tests/fixtures/flange_R2000.dxf'));
+      await page.getByRole('dialog', { name: 'DXF 열기 결과' }).waitFor();
+      const warn = await page.getByRole('dialog').innerText();
+      if (!/INSERT/.test(warn) || !/SPLINE/.test(warn)) throw new Error('미지원 객체 경고 누락: ' + warn);
+      await page.keyboard.press('Escape');
+      const t = (await ents()).find((e) => e.type === 'text');
+      eq(t.text, '플랜지 8-%%c14 PCD150', '한글 문자');
+      const before = (await ents()).filter((e) => e.type === 'circle' && e.r === 7).map((c) => c.c);
+      eq(before.length, 8);
+      await cmd('HD');
+      await page.getByRole('cell', { name: 'Ø14', exact: true }).click();
+      await page.fill('#newdia', '13.5');
+      await page.getByRole('button', { name: '일괄 변경', exact: true }).click();
+      await page.keyboard.press('Escape');
+      const after = (await ents()).filter((e) => e.type === 'circle' && e.r === 6.75).map((c) => c.c);
+      eq(after, before, '구멍 중심 유지');
+      // 잠긴 레이어 객체 지우기 시도
+      await ev(() => window.__pureunCad.eng.setSelection([]));
+      const n0 = (await ents()).length;
+      await cmd('E');
+      await cmd('ALL');
+      await cmd('');
+      const left = await ents();
+      if (!left.some((e) => e.layer === '잠금')) throw new Error('잠긴 레이어 객체가 지워짐');
+      if (!left.some((e) => e.layer === '숨김')) throw new Error('숨김 레이어 객체가 지워짐');
+      await cmd('U');
+      eq((await ents()).length, n0, '실행취소 후 복원');
+      const [dl] = await Promise.all([page.waitForEvent('download'), (async () => {
+        await cmd('SAVEAS');
+        await page.getByText('근사 형상(선·폴리선·문자)으로 변환하여 포함', { exact: false }).click();
+        await page.getByRole('button', { name: '저장', exact: true }).click();
+      })()]);
+      const f = path.join(OUT, 'e2e-flange-modified.dxf');
+      await dl.saveAs(f);
+      const audit = execFileSync('python3', [path.join(ROOT, 'tests/e2e/audit_dxf.py'), f]).toString();
+      if (!audit.includes('AUDIT OK')) throw new Error('ezdxf 검사 실패: ' + audit);
+      console.log('   ezdxf:', audit.trim().split('\n')[0]);
+      await page.screenshot({ path: path.join(OUT, 'flange.png') });
+    });
+
     await test('설정 1회 클릭 → 일반 설정, 민감 정보 없음', async () => {
       await page.getByTestId('open-settings').click();
       await page.getByRole('dialog', { name: '설정' }).waitFor();
@@ -366,6 +409,14 @@ async function waitServer() {
       await page.keyboard.press('Escape');
     });
 
+    await test('접근성 대체 경로: 설정 아이콘에 키보드 초점 + Enter 5회 → 관리자 인증 창', async () => {
+      await page.getByTestId('open-settings').click();
+      await page.getByTestId('settings-gear').focus();
+      for (let i = 0; i < 5; i++) await page.keyboard.press('Enter');
+      await page.getByRole('dialog', { name: '관리자 인증' }).waitFor({ timeout: 3000 });
+      await page.keyboard.press('Escape');
+    });
+
     await test('공유(링크·QR) / 버전 정보', async () => {
       await page.getByRole('button', { name: '공유', exact: true }).click();
       const img = page.locator('.qr img');
@@ -381,6 +432,11 @@ async function waitServer() {
     });
 
     await test('ESC 취소 시 원본 유지 / 계산 불가 오프셋 오류 메시지', async () => {
+      await ev(() => (window.__pureunCad.eng.doc.modified = false));
+      await reset();
+      await cmd('C');
+      await cmd('30,40');
+      await cmd('10');
       const n0 = (await ents()).length;
       await cmd('O');
       await cmd('100');

@@ -519,6 +519,12 @@ export function VersionDialog({ onClose }: { onClose: () => void }) {
           </ul>
         </div>
       ))}
+      <p className="small">
+        <a href="THIRD_PARTY_NOTICES.txt" target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>
+          오픈소스 라이선스 고지
+        </a>{' '}
+        — React, rbush, quickselect, qrcode-generator (MIT/ISC)
+      </p>
       <p className="small">업데이트 방식: 웹앱(PWA) — 배포 주소에 새 버전이 올라가면 이 화면에서 확인 후 적용합니다. 자동 설치형 업데이트는 지원하지 않습니다.</p>
       {state && <p className="msg">{state}</p>}
     </Modal>
