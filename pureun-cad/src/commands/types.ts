@@ -127,7 +127,7 @@ export interface Ctx {
   setMarks(pts: Vec2[]): void;
 }
 
-export type UiAction = 'layer' | 'settings' | 'hole' | 'open' | 'save' | 'saveas' | 'new' | 'help' | 'zoomExtents' | 'zoomWindow' | 'share' | 'version' | 'contextmenu';
+export type UiAction = 'layer' | 'settings' | 'hole' | 'open' | 'save' | 'saveas' | 'new' | 'help' | 'zoomExtents' | 'zoomWindow' | 'share' | 'version' | 'contextmenu' | 'qselect';
 
 export type CommandFn = (ctx: Ctx) => Generator<Req, void, Resp>;
 

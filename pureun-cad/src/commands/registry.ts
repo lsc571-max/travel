@@ -78,6 +78,7 @@ export const COMMANDS: CommandDef[] = [
   { name: 'LIST', aliases: ['LI', 'LS'], label: '객체 정보', fn: LIST, usesSelection: true },
   { name: 'ZOOM', aliases: ['Z'], label: '줌', fn: ZOOM },
   { name: 'LAYER', aliases: ['LA'], label: '레이어', fn: uiCmd('layer') },
+  { name: 'QSELECT', aliases: ['QS'], label: '빠른 선택', fn: uiCmd('qselect') },
   { name: 'HOLEDIA', aliases: ['HD'], label: '동일 지름 원 일괄 변경', fn: uiCmd('hole') },
   { name: 'OPTIONS', aliases: ['OP', 'SETTINGS'], label: '설정', fn: uiCmd('settings') },
   { name: 'OPEN', aliases: [], label: '열기', fn: uiCmd('open') },

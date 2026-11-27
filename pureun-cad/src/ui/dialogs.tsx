@@ -363,3 +363,93 @@ export function HelpDialog({ onClose }: { onClose: () => void }) {
     </Modal>
   );
 }
+
+/** 빠른 선택: 종류·레이어·색상 조건으로 객체 선택 */
+export function QuickSelectDialog({ eng, onClose }: { eng: Engine; onClose: () => void }) {
+  const { doc } = eng;
+  const [type, setType] = useState('');
+  const [layer, setLayer] = useState('');
+  const [color, setColor] = useState('');
+  const [mode, setMode] = useState<'new' | 'add'>('new');
+  const match = [...doc.entities.values()].filter(
+    (e) =>
+      (!type || e.type === type) &&
+      (!layer || e.layer === layer) &&
+      (!color || String(e.color ?? 256) === color) &&
+      doc.isEditable(e),
+  );
+  const colors = [...new Set([...doc.entities.values()].map((e) => String(e.color ?? 256)))];
+  return (
+    <Modal
+      title="빠른 선택 (QSELECT)"
+      onClose={onClose}
+      foot={
+        <>
+          <span className="small" style={{ flex: 1 }}>
+            조건에 맞는 객체 {match.length.toLocaleString()}개 (잠김·꺼짐 레이어 제외)
+          </span>
+          <button className="btn" onClick={onClose}>
+            취소
+          </button>
+          <button
+            className="btn primary"
+            disabled={!match.length}
+            onClick={() => {
+              const ids = match.map((e) => e.id);
+              eng.setSelection(mode === 'add' ? [...new Set([...eng.sel, ...ids])] : ids);
+              eng.log(`빠른 선택: ${ids.length}개 선택`);
+              onClose();
+            }}
+          >
+            선택
+          </button>
+        </>
+      }
+    >
+      <div className="row">
+        <label htmlFor="qs-type">객체 종류</label>
+        <select id="qs-type" value={type} onChange={(e) => setType(e.target.value)}>
+          <option value="">전체</option>
+          <option value="line">선</option>
+          <option value="circle">원</option>
+          <option value="arc">호</option>
+          <option value="polyline">폴리선</option>
+          <option value="text">문자</option>
+          <option value="dimension">치수</option>
+        </select>
+      </div>
+      <div className="row">
+        <label htmlFor="qs-layer">레이어</label>
+        <select id="qs-layer" value={layer} onChange={(e) => setLayer(e.target.value)}>
+          <option value="">전체</option>
+          {[...doc.layers.values()].map((l) => (
+            <option key={l.name} value={l.name}>
+              {l.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="row">
+        <label htmlFor="qs-color">색상</label>
+        <select id="qs-color" value={color} onChange={(e) => setColor(e.target.value)}>
+          <option value="">전체</option>
+          {colors.map((c) => (
+            <option key={c} value={c}>
+              {c === '256' ? 'BYLAYER' : `ACI ${c}`}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="row">
+        <label>선택 방식</label>
+        <label style={{ minWidth: 0, color: 'inherit' }}>
+          <input type="radio" checked={mode === 'new'} onChange={() => setMode('new')} /> 새로 선택
+        </label>
+        <label style={{ minWidth: 0, color: 'inherit' }}>
+          <input type="radio" checked={mode === 'add'} onChange={() => setMode('add')} /> 현재 선택에 추가
+        </label>
+      </div>
+      <p className="small">같은 지름의 원을 고르려면 "동일 지름 원 일괄 변경(HD)"의 "도면에서 선택 표시"를 사용하십시오.</p>
+    </Modal>
+  );
+}

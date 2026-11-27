@@ -13,7 +13,7 @@ import { idbGet, idbSet } from '../storage/idb';
 import { APP_NAME, APP_VERSION } from '../version';
 import { CanvasView } from './CanvasView';
 import { setCustomAliases, suggestCommands } from '../commands/registry';
-import { HelpDialog, HoleDialog, LayerDialog, MessageDialog, SaveDialog, type SaveChoice } from './dialogs';
+import { HelpDialog, HoleDialog, LayerDialog, MessageDialog, QuickSelectDialog, SaveDialog, type SaveChoice } from './dialogs';
 import { clearSaveHandle, pickOpenFile, saveText } from './files';
 import { Icon } from './icons';
 import { Modal } from './Modal';
@@ -22,7 +22,7 @@ import { ALIAS_KEY, SettingsDialog, ShareDialog, VersionDialog } from './setting
 
 type DialogState =
   | null
-  | { k: 'layer' | 'hole' | 'settings' | 'help' | 'share' | 'version' }
+  | { k: 'layer' | 'hole' | 'settings' | 'help' | 'share' | 'version' | 'qselect' }
   | { k: 'save'; reuse: boolean }
   | { k: 'msg'; title: string; lines: string[] }
   | { k: 'restore'; data: AutoSave };
@@ -138,6 +138,7 @@ const MENUS: { label: string; items: ([string, string, string?] | '-')[] }[] = [
       ['다시실행', 'REDO', 'Ctrl+Y'],
       '-',
       ['전체 선택', '#selectall', 'Ctrl+A'],
+      ['빠른 선택(종류·레이어·색상)', 'QSELECT', 'QS'],
       ['지우기', 'ERASE', 'Del'],
     ],
   },
@@ -304,6 +305,7 @@ export function App() {
         case 'help':
         case 'share':
         case 'version':
+        case 'qselect':
           setDialog({ k: a });
           break;
         case 'open':
@@ -642,6 +644,7 @@ export function App() {
 
       {dialog?.k === 'layer' && <LayerDialog eng={eng} onClose={() => setDialog(null)} />}
       {dialog?.k === 'hole' && <HoleDialog eng={eng} onClose={() => setDialog(null)} />}
+      {dialog?.k === 'qselect' && <QuickSelectDialog eng={eng} onClose={() => setDialog(null)} />}
       {dialog?.k === 'help' && <HelpDialog onClose={() => setDialog(null)} />}
       {dialog?.k === 'share' && <ShareDialog onClose={() => setDialog(null)} />}
       {dialog?.k === 'version' && <VersionDialog onClose={() => setDialog(null)} />}
