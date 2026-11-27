@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="푸른 AI CAM - 소규모 기계가공 업체용 FANUC 3축 머시닝센터 구멍·탭·포켓 가공 CAM (무설치·오프라인 웹앱, 3D 가공 시뮬레이션)">
+<meta name="theme-color" content="#0b6e79">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+<title>푸른 AI CAM</title>
+<style>
+/*__CSS__*/
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-stock" viewBox="0 0 24 24"><path d="M3 8l9-4 9 4v8l-9 4-9-4z M3 8l9 4 9-4 M12 12v8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    <symbol id="i-drill" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></symbol>
+    <symbol id="i-tap" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7.5 9.5l9 -2 M7 13l10-2 M8 16.5l8.5-2" stroke="currentColor" stroke-width="1.6" fill="none"/></symbol>
+    <symbol id="i-pocket" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="7.5" y="9" width="9" height="6" rx="1.5" fill="currentColor" opacity=".35"/></symbol>
+    <symbol id="i-custom" viewBox="0 0 24 24"><path d="M5 7h10M5 12h14M5 17h8" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/><circle cx="18" cy="7" r="2" fill="currentColor"/><circle cx="16" cy="17" r="2" fill="currentColor"/></symbol>
+    <symbol id="i-nc" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z M15 3v4h4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 12h7M9 15.5h7M9 8.5h3" stroke="currentColor" stroke-width="1.6"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" fill="currentColor"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z" fill="currentColor"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M6 5h2v14H6zM19 5L9 12l10 7z" fill="currentColor"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM5 5l10 7-10 7z" fill="currentColor"/></symbol>
+    <symbol id="i-end" viewBox="0 0 24 24"><path d="M4 5l8 7-8 7zM12 5l8 7-8 7z" fill="currentColor"/></symbol>
+    <symbol id="i-save" viewBox="0 0 24 24"><path d="M12 4v11M7 10l5 5 5-5M5 19h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><path d="M18.97,10.21 L21.67,10.41 L21.67,13.59 L18.97,13.79 L18.20,15.67 L19.96,17.71 L17.71,19.96 L15.67,18.20 L13.79,18.97 L13.59,21.67 L10.41,21.67 L10.21,18.97 L8.33,18.20 L6.29,19.96 L4.04,17.71 L5.80,15.67 L5.03,13.79 L2.33,13.59 L2.33,10.41 L5.03,10.21 L5.80,8.33 L4.04,6.29 L6.29,4.04 L8.33,5.80 L10.21,5.03 L10.41,2.33 L13.59,2.33 L13.79,5.03 L15.67,5.80 L17.71,4.04 L19.96,6.29 L18.20,8.33 Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="17" cy="6" r="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="17" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8.2 10.8l6.6-3.6M8.2 13.2l6.6 3.6" stroke="currentColor" stroke-width="1.7"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 7L4 12l5 5M4 12h11a5 5 0 010 10h-3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,-3)"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="M15 7l5 5-5 5M20 12H9a5 5 0 000 10h3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" transform="translate(0,-3)"/></symbol>
+    <symbol id="i-tool" viewBox="0 0 24 24"><path d="M10 3h4v4h-4z M11 7h2v9l-1 4-1-4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M11 10l2 1.5M11 13l2 1.5" stroke="currentColor" stroke-width="1.3"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+    <symbol id="i-contour" viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="12" rx="2" fill="currentColor" opacity=".3"/><rect x="2.5" y="3.5" width="19" height="17" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-dasharray="3 2"/></symbol>
+    <symbol id="i-face" viewBox="0 0 24 24"><path d="M3 15h18v4H3z" fill="currentColor" opacity=".35"/><path d="M3 11h18M5 7l14 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M15 4l4 3-4 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+    <symbol id="i-chamfer" viewBox="0 0 24 24"><path d="M4 20V9l5-5h11v16z" fill="currentColor" opacity=".3"/><path d="M4 20V9l5-5h11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-dxf" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z M15 3v4h4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="10" cy="14" r="2.2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M13 11h3v6" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V5a1 1 0 00-1-1H5a1 1 0 00-1 1v10a1 1 0 001 1h3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+    <symbol id="i-panelL" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M9 4v16" stroke="currentColor" stroke-width="1.7"/></symbol>
+    <symbol id="i-panelR" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M15 4v16" stroke="currentColor" stroke-width="1.7"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3l10 18H2z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 10v5M12 17.5v.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 9V4h10v5M7 17H5a2 2 0 01-2-2v-4a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2h-2M7 14h10v6H7z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+<div id="app">
+  <!-- 머리글: 프로젝트·되돌리기·공구·설정·공유·NC 저장 -->
+  <header id="top">
+    <div class="brand"><span class="logo" aria-hidden="true"></span><b>푸른 AI CAM</b><small id="verTag" class="ver"></small></div>
+    <input id="projName" class="projname" aria-label="프로젝트 이름" maxlength="60">
+    <div class="hspace"></div>
+    <div class="hgroup">
+      <button id="btnUndo" class="ibtn" title="되돌리기 (Ctrl+Z)" aria-label="되돌리기"><svg><use href="#i-undo"/></svg></button>
+      <button id="btnRedo" class="ibtn" title="다시 하기 (Ctrl+Y)" aria-label="다시 하기"><svg><use href="#i-redo"/></svg></button>
+    </div>
+    <div class="hgroup">
+      <button id="btnProjects" class="tbtn" title="프로젝트 열기·새로 만들기·파일"><svg><use href="#i-folder"/></svg><span class="lbl">프로젝트</span></button>
+      <button id="btnTools" class="tbtn" title="장비·공구·공정 묶음 관리"><svg><use href="#i-tool"/></svg><span class="lbl">장비·공구</span></button>
+      <button id="btnSheet" class="tbtn" title="작업지시서(셋업시트) 인쇄"><svg><use href="#i-print"/></svg><span class="lbl">작업지시서</span></button>
+    </div>
+    <div class="hgroup">
+      <button id="btnShare" class="ibtn" title="공유·QR코드" aria-label="공유"><svg><use href="#i-share"/></svg></button>
+      <button id="btnTheme" class="ibtn" title="밝게/어둡게 전환" aria-label="밝게/어둡게 전환"><svg><use href="#i-moon"/></svg></button>
+      <button id="btnSettings" class="ibtn" title="설정" aria-label="설정"><svg><use href="#i-gear"/></svg></button>
+    </div>
+    <button id="btnDownload" class="savebtn" title="NC 파일 저장"><svg><use href="#i-save"/></svg><span>NC 저장</span></button>
+  </header>
+
+  <!-- 왼쪽: 작업 목록 (소재 → 가공 → 출력) -->
+  <aside id="left" class="panel mpanel" aria-label="작업 목록">
+    <div id="tree" class="pbody tree"></div>
+  </aside>
+
+  <!-- 가운데: 2D 배치 / 3D 시뮬레이션 -->
+  <section id="view" class="panel mpanel" aria-label="화면">
+    <div class="vhead">
+      <div class="vtabs" role="tablist">
+        <button id="tab2d" role="tab" data-v="2d">2D 배치</button>
+        <button id="tab3d" role="tab" data-v="3d">3D 시뮬레이션</button>
+      </div>
+      <div class="vtools" id="vtools"></div>
+      <button id="togL" class="ibtn sm paneltog" title="작업 목록 숨기기/보이기" aria-label="작업 목록 숨기기/보이기"><svg><use href="#i-panelL"/></svg></button>
+      <button id="togR" class="ibtn sm paneltog" title="속성 패널 숨기기/보이기" aria-label="속성 패널 숨기기/보이기"><svg><use href="#i-panelR"/></svg></button>
+    </div>
+    <div class="canvasWrap" id="canvasWrap">
+      <canvas id="cv" aria-label="2D 배치 화면: 소재, 구멍·포켓 위치, 가공 순서" tabindex="0"></canvas>
+      <div id="cursorPos" class="cursorpos"></div>
+      <div id="viewHint" class="viewhint"></div>
+    </div>
+    <div class="v3wrap" id="v3wrap" hidden>
+      <div id="v3host" class="v3host"></div>
+      <div id="hud3" class="hud3"></div>
+      <div id="simbar" class="simbar"></div>
+    </div>
+  </section>
+
+  <!-- 오른쪽: 선택한 항목의 속성 -->
+  <aside id="right" class="panel mpanel" aria-label="속성">
+    <div id="propHead" class="prophead"></div>
+    <div id="rightBody" class="pbody"></div>
+  </aside>
+
+  <!-- 아래: 검증 결과·G코드 서랍 -->
+  <section id="bottom" class="panel mpanel drawer" aria-label="검증 결과와 G코드">
+    <nav class="tabs" id="bottomTabs" role="tablist">
+      <button data-tab="check" role="tab">검증 결과 <span id="chkBadge" class="badge"></span></button>
+      <button data-tab="code" role="tab">G코드</button>
+      <span class="tspace"></span>
+      <button id="drawerClose" class="ibtn sm" title="닫기" aria-label="서랍 닫기"><svg><use href="#i-x"/></svg></button>
+    </nav>
+    <div id="bottomBody" class="pbody"></div>
+  </section>
+
+  <!-- 상태 표시줄 -->
+  <footer id="status" class="statusbar" aria-live="polite"></footer>
+
+  <div class="split v" id="splitL" role="separator" aria-orientation="vertical" aria-label="작업 목록 폭 조절 (끌기, 더블클릭=기본)" tabindex="0"></div>
+  <div class="split v" id="splitR" role="separator" aria-orientation="vertical" aria-label="속성 패널 폭 조절 (끌기, 더블클릭=기본)" tabindex="0"></div>
+  <div class="split h" id="splitB" role="separator" aria-orientation="horizontal" aria-label="아래 서랍 높이 조절 (끌기, 더블클릭=기본)" tabindex="0"></div>
+
+  <nav id="mnav" aria-label="모바일 화면 전환">
+    <button data-m="left">작업</button>
+    <button data-m="view">화면</button>
+    <button data-m="right">속성</button>
+    <button data-m="bottom">검증·코드</button>
+  </nav>
+</div>
+
+<dialog id="dlg"><div id="dlgBody"></div></dialog>
+<dialog id="dlg2"><div id="dlg2Body"></div></dialog>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+/*__QR__*/
+</script>
+<script>
+/*__THREE__*/
+</script>
+<script>
+/*__CLIPPER__*/
+</script>
+<script>
+/*__CORE__*/
+</script>
+<script>
+/*__UI__*/
+</script>
+</body>
+</html>
