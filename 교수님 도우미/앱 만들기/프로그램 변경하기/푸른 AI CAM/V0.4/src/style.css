@@ -9,7 +9,8 @@
   --text:#121a24;--text2:#3d4a5a;--muted:#6b7787;
   --brand:#0b6e79;--brand-ink:#ffffff;--brand-soft:#e3f2f3;--brand-strong:#085760;
   --c-center:#14a37f;--c-drill:#2f6fed;--c-tap:#8b5cf6;--c-pocket:#ee8a10;--c-custom:#64748b;
-  --ok:#11905a;--ok-soft:#e6f6ee;--warn:#c2620a;--warn-soft:#fff3e3;--err:#d0312d;--err-soft:#fdecec;--info:#2b62b8;--info-soft:#e9f0fb;
+  --ok:#11805a;--ok-soft:#e6f6ee;--warn:#a85200;--warn-soft:#fff3e3;--err:#d0312d;--err-soft:#fdecec;--info:#2b62b8;--info-soft:#e9f0fb;
+  --ink-center:#0b7a5c;--ink-drill:#2457c5;--ink-tap:#6d43d6;--ink-pocket:#a85400;
   --cv-bg:#fbfcfd;--cv-grid:#e8edf2;--cv-grid2:#d4dce5;--cv-stock:#e4ebf2;--cv-stock-line:#5f7d99;
   --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);--shadow2:0 8px 24px rgba(16,24,40,.12);
   --radius:10px;--font:"Pretendard","Malgun Gothic","Apple SD Gothic Neo","Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -22,6 +23,7 @@
   --brand:#2bb3bf;--brand-ink:#06262a;--brand-soft:#14363a;--brand-strong:#57d0da;
   --c-center:#34c99c;--c-drill:#5b8ff9;--c-tap:#a78bfa;--c-pocket:#ffa94d;--c-custom:#94a3b8;
   --ok:#3dd68c;--ok-soft:#123224;--warn:#f5a54a;--warn-soft:#3a2a12;--err:#ff6b66;--err-soft:#3a1b1b;--info:#7fb0ef;--info-soft:#192b44;
+  --ink-center:#34c99c;--ink-drill:#7ea6ff;--ink-tap:#b9a3ff;--ink-pocket:#ffb366;
   --cv-bg:#12171d;--cv-grid:#1c242d;--cv-grid2:#27313c;--cv-stock:#203040;--cv-stock-line:#86a9c9;
   --shadow:0 1px 2px rgba(0,0,0,.4);--shadow2:0 8px 24px rgba(0,0,0,.5);color-scheme:dark;
 }
@@ -102,9 +104,11 @@ label{display:block}
 .hspace{flex:1}
 .hgroup{display:flex;gap:2px;padding:0 4px;border-left:1px solid var(--line)}
 .savebtn{background:var(--brand);color:var(--brand-ink);border-color:var(--brand);font-weight:700;min-height:38px;padding:0 16px;border-radius:9px;margin-left:6px;box-shadow:0 2px 6px rgba(11,110,121,.25)}
-.savebtn:hover:not(:disabled){background:var(--brand-strong)!important;border-color:var(--brand-strong)!important}
-.savebtn.blocked{background:var(--surface3);color:var(--muted);border-color:var(--line2);box-shadow:none}
-.savebtn.test::after{content:"검증용";font-size:.7em;font-weight:700;background:var(--warn);color:#fff;border-radius:6px;padding:1px 5px;margin-left:2px}
+.savebtn:not(.blocked):hover{background:var(--brand-strong)!important;border-color:var(--brand-strong)!important}
+.savebtn.blocked,.savebtn.blocked:hover{background:var(--surface2)!important;color:var(--text2);border:1.5px dashed var(--line2)!important;box-shadow:none;opacity:1}
+.savebtn.blocked::before{content:"";width:16px;height:16px;background:currentColor;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='5' y='10.5' width='14' height='10' rx='2' fill='black'/%3E%3Cpath d='M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3' fill='none' stroke='black' stroke-width='2'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='5' y='10.5' width='14' height='10' rx='2' fill='black'/%3E%3Cpath d='M8.5 10.5V7.5a3.5 3.5 0 0 1 7 0v3' fill='none' stroke='black' stroke-width='2'/%3E%3C/svg%3E") center/contain no-repeat}
+.savebtn.blocked svg{display:none}
+.savebtn.test::after{content:"TEST";font-size:.7em;font-weight:700;background:var(--warn);color:#fff;border-radius:6px;padding:1px 5px;margin-left:2px}
 
 /* ---------- 작업 목록 (왼쪽) ---------- */
 .tree .sect-t{font-size:.78em;font-weight:700;color:var(--muted);letter-spacing:.04em;margin:14px 2px 6px;display:flex;align-items:center;gap:6px}
@@ -124,7 +128,7 @@ label{display:block}
 .addrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px}
 .addbtn{flex-direction:column;gap:3px;padding:8px 4px;min-height:58px;font-size:.86em;font-weight:600;border-style:dashed;justify-content:center}
 .addbtn svg{width:20px;height:20px}
-.addbtn.k-drill{color:var(--c-drill)}.addbtn.k-tap{color:var(--c-tap)}.addbtn.k-pocket{color:var(--c-pocket)}
+.addbtn.k-drill{color:var(--ink-drill)}.addbtn.k-tap{color:var(--ink-tap)}.addbtn.k-pocket{color:var(--ink-pocket)}
 .titem .del{opacity:0;transition:opacity .1s}
 .titem:hover .del,.titem.sel .del{opacity:1}
 .tsum{margin-top:12px;padding:10px;border-radius:9px;background:var(--surface2);border:1px solid var(--line);font-size:.88em;line-height:1.6}
@@ -141,7 +145,7 @@ label{display:block}
 .seg button{flex:1;border:0;border-radius:7px;background:transparent;min-height:32px;justify-content:center;font-weight:550;color:var(--text2);padding:4px 6px}
 .seg button svg{width:16px;height:16px}
 .seg button.on{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
-.seg button.on.k-drill{color:var(--c-drill)}.seg button.on.k-tap{color:var(--c-tap)}.seg button.on.k-pocket{color:var(--c-pocket)}
+.seg button.on.k-drill{color:var(--ink-drill)}.seg button.on.k-tap{color:var(--ink-tap)}.seg button.on.k-pocket{color:var(--ink-pocket)}
 .card{border:1px solid var(--line);border-radius:var(--radius);padding:12px;margin:8px 0;background:var(--surface2)}
 .card.wiz{background:var(--surface)}
 .card .head{display:flex;align-items:center;gap:6px;margin-bottom:6px}
@@ -166,6 +170,9 @@ table.tbl{width:100%;border-collapse:collapse;font-size:.9em;font-variant-numeri
 table.tbl th,table.tbl td{border-bottom:1px solid var(--line);padding:4px 5px;text-align:left}
 table.tbl th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--surface);font-size:.86em}
 table.tbl input,table.tbl select{width:100%;min-height:28px;padding:2px 5px}
+table.tbl select{min-width:76px}
+dialog .tblwrap{max-height:none}
+dialog .fld>span{white-space:normal}
 table.tbl tr.sel td{background:var(--brand-soft)}
 .tblwrap{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:8px}
 .subtabs{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap}
@@ -186,6 +193,7 @@ table.tbl tr.sel td{background:var(--brand-soft)}
 .vtabs button{border:0;background:transparent;min-height:30px;font-weight:600;color:var(--text2);border-radius:7px;padding:4px 14px}
 .vtabs button.act{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
 .vtools{display:flex;gap:4px;align-items:center;flex-wrap:wrap;flex:1}
+.vtools button,.vtabs button{white-space:nowrap}
 .vtools .sep{width:1px;height:22px;background:var(--line);margin:0 4px}
 .vtools select{min-height:30px}
 .canvasWrap{position:relative;flex:1;min-height:0}
@@ -204,15 +212,18 @@ table.tbl tr.sel td{background:var(--brand-soft)}
 .hud3 .xyz b{display:inline-block;min-width:76px}
 .hud3 .legend{display:flex;gap:10px;flex-wrap:wrap}
 .hud3 .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
-.hud3 .assume{font-size:.8em;color:var(--muted)}
-.v3views{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:4px}
-.v3views button{min-height:30px;padding:3px 10px;font-size:.86em;background:var(--surface);box-shadow:var(--shadow)}
+.hud3 .assume{font-size:.8em;color:var(--text2);margin-top:2px}
+.hud3 .legend i{box-shadow:0 0 0 1px var(--line2)}
+#app.drawer-open .hud3 .aux{display:none}
 .simbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border-top:1px solid var(--line);flex-wrap:wrap}
 .simbar .play{width:40px;height:40px;border-radius:50%;padding:0;justify-content:center;background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
 .simbar .play svg{width:20px;height:20px}
+.simbar .play:hover:not(:disabled){background:var(--brand-strong);border-color:var(--brand-strong);color:var(--brand-ink)}
 .simbar .tline{flex:1;min-width:180px;position:relative;height:30px;display:flex;align-items:center}
 .simbar .bands{position:absolute;left:0;right:0;top:11px;height:8px;border-radius:4px;overflow:hidden;display:flex;background:var(--surface3)}
-.simbar .bands span{height:100%}
+.simbar .bands span{height:100%;position:relative;border-right:1px solid var(--surface)}
+.simbar .bands em{position:absolute;left:3px;top:9px;font-style:normal;font-size:10.5px;font-weight:650;color:var(--text2);white-space:nowrap}
+.simbar .tline{margin-bottom:8px}
 .simbar input[type=range]{position:relative;width:100%;background:transparent;-webkit-appearance:none;appearance:none;height:30px;margin:0}
 .simbar input[type=range]::-webkit-slider-runnable-track{height:8px;background:transparent}
 .simbar input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--surface);border:3px solid var(--brand);margin-top:-5px;box-shadow:var(--shadow)}
@@ -273,9 +284,33 @@ dialog::backdrop{background:rgba(10,15,22,.5);backdrop-filter:blur(2px)}
 .qrbox{display:flex;flex-direction:column;align-items:center;gap:10px}
 .qrbox canvas{width:min(340px,80vw);height:auto;image-rendering:pixelated;background:#fff;border-radius:8px}
 .adm{border:2px solid var(--warn);border-radius:10px;padding:8px 10px;margin:8px 0;background:var(--warn-soft)}
-#toasts{position:fixed;left:50%;bottom:52px;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:9999;pointer-events:none;align-items:center}
+#toasts{position:fixed;left:50%;top:64px;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:9999;pointer-events:none;align-items:center}
 .toast{background:#1d2630;color:#fff;padding:9px 16px;border-radius:9px;font-size:.95em;box-shadow:var(--shadow2);max-width:90vw}
 .toast.err{background:var(--err)}.toast.ok{background:var(--ok)}.toast.warn{background:#9a5b00}
+
+/* ---------- 작업 흐름 단계 ---------- */
+.flow{list-style:none;margin:0 0 14px;padding:6px;display:grid;grid-template-columns:repeat(5,1fr);gap:3px;background:var(--surface2);border:1px solid var(--line);border-radius:11px}
+.flow li{min-width:0}
+.flow .fl{width:100%;flex-direction:column;gap:3px;padding:6px 2px;min-height:52px;border:0;background:transparent;font-size:.78em;font-weight:600;color:var(--text2);justify-content:center;white-space:nowrap}
+.flow .fl .n{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;font-size:12px;font-weight:700;background:var(--surface3);color:var(--text2);border:1.5px solid var(--line2)}
+.flow .fl.ok .n{background:var(--ok);border-color:var(--ok);color:#fff}
+.flow .fl.warn .n{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.flow .fl.err .n{background:var(--err);border-color:var(--err);color:#fff}
+.flow .fl.err{color:var(--err)}
+.flow .fl:hover{background:var(--surface)}
+/* 2D 도구 줄: 묶음·표시 팝오버 */
+.bgrp{display:inline-flex;gap:2px}
+details.pop{position:relative}
+details.pop>summary{list-style:none;cursor:pointer;border:1px solid var(--line2);border-radius:8px;padding:3px 10px;min-height:28px;display:inline-flex;align-items:center;font-size:.92em;background:var(--surface)}
+details.pop>summary::-webkit-details-marker{display:none}
+details.pop[open]>summary{border-color:var(--brand);background:var(--brand-soft)}
+.popbody{position:absolute;right:0;top:calc(100% + 6px);z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow2);padding:10px 12px;min-width:220px;display:flex;flex-direction:column;gap:6px}
+/* 오류 항목으로 이동했을 때 강조 */
+@keyframes flashkf{0%{box-shadow:inset 0 0 0 3px var(--brand)}100%{box-shadow:inset 0 0 0 0 transparent}}
+.flash{animation:flashkf 1.2s ease-out}
+:root[data-theme="dark"] .badge.warn,:root[data-theme="dark"] .savebtn.test::after,:root[data-theme="dark"] .toast.warn{color:#2a1700}
+.sheet{overflow-x:auto}
+.sheet table.sh-t{min-width:540px}
 
 /* ---------- 반응형 ---------- */
 @media (max-width:1280px){#app{grid-template-columns:260px minmax(0,1fr) 350px}.tbtn .lbl{display:none}}
@@ -290,12 +325,18 @@ dialog::backdrop{background:rgba(10,15,22,.5);backdrop-filter:blur(2px)}
   .projname{order:3;max-width:none;width:100%;flex-basis:100%}
   .hgroup{border:0;padding:0}
   .hspace{display:none}
-  .savebtn span{display:none}
-  .brand b{font-size:1em}
+  .brand b{display:none}
+  .savebtn{padding:0 12px}
   .chkcols{grid-template-columns:minmax(0,1fr)}
   .codewrap{height:55vh}
-  button{min-height:40px}
-  .ibtn{width:40px;height:40px}
+  button,button.sm,.vtabs button,.seg button,.simbar select,details.pop>summary,select,input{min-height:44px}
+  .ibtn,.ibtn.sm{width:44px;height:44px}
+  input[type=checkbox]{width:22px;height:22px;min-height:22px}
+  .vtools{flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
+  .vhead{flex-wrap:nowrap;overflow-x:auto}
+  .popbody{position:fixed;left:12px;right:12px;top:auto;bottom:120px}
+  .flow .fl{font-size:.72em}
+  #toasts{top:auto;bottom:110px}
   #drawerClose{display:none}
   #status{font-size:.85em}
   .hud3 .aux{display:none}

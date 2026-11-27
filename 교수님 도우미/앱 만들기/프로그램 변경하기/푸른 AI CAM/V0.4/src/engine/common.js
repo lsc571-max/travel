@@ -149,7 +149,7 @@
       ]
     };
   }
-  const GROUP_COLORS = ['#1f77b4', '#d62728', '#2ca02c', '#9467bd', '#ff7f0e', '#17becf', '#8c564b', '#e377c2'];
+  const GROUP_COLORS = ['#1f77b4', '#7b5cd6', '#2c9f6b', '#0f9bb0', '#8c564b', '#c2459b', '#4c6ef5', '#5f7d2a']; // 빨강·주황 제외 (오류·경고 색과 구분)
   function newGroup(name, i) { return { id: uid('g'), name: name || '홀 그룹', color: GROUP_COLORS[(i || 0) % GROUP_COLORS.length], holes: [], ops: [] }; }
   function newProject(machine) {
     return {

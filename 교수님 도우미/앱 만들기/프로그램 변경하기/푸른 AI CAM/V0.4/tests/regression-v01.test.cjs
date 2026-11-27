@@ -64,7 +64,9 @@ function randomProject(R, bad) {
   }
   return { p, m };
 }
-const issueKey = i => i.level + '|' + i.cat + '|' + i.msg + '|' + JSON.stringify(i.ref);
+// [V0.4] 소재 바닥 초과 오류의 해결 안내 문구만 구체화 (판정 동일)
+const fixMsg = m => m.replace(/테이블\/지그 충돌 위험 → .*$/, '테이블/지그 충돌 위험 →');
+const issueKey = i => i.level + '|' + i.cat + '|' + fixMsg(i.msg) + '|' + JSON.stringify(i.ref);
 const sortIssues = v => v.issues.map(issueKey).sort();
 const DATE = new Date(2026, 10, 27, 9, 0);
 

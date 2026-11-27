@@ -50,7 +50,7 @@
       tool = toolMap(machine).get(spec.toolNo) || null;
       if (!tool || tool.type !== 'endmill') { notes.push({ level: 'error', msg: 'T' + spec.toolNo + ' 은(는) 평 엔드밀이 아닙니다. 공구를 다시 고르세요.' }); tool = null; }
     } else {
-      const fitW = t => t.dia <= 0.75 * mw + 1e-9 && 2 * (t.dia / 2 + spec.allowWall) < mw - 1e-6;
+      const fitW = t => t.dia <= 0.75 * mw + 1e-9 && 2 * (t.dia / 2 + spec.allowWall) < mw - 0.25; // 헬리컬 진입 여유 포함
       const fitR = t => spec.shape !== 'rect' || spec.cr <= 0 || t.dia / 2 <= spec.cr + 1e-9;
       tool = ems.find(t => fitW(t) && fitR(t)) || null;
       if (!tool) {

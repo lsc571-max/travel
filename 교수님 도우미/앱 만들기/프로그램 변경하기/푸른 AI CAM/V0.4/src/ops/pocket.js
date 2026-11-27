@@ -152,13 +152,15 @@
       if (!(af >= 0 && af <= 2)) add('error', 9, on + ': 바닥 여유는 0~2mm 범위여야 합니다.');
       if (af >= d.depth) add('error', 9, on + ': 바닥 여유가 포켓 깊이 이상입니다.');
       const sd = toNum(op.stepdown, NaN);
-      if (!(sd > 0)) add('error', 9, on + ': 절입 깊이(1회)가 0 이하입니다.');
+      if (!(sd >= 0.05)) add('error', 9, on + ': 절입 깊이(1회)는 0.05mm 이상이어야 합니다.');
       else if (sd > tool.dia + EPS) add('error', 9, on + ': 절입 깊이 ' + sd + 'mm 가 공구 직경 Ø' + tool.dia + ' 을 넘습니다.');
       else if (tool.flute > 0 && sd > tool.flute + EPS) add('error', 9, on + ': 절입 깊이가 공구 날 길이를 넘습니다.');
     }
     const so = toNum(op.stepover, NaN);
     if (!(so >= 10 && so <= STEPOVER_MAX)) add('error', 9, on + ': 경로 간격은 공구 직경의 10~' + STEPOVER_MAX + '% 여야 합니다 (현재 ' + op.stepover + '%).');
-    if (mw > 0 && 2 * (rt + aw) >= mw - EPS) add('error', 5, on + ': 공구 Ø' + tool.dia + (aw ? ' + 측벽 여유' : '') + ' 가 포켓 폭 ' + r3(mw) + 'mm 보다 커서 가공할 수 없습니다.');
+    const g0 = mw > 0 && 2 * (rt + aw) < mw - 0.02 ? loopsFor(op, rt, aw, Math.max(0.05, Math.min(STEPOVER_MAX, toNum(op.stepover, 50)) / 100) * tool.dia) : null;
+    if (mw > 0 && 2 * (rt + aw) >= mw - 0.02) add('error', 5, on + ': 공구 Ø' + tool.dia + (aw ? ' + 측벽 여유' : '') + ' 가 포켓 폭 ' + r3(mw) + 'mm 보다 커서 가공할 수 없습니다.');
+    else if (g0 && machine.helical !== false && Math.min(0.5 * rt, g0.fit) < 0.1) add('error', 5, on + ': 포켓이 공구보다 너무 조금 넓어 헬리컬 진입 공간이 없습니다 (수직 하강 위험). 더 작은 엔드밀을 쓰거나 포켓을 넓히세요.');
     else if (mw > 0 && tool.dia > 0.8 * mw) add('warn', 5, on + ': 공구가 포켓 폭에 비해 큽니다 (권장: 폭의 75% 이하).');
     if (op.shape === 'rect') {
       if (op.cr > Math.min(op.w, op.h) / 2 + EPS) add('error', 5, on + ': 코너 R ' + op.cr + ' 이 포켓 폭의 절반보다 큽니다.');
@@ -166,8 +168,9 @@
     }
     if (d.depth >= st.sz - EPS) add('error', 8, on + ': 포켓 깊이 ' + d.depth + ' 가 소재 두께 ' + st.sz + ' 이상입니다 (관통 포켓은 지원하지 않음).');
     if (finish) {
-      const sameGeo = o => o.type === 'pocketRough' && o.shape === op.shape && ['w', 'h', 'cr', 'dia', 'depth'].every(k => Math.abs(toNum(o[k], 0) - toNum(op[k], 0)) < 1e-6);
-      if (!ops.slice(0, oi).some(sameGeo)) add('error', 5, on + ': 정삭 앞에 같은 포켓의 황삭 공정이 없습니다.');
+      // 정삭은 황삭이 남긴 바닥(바닥 여유) 바로 위까지 이송 하강하므로, 남김 여유까지 같아야 함
+      const sameGeo = o => o.type === 'pocketRough' && o.shape === op.shape && ['w', 'h', 'cr', 'dia', 'depth', 'allowWall', 'allowFloor'].every(k => Math.abs(toNum(o[k], 0) - toNum(op[k], 0)) < 1e-6);
+      if (!ops.slice(0, oi).some(sameGeo)) add('error', 5, on + ': 정삭 앞에 같은 포켓(모양·크기·깊이·남김 여유가 같은)의 황삭 공정이 없습니다.');
     }
     if (machine.helical === false) add('warn', 9, on + ': 장비가 헬리컬 보간을 지원하지 않아 중심 수직 진입합니다 (중심 절삭 가능 엔드밀 필요).');
   }
@@ -189,6 +192,7 @@
         if (tool.flute > 0 && d.depth > tool.flute + EPS) add('error', 8, on + ': 포켓 깊이 ' + d.depth + ' 가 공구 유효 날 길이 ' + tool.flute + ' 를 넘습니다.');
         validatePocket(ctx, finish);
         H.validateRPlane(ctx);
+        if (toNum(ctx.op.r, 0) < 1 - EPS) add('error', 10, on + ': 포켓 R점은 소재 상면 위 1mm 이상이어야 합니다 (급속 하강 안전 거리).');
       },
       toolpath: () => ({ kind: 'path', spindle: 'cw' })
     };

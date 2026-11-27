@@ -47,6 +47,7 @@
     r = Math.max(0, r); x.moveTo(a + r, b); x.lineTo(a + w - r, b); x.arcTo(a + w, b, a + w, b + r, r); x.lineTo(a + w, b + h - r); x.arcTo(a + w, b + h, a + w - r, b + h, r);
     x.lineTo(a + r, b + h); x.arcTo(a, b + h, a, b + h - r, r); x.lineTo(a, b + r); x.arcTo(a, b, a + r, b, r); x.closePath();
   }
+  const uf = v => String(C.fmt(v)).replace(/\.$/, ''); // 화면 표시용 (NC 끝 소수점 제거)
   function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
   function drawView() {
     const c = cv(); if (!c) return;
@@ -110,7 +111,8 @@
     const tm = C.toolMap(machine());
     P.groups.forEach(g => {
       const ext = extentOf(g, tm), z = S.gz ? S.gz.get(g.id) : null;
-      g.holes.forEach(hh => {
+      const lbl = S.gzLabel ? S.gzLabel.get(g.id) : '';
+      g.holes.forEach((hh, hk) => {
         if (!C.isNum(hh.x) || !C.isNum(hh.y)) return;
         const [px, py] = w2s(hh.x, hh.y);
         x.fillStyle = g.color + (ext.pocket ? '38' : '55'); x.strokeStyle = g.color; x.lineWidth = 1.5;
@@ -124,13 +126,16 @@
           x.beginPath(); x.arc(px, py, rr, 0, Math.PI * 2); x.fill(); x.stroke();
         }
         x.beginPath(); x.moveTo(px - 3, py); x.lineTo(px + 3, py); x.moveTo(px, py - 3); x.lineTo(px, py + 3); x.stroke();
-        if (z !== null && z !== undefined && (ext.pocket ? rr > 18 : rr >= 9)) {
-          x.font = '600 10.5px ' + cssVar('--font'); x.textAlign = 'center'; x.fillStyle = cssVar('--text2');
-          x.fillText('Z' + C.fmt(z), px, ext.pocket ? py + 14 : py + rr + 12); x.textAlign = 'start';
+        // 깊이 이름표: 포켓은 각각, 구멍·탭은 그룹의 첫 위치에만 (화면 혼잡 방지, 나머지는 마우스를 올리면 표시)
+        if (lbl && hh.id !== S.sel.hid && (ext.pocket ? rr > 18 : hk === 0 && rr >= 4)) {
+          x.font = '600 11.5px ' + cssVar('--font'); x.textAlign = ext.pocket ? 'center' : 'start';
+          const tx = ext.pocket ? px : px + rr + 5, ty = ext.pocket ? py + 15 : py + 4, tw = x.measureText(lbl).width;
+          x.fillStyle = cssVar('--surface'); x.globalAlpha = 0.85; x.fillRect(ext.pocket ? tx - tw / 2 - 3 : tx - 3, ty - 11, tw + 6, 15); x.globalAlpha = 1;
+          x.fillStyle = cssVar('--text'); x.fillText(lbl, tx, ty); x.textAlign = 'start';
         }
         const ring = (pad) => { x.beginPath(); if (ext.rect) { const hw = ext.w / 2 * sc + pad, hh2 = ext.h / 2 * sc + pad; roundRect(x, px - hw, py - hh2, hw * 2, hh2 * 2, Math.min(ext.cr * sc + pad, hw, hh2)); } else x.arc(px, py, (ext.pocket ? rr : Math.min(rr, 60)) + pad, 0, Math.PI * 2); x.stroke(); };
         if (errHoles.has(hh.id) || warnHoles.has(hh.id)) { x.strokeStyle = errHoles.has(hh.id) ? cssVar('--err') : cssVar('--warn'); x.lineWidth = 2.5; ring(4); }
-        if (hh.id === S.sel.hid) { x.strokeStyle = cssVar('--brand'); x.lineWidth = 2; x.setLineDash([3, 2]); ring(8); x.setLineDash([]); x.fillStyle = cssVar('--text'); x.font = '12px ' + cssVar('--mono'); x.fillText('X' + C.fmt(hh.x) + ' Y' + C.fmt(hh.y) + (z !== null && z !== undefined ? ' Z' + C.fmt(z) : ''), px + Math.min(rr, 60) + 10, py + 4); }
+        if (hh.id === S.sel.hid) { x.strokeStyle = cssVar('--brand'); x.lineWidth = 2; x.setLineDash([3, 2]); ring(8); x.setLineDash([]); x.fillStyle = cssVar('--text'); x.font = '12px ' + cssVar('--mono'); x.fillText('X' + uf(hh.x) + ' Y' + uf(hh.y) + (lbl ? '  ' + lbl : ''), px + Math.min(rr, 60) + 10, py + 4); }
       });
     });
     // NC 해석 결과 오버레이 (독립 검증기의 해석 결과)

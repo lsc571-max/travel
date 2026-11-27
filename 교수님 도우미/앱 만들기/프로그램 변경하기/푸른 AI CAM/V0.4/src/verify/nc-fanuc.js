@@ -49,7 +49,8 @@
     const wantWcs = ctx.settings && /^G5[4-9]$/.test(ctx.settings.wcs) ? parseInt(ctx.settings.wcs.slice(1), 10) : null;
     let wcsChecked = false;
     const zSafe = Math.max(1, ...(ctx.clamps || []).map(c => c.height + CLAMP_MARGIN)); // XY 미지정 상태 하강 한계
-    const s = { feedMode: null, units: null, abs: true, motion: null, cycle: null, ret: 98, h: null, hNeed: true, tool: null, nextT: null, spin: false, S: 0, F: 0,
+    const cutPts = []; // [V0.4] 엔드밀이 이미 깎은 점 (수직 하강 검사용)
+    const s = { plane: null, feedMode: null, units: null, abs: true, motion: null, cycle: null, ret: 98, h: null, hNeed: true, tool: null, nextT: null, spin: false, S: 0, F: 0,
       m29: false, m29S: 0, x: null, y: null, z: Infinity, cz: null, cr: null, cq: null, cp: 0, initZ: null, cool: false, ended: false, wcs: null };
     let pct = 0, hasO = false, unitsWarned = false, sawMotion = false;
     const lines = String(text).split(/\r?\n/);
@@ -145,6 +146,7 @@
         else if (g === 90) s.abs = true;
         else if (g === 91) s.abs = false;
         else if (g === 94) s.feedMode = 94;
+        else if (g === 17 || g === 18 || g === 19) s.plane = g;
         else if (g === 98) s.ret = 98;
         else if (g === 99) s.ret = 99;
         else if (g >= 54 && g <= 59) s.wcs = g;
@@ -249,6 +251,7 @@
           if (s.cycle === 84 && tool.type !== 'tap') E(ln, 'G84(탭) 사이클에 탭이 아닌 공구 T' + tool.no + ' 사용.');
           if (s.cycle !== 84 && tool.type === 'tap') E(ln, '탭 공구 T' + tool.no + ' 로 ' + code + ' 드릴 사이클 실행 (공구 파손).');
           if ((s.cycle === 73 || s.cycle === 83) && tool.type === 'center') W(ln, '센터 드릴로 펙 사이클을 사용합니다.');
+          if (tool.type === 'endmill') E(ln, '엔드밀 T' + tool.no + ' 로 드릴 고정 사이클(' + code + ') 실행 — 엔드밀은 포켓 경로(G01/G03)로만 가공합니다.');
           if (tool.flute > 0 && -s.cz > tool.flute + EPS) E(ln, '가공 깊이 ' + fmt(-s.cz) + ' 이(가) T' + tool.no + ' 유효 날 길이 ' + tool.flute + ' 를 초과합니다.');
           if (s.cycle === 84) {
             const S = s.m29 ? s.m29S : s.S, want = S * toNum(tool.pitch, 0);
@@ -289,6 +292,7 @@
         if (isArc) {
           if (s.x === null || s.y === null || s.z === Infinity) { E(ln, '원호 시작점(XYZ)이 정해지지 않았습니다.'); continue; }
           if (!A.I && !A.J) { E(ln, '원호에 I, J 가 없습니다.'); continue; }
+          if (s.plane !== 17) E(ln, '원호 전에 G17(XY 평면)이 지정되지 않았습니다 — 장비에 G18/G19 가 남아 있으면 다른 평면으로 원호가 그려집니다.');
           const cx = s.x + (A.I ? A.I.v : 0), cy = s.y + (A.J ? A.J.v : 0);
           const r0 = Math.hypot(s.x - cx, s.y - cy), r1 = Math.hypot(tx - cx, ty - cy);
           if (!(r0 > 1e-3)) { E(ln, '원호 반경이 0 입니다.'); continue; }
@@ -305,6 +309,12 @@
             if (tool.flute > 0 && -zLowMove > tool.flute + EPS) E(ln, '절삭 깊이 ' + fmt(-zLowMove) + ' 이(가) T' + tool.no + ' 날 길이 ' + tool.flute + ' 를 넘습니다.');
             if (s.x !== null && s.y !== null) {
               const pts = sampleMove(s.x, s.y, s.z, tx, ty, tz, arc);
+              // 수직 하강(XY 그대로 Z 만 내려감): 이미 깎인 곳이 아니면 차단 (헬리컬 지원 장비)
+              if (!arc && Math.abs(tx - s.x) < 1e-6 && Math.abs(ty - s.y) < 1e-6 && tz < s.z - EPS && tz < -0.3 && machine.helical !== false) {
+                const ok = cutPts.some(q => q.z <= tz + 0.3 && Math.hypot(q.x - tx, q.y - ty) <= rad * 0.6 + 1e-6);
+                if (!ok) E(ln, 'G01 로 Z' + fmt(tz) + ' 까지 수직 하강 — 깎이지 않은 소재로 곧장 들어갑니다 (엔드밀 파손 위험). 헬리컬 진입을 사용하세요.');
+              }
+              pts.forEach(q => { if (q.z < -EPS && cutPts.length < 400000) cutPts.push(q); });
               const bad = pts.find(p => p.z < -EPS && !regions.some(rg => P.inPocketRegion(rg, p.x, p.y, rad, 0.01) && p.z >= rg.floorZ - 0.005));
               if (bad) E(ln, 'G0' + s.motion + ' 로 소재 상면(Z0) 아래 절삭 — 포켓 영역 밖 또는 바닥 아래 (X' + fmt(bad.x) + ' Y' + fmt(bad.y) + ' Z' + fmt(bad.z) + ', G01 로 소재 상면 아래 과삭·충돌).');
             } else E(ln, 'XY 위치를 모르는 상태에서 절삭 이송합니다.');
@@ -320,7 +330,8 @@
         const zLow = Math.min(tz, s.z);
         if (xyMove) {
           const zAt = tz < s.z ? tz : s.z; // 하강이 섞이면 낮은 높이로 보수적 판단
-          clampHit(s.x, s.y, tx, ty, zAt, rad, ln, (s.motion === 0 ? '급속' : '절삭') + ' 이동');
+          if (arc && s.x !== null) { const ap = sampleMove(s.x, s.y, zAt, tx, ty, zAt, arc); for (let k = 1; k < ap.length; k++) clampHit(ap[k - 1].x, ap[k - 1].y, ap[k].x, ap[k].y, zAt, rad, ln, '원호 절삭 이동'); }
+          else clampHit(s.x, s.y, tx, ty, zAt, rad, ln, (s.motion === 0 ? '급속' : '절삭') + ' 이동');
           if (s.motion === 0 && zAt <= 0 && crossStock(s.x, s.y, tx, ty, rad)) E(ln, '소재 상면 높이 이하에서 급속 XY 이동 (소재 충돌).');
           if (s.x !== null && s.y !== null) moves.push({ x0: s.x, y0: s.y, x1: tx, y1: ty, z: zAt, rapid: s.motion === 0, arc });
         }

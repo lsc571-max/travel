@@ -1,5 +1,6 @@
 // 변경 전후 비교: V0.3 vs V0.4 (같은 폴더 '프로그램 변경하기/푸른 AI CAM')
-// 포켓이 없는 구멍·탭 프로젝트 1,000건 → 검증 결과·G코드·독립 검증 결과가 같은지 확인한다 (버전 주석만 차이).
+// 포켓이 없는 구멍·탭 프로젝트 1,000건 → 검증 결과·G코드·독립 검증 결과가 같은지 확인한다.
+// 허용하는 차이: NC 버전 주석, 소재 바닥 초과 오류의 해결 안내 문구(판정은 동일)
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -37,7 +38,9 @@ test('V0.3 → V0.4 동일 결과 (포켓 없는 프로젝트): 1,000건', { ski
     const mb = NEW.normalizeMachine(JSON.parse(JSON.stringify(m)));
     pb.groups.forEach(g => { if (g.spec) NEW.applyHoleSpec(g, mb, pb.stock); });
     const va = OLD.validateProject(pa, m), vb = NEW.validateProject(pb, mb);
-    const key = v => v.issues.map(i => i.level + '|' + i.cat + '|' + i.msg).sort();
+    // [V0.4 의도한 변경] 소재 바닥 초과 오류의 해결 안내 문구만 구체화 (판정·수준·항목은 동일해야 함)
+    const fixMsg = m => m.replace(/테이블\/지그 충돌 위험 → .*$/, '테이블/지그 충돌 위험 →');
+    const key = v => v.issues.map(i => i.level + '|' + i.cat + '|' + fixMsg(i.msg)).sort();
     assert.deepEqual(key(vb), key(va), '검증 결과 #' + n);
     const ga = OLD.generateNC(pa, m, va.plan, { date: DATE }), gb = NEW.generateNC(pb, mb, vb.plan, { date: DATE });
     assert.equal(!!gb.blocked, !!ga.blocked, '차단 여부 #' + n);

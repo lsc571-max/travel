@@ -36,6 +36,15 @@ function serve() {
   page.on('dialog', d => { page.__lastDialog = d.message(); if (d.type() === 'prompt') d.accept(page.__promptAnswer || ''); else d.accept(); });
   const openCode = async (pg) => { pg = pg || page; if (!(await pg.locator('#ncText').count())) await pg.click('#status button:has-text("G코드")'); await sleep(120); };
   const openCheck = async (pg) => { pg = pg || page; if (!(await pg.locator('#bottomBody .todo').count())) await pg.click('#status button:has-text("검증 결과")'); await sleep(120); };
+  // [V0.4] NC 저장 대화상자: 점검 항목을 모두 체크해야 저장
+  const confirmSave = async (pg, opt) => {
+    pg = pg || page; await pg.waitForSelector('#dlg[open] #ncFileName');
+    const txt = await pg.textContent('#dlg');
+    if (opt && opt.rename) { await pg.fill('#ncFileName', opt.rename); }
+    if (opt && opt.skipChecks) { await pg.click('#dlg .dfoot button.primary'); return txt; }
+    for (const c of await pg.locator('#dlg .ncChk').all()) await c.check();
+    await pg.click('#dlg .dfoot button.primary'); return txt;
+  };
   const st = () => page.evaluate(() => { const U = window.__PCAM_UI__; return { holes: U.P.groups.map(g => g.holes.length), ds: U.downloadState(), edited: U.S.nc.edited, errs: U.S.V.issues.filter(i => i.level === 'error').length }; });
 
   // 1. 로드
@@ -91,13 +100,18 @@ function serve() {
   s = await st(); ok('수정 후 차단 해제', s.ds.ok, JSON.stringify(s.ds));
 
   // 6. NC 다운로드 (검증용 파일명·CRLF·내용)
-  const dl2 = page.waitForEvent('download');
   await page.click('#btnDownload');
+  let dlNone = null; const wNone = page.waitForEvent('download', { timeout: 800 }).then(d => { dlNone = d; }).catch(() => { });
+  const saveTxt = await confirmSave(page, { skipChecks: true }); await wNone;
+  ok('[V0.4] 점검 항목 미확인 시 저장 안 됨', dlNone === null && (await page.locator('#dlg[open]').count()) === 1);
+  const dl2 = page.waitForEvent('download');
+  for (const c of await page.locator('#dlg .ncChk').all()) await c.check();
+  await page.click('#dlg .dfoot button.primary');
   const d2 = await dl2;
   const fn = d2.suggestedFilename(); const fp = await d2.path(); const txt = fs.readFileSync(fp, 'utf8');
   ok('NC 다운로드 파일명 TEST_O0001_*.nc', /^TEST_O0001_.*\.nc$/.test(fn), fn);
   ok('NC 내용: CRLF·%·O0001·M30·TEST ONLY', txt.includes('\r\n') && txt.startsWith('%\r\nO0001') && txt.includes('M30\r\n%') && txt.includes('TEST ONLY'));
-  ok('다운로드 전 안전 확인 대화상자', /드라이런/.test(page.__lastDialog || ''));
+  ok('저장 전 안전 점검 대화상자 (드라이런·TEST 안내)', /드라이런/.test(saveTxt) && /검증용\(TEST\)/.test(saveTxt));
 
   // 7. G코드 직접 수정 → 재검증 전 차단 → 재검증 통과 → 결함 수정본 차단
   await openCode();
@@ -114,9 +128,10 @@ function serve() {
   s = await st(); ok('소수점 누락 수정본 → 재검증 오류로 차단', !s.ds.ok && /오류/.test(s.ds.why), JSON.stringify(s.ds));
   await ta.fill(val.replace('M30', 'M30\n'));
   await page.click('#bottomBody button:has-text("재검증")'); await sleep(150);
-  const dl3 = page.waitForEvent('download'); await page.click('#bottomBody button:has-text("NC 저장")'); const d3 = await dl3;
+  const dl3 = page.waitForEvent('download'); await page.click('#bottomBody button:has-text("NC 저장")'); await page.waitForSelector('#dlg[open] #ncFileName'); const defName = await page.inputValue('#ncFileName'); await confirmSave(page, { rename: 'MYPART' }); const d3 = await dl3;
+  ok('[V0.4] 파일 이름 변경해도 TEST_ 접두·확장자 유지', d3.suggestedFilename() === 'TEST_MYPART.nc', d3.suggestedFilename());
   const t3 = fs.readFileSync(await d3.path(), 'utf8');
-  ok('수정본 다운로드: _EDIT 파일명, USER EDITED 표시', /_EDIT\.nc$/.test(d3.suggestedFilename()) && t3.includes('(USER EDITED'), d3.suggestedFilename());
+  ok('수정본 저장: USER EDITED 표시, 기본 파일명 _EDIT', t3.includes('(USER EDITED') && /^TEST_O0001_.*_EDIT\.nc$/.test(defName), defName);
   await page.click('#bottomBody button:has-text("다시 생성")'); await sleep(100);
   s = await st(); ok('다시 생성 → 수정 상태 해제', !s.edited && s.ds.ok);
   if (SHOT) await page.screenshot({ path: path.join(SHOT, 'e2e-2-code.png') });

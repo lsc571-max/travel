@@ -189,3 +189,52 @@ test('여러 포켓 + 구멍 혼합: 검증 통과, 포켓 영역 밖 구멍은 
   assert.deepEqual(v.errors, []); assert.equal(v.match, true);
   assert.equal(v.hits.length, gen.hits.length);
 });
+
+// ---------- 독립 안전 검토(V0.4) 지적 사항 재현 → 차단 확인 ----------
+test('[검토 1] 정삭의 남김 여유가 황삭과 다르면 차단 (정삭 수직 하강 방지)', () => {
+  const r = build([{ spec: { shape: 'rect', w: 40, h: 30, cr: 5, depth: 5 } }]);
+  const g = r.p.groups[0]; g.spec = null; g.ops[0].allowFloor = 2; // 직접 구성으로 황삭 바닥 여유만 변경
+  const V = C.validateProject(r.p, r.m);
+  assert.ok(errs(V).some(m => /남김 여유가 같은/.test(m)), JSON.stringify(errs(V)));
+});
+test('[검토 1] 검증기: 깎이지 않은 소재로 엔드밀 수직 하강 차단 (헬리컬 삭제한 수정 NC)', () => {
+  const r = build([{ spec: { shape: 'rect', w: 40, h: 30, cr: 5, depth: 5 } }]);
+  const L = r.g.text.split('\n'), i = L.findIndex(l => /^G03 [^\n]*Z-/.test(l));
+  let j = i; while (/^G03 [^\n]*Z-/.test(L[j + 1])) j++;
+  const zf = /Z(-[\d.]+)/.exec(L[j])[1], xy = /X[-\d.]+ Y[-\d.]+/.exec(L[j])[0];
+  L.splice(i, j - i + 1, 'G01 ' + xy + ' Z' + zf); // 첫 단의 헬리컬을 모두 수직 하강 한 줄로 바꿈
+  const v = C.verifyNC(L.join('\n'), r.ctx({ expected: null }));
+  assert.ok(v.errors.some(e => /수직 하강/.test(e.msg)), JSON.stringify(v.errors.slice(0, 3)));
+});
+test('[검토 2] 포켓이 공구보다 아주 조금 넓으면(헬리컬 공간 없음) 차단', () => {
+  for (const spec of [{ shape: 'circle', dia: 6.45, toolNo: 18, depth: 5 }, { shape: 'rect', w: 40, h: 6.45, cr: 3, toolNo: 18, depth: 5 }, { shape: 'circle', dia: 6.401, toolNo: 18, depth: 5 }]) {
+    const r = build([{ spec }]);
+    assert.ok(errs(r.V).length > 0, JSON.stringify(spec));
+  }
+  // 자동 선택은 이런 공구를 고르지 않음
+  const auto = C.planPocketSpec(C.newPocketSpec({ shape: 'circle', dia: 6.45 }), C.defaultMachine(), { sz: 20, material: 'S45C' });
+  assert.ok(auto.ops.every(o => o.toolNo !== 18));
+});
+test('[검토 3·4·5] 검증기: G17 누락, 클램프를 지나는 원호, 엔드밀 드릴 사이클 차단', () => {
+  const r = build([{ spec: { shape: 'rect', w: 40, h: 30, cr: 5, depth: 5 } }]);
+  const v1 = C.verifyNC(r.g.text.replace(/ G17/, ''), r.ctx({ expected: null }));
+  assert.ok(v1.errors.some(e => /G17/.test(e.msg)), 'G17');
+  const clamp = [{ id: 'c', x: 132, y: 45, w: 10, h: 10, height: 15 }]; // 원호(중심 X107.5, 반경 30)의 오른쪽 끝(X137.5) 위치
+  const t2 = r.g.text.replace(/(G00 Z50\.\n)(?![\s\S]*G00 Z50\.\n)/, '$1G00 X77.5 Y50.\nG01 Z2. F500.\nG03 X77.5 Y50. I30. J0.\nG00 Z50.\n');
+  const v2 = C.verifyNC(t2, Object.assign(r.ctx({ expected: null }), { clamps: clamp }));
+  assert.ok(v2.errors.some(e => /클램프/.test(e.msg)), JSON.stringify(v2.errors.slice(0, 3)));
+  const t3 = r.g.text.replace(/(G00 Z50\.\n)(?![\s\S]*G00 Z50\.\n)/, '$1G98 G81 X20. Y20. Z-8. R3. F300.\nG80\n');
+  const v3 = C.verifyNC(t3, r.ctx({ expected: null }));
+  assert.ok(v3.errors.some(e => /엔드밀 T16 로 드릴 고정 사이클/.test(e.msg)), JSON.stringify(v3.errors.slice(0, 3)));
+});
+test('[검토 7] 간편 입력 포켓의 공정 값이 바뀌면(크기·여유) 불일치로 차단', () => {
+  const r = build([{ spec: { shape: 'rect', w: 40, h: 30, cr: 5, depth: 5 } }]);
+  r.p.groups[0].ops[0].w = 60;
+  assert.ok(errs(C.validateProject(r.p, r.m)).some(m => /일치하지 않습니다/.test(m)));
+});
+test('[검토 기타] 포켓 R점 1mm 미만·절입 0.05mm 미만은 모델 오류', () => {
+  const r = build([{ spec: { shape: 'rect', w: 40, h: 30, cr: 5, depth: 5 } }]);
+  const g = r.p.groups[0]; g.spec = null; g.ops.forEach(o => { o.r = 0.8; }); g.ops[0].stepdown = 0.01;
+  const e = errs(C.validateProject(r.p, r.m));
+  assert.ok(e.some(m => /R점은 소재 상면 위 1mm/.test(m)) && e.some(m => /0\.05mm 이상/.test(m)), JSON.stringify(e));
+});

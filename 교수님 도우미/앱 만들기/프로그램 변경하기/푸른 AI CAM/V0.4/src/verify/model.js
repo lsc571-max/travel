@@ -64,7 +64,7 @@
       const dia = P.holeDiaForGroup(g, tm);
       const rad = dia / 2;
       // 소재 범위·클램프는 이 홀에 쓰는 가장 큰 공구(스팟 드릴 포함) 반경으로 검사 (NC 검증기와 같은 기준)
-      const pext = (() => { const mo = g.ops.filter(o => P.OPS.get(o.type) && P.OPS.get(o.type).role === 'mill'); if (!mo.length) return null; let ex = 0, ey = 0; mo.forEach(o => { const e = P.pocketExtent(o); ex = Math.max(ex, e.ex); ey = Math.max(ey, e.ey); }); return { ex, ey }; })();
+      const pext = (() => { const mo = g.ops.filter(o => P.OPS.get(o.type) && P.OPS.get(o.type).role === 'mill'); if (!mo.length) return null; let ex = 0, ey = 0; mo.forEach(o => { const e = P.pocketExtent(o); ex = Math.max(ex, e.ex); ey = Math.max(ey, e.ey); }); return { ex, ey, circle: mo.every(o => o.shape === 'circle') }; })();
       const cutRad = Math.max(rad, ...g.ops.map(o => { const t = tm.get(o.toolNo); return t && t.dia > 0 ? t.dia / 2 : 0; }));
       totalHoles += g.holes.length;
       if (g.holes.length && !g.ops.length) add('warn', 4, gname + ' 홀은 있지만 공정이 없어 가공되지 않습니다.', { gid: g.id });
@@ -73,7 +73,7 @@
         const plan0 = P.planHoleSpec(g.spec, machine, st);
         if (g.holes.length) plan0.missing.forEach(mm => add('error', 4, gname + ' ' + (g.spec.kind === 'tap' ? '탭' : '구멍') + ' 가공에 필요한 ' + (mm.type === 'tap' ? '탭 M' + mm.dia + '×' + mm.pitch : mm.type === 'center' ? '센터 드릴' : '드릴 Ø' + mm.dia) + ' 이(가) 장비에 없어 공정이 완성되지 않았습니다.', { gid: g.id }));
         // 공정 내용까지 비교 (되돌리기·장비 변경 뒤 오래된 공정이 남는 것 방지)
-        const sig = o => [o.type, o.toolNo, P.r3(+o.depth), o.depthMode, !!o.thru, P.r3(+o.brk), P.r3(+o.q), P.r3(+o.r), P.r3(+o.dwell), !!o.auto].join('|');
+        const sig = o => [o.type, o.toolNo, P.r3(+o.depth), o.depthMode, !!o.thru, P.r3(+o.brk), P.r3(+o.q), P.r3(+o.r), P.r3(+o.dwell), !!o.auto].concat(P.POCKET_PARAMS && (o.type === 'pocketRough' || o.type === 'pocketFinish') ? Object.keys(P.POCKET_PARAMS).map(k => k === 'shape' ? o[k] : P.r3(+o[k])) : []).join('|'); // [V0.4] 포켓 매개변수 포함
         if (g.holes.length && (g.ops.length !== plan0.ops.length || g.ops.some((o, k) => sig(o) !== sig(plan0.ops[k])))) add('error', 11, gname + ' 간편 입력과 공정 목록이 일치하지 않습니다 (설정 변경 후 갱신되지 않음). 가공 방법을 다시 선택하거나 값을 다시 입력하세요.', { gid: g.id });
       }
       if (!g.holes.length && g.ops.length) add('info', 4, gname + ' 공정은 있지만 홀이 없습니다.', { gid: g.id });
@@ -91,7 +91,7 @@
           if (x0 < sr.x0 - EPS || x1 > sr.x1 + EPS || y0 < sr.y0 - EPS || y1 > sr.y1 + EPS) add('error', 2, pn + ' (X' + fmt(h.x) + ' Y' + fmt(h.y) + '): 포켓(' + r3(2 * pext.ex) + '×' + r3(2 * pext.ey) + ')이 소재 밖으로 벗어납니다.', ref);
           else { const wall = Math.min(x0 - sr.x0, sr.x1 - x1, y0 - sr.y0, sr.y1 - y1); if (wall < 1) add('warn', 2, pn + ': 소재 가장자리까지 남는 벽 두께가 ' + r3(wall) + 'mm 로 얇습니다.', ref); }
           project.clamps.forEach((c, ci) => { const cr = clampRect(c, 1); if (x0 <= cr.x1 && x1 >= cr.x0 && y0 <= cr.y1 && y1 >= cr.y0) add('error', 10, pn + ': 클램프 ' + (ci + 1) + ' 영역과 겹칩니다 (공구 충돌).', ref); });
-          allHoles.push({ g, h, rad: Math.max(pext.ex, pext.ey), hi, ref, hn: pn });
+          allHoles.push({ g, h, rad: pext.circle ? pext.ex : Math.hypot(pext.ex, pext.ey), hi, ref, hn: pn }); // 사각은 모서리까지 (보수적)
           return;
         }
         if (h.x - cutRad < sr.x0 - EPS || h.x + cutRad > sr.x1 + EPS || h.y - cutRad < sr.y0 - EPS || h.y + cutRad > sr.y1 + EPS)

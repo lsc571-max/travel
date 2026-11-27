@@ -99,7 +99,7 @@
     if (!(d.depth > 0)) add('error', 8, on + ': 가공 깊이가 0 이하입니다.');
     if (op.thru && !(toNum(op.brk, NaN) >= 0.5)) add('error', 8, on + ': 관통 여유는 0.5mm 이상이어야 합니다 (현재 ' + op.brk + ').');
     if (tool.flute > 0 && d.depth > tool.flute + EPS) add('error', 8, on + ': 깊이 ' + d.depth + ' 가 공구 유효 날 길이 ' + tool.flute + ' 을 초과합니다.');
-    if (d.z < -(st.sz + under) - EPS) add('error', 8, on + ': 공구 끝 Z' + fmt(d.z) + ' 이(가) 소재 바닥 아래 허용 범위(하부 여유 ' + under + 'mm)를 넘습니다. 테이블/지그 충돌 위험 → 하부 여유(패럴렐 틈)를 확인하세요.');
+    if (d.z < -(st.sz + under) - EPS) add('error', 8, on + ': 공구 끝 Z' + fmt(d.z) + ' 이(가) 소재 바닥 아래 허용 범위(하부 여유 ' + under + 'mm)를 넘습니다. 테이블/지그 충돌 위험 → ' + (op.thru ? '관통이면 하부 여유(패럴렐 틈)를 늘리거나 관통 여유를 줄이세요.' : '깊이를 줄이거나, 관통 구멍이면 [관통]을 체크하고 하부 여유(패럴렐 틈)를 입력하세요.'));
     else if (!op.thru && d.depth > st.sz + EPS) add('warn', 8, on + ': 깊이가 소재 두께를 넘습니다. 관통이면 "관통" 옵션을 사용하세요.');
   }
   function validateRPlane(ctx) {

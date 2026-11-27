@@ -12,7 +12,7 @@
   const C = window.PCAM;
   window.PCAM_UI = window.PCAM_UI || {};
 
-  const TAG_COLORS = { 0: [0.74, 0.77, 0.81], 1: [0.10, 0.66, 0.50], 2: [0.20, 0.45, 0.93], 3: [0.56, 0.36, 0.96], 4: [0.95, 0.56, 0.10] };
+  const TAG_COLORS = { 0: [0.82, 0.85, 0.89], 1: [0.10, 0.66, 0.50], 2: [0.20, 0.45, 0.93], 3: [0.56, 0.36, 0.96], 4: [0.95, 0.56, 0.10] };
   const THRU = [0.13, 0.15, 0.18];
 
   window.PCAM_UI.createView3D = function (host, hooks) {
@@ -25,6 +25,7 @@
     api.ok = true;
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.localClippingEnabled = true; // 단면 보기
     host.appendChild(renderer.domElement);
     renderer.domElement.className = 'v3-canvas';
     renderer.domElement.setAttribute('aria-label', '3D 가공 시뮬레이션 화면');
@@ -41,6 +42,10 @@
     let stockGroup = null, mesh = null, geo = null, sim = null, toolGroup = null, pathGroup = null, gridHelper = null, axes = null;
     let motions = [], tl = [], tools = new Map(), total = 0, simT = 0, cutIndex = 0, playing = false, speed = 10, lastFrame = 0;
     let target = new THREE.Vector3(), sph = { r: 300, th: -0.9, ph: 0.95 }, theme = 'light';
+    let snaps = new Map(), zTop = 50, zClip = Infinity, clipMats = [];
+    // 단면: CAM Y ≥ ys 쪽만 남김 (앞쪽을 잘라 구멍 깊이를 옆에서 보이게)
+    const section = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0); let sectionOn = false;
+    function applySection() { clipMats.forEach(m => { m.clippingPlanes = sectionOn ? [section] : []; m.needsUpdate = true; }); render(); }
 
     /* ---------- 카메라 (궤도) ---------- */
     function applyCam() {
@@ -53,8 +58,11 @@
       if (!sim) return;
       const cx = sim.x0 + sim.sx / 2, cy = sim.y0 + sim.sy / 2;
       target = V(cx, cy, sim.bottom / 2);
-      const size = Math.max(sim.sx, sim.sy, -sim.bottom);
-      sph.r = size * 2.1;
+      // 소재 + 공구가 다니는 높이(초기점)까지 화면에 들어오게
+      const top = Math.max(0, Math.min(zTop, 200));
+      target = V(cx, cy, (sim.bottom + top) / 2);
+      const size = Math.max(sim.sx, sim.sy, top - sim.bottom);
+      sph.r = size * 2.0;
       if (kind === 'top') { sph.th = 0; sph.ph = 0.0001; }
       else if (kind === 'front') { sph.th = 0; sph.ph = Math.PI / 2 - 0.02; }
       else if (kind === 'side') { sph.th = Math.PI / 2; sph.ph = Math.PI / 2 - 0.02; }
@@ -124,10 +132,14 @@
       geo.setIndex(new THREE.BufferAttribute(idx, 1));
       updateRegion(0, nx - 1, 0, ny - 1);
       mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.08, roughness: 0.62, side: THREE.DoubleSide }));
+      clipMats = [mesh.material];
       stockGroup.add(mesh);
       // 옆면·바닥 (높이맵 가장자리 아래 얇은 벽)
       const sideMat = new THREE.MeshStandardMaterial({ color: 0xaab3bd, metalness: 0.08, roughness: 0.7 });
-      const walls = edgeWalls(sideMat); stockGroup.add(walls);
+      const walls = edgeWalls(sideMat); stockGroup.add(walls); clipMats.push(sideMat);
+      // 소재 외곽선 (입체감)
+      const edges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(sim.sx, -sim.bottom, sim.sy)), new THREE.LineBasicMaterial({ color: theme === 'dark' ? 0x8fa3b8 : 0x55687c, transparent: true, opacity: 0.8 }));
+      edges.position.copy(V(sim.x0 + sim.sx / 2, sim.y0 + sim.sy / 2, sim.bottom / 2)); stockGroup.add(edges); clipMats.push(edges.material);
       scene.add(stockGroup);
     }
     function edgeWalls(mat) {
@@ -147,7 +159,7 @@
         const k = j * nx + i, z = h[k], p = k * 3;
         pos[p] = x0 + i * dx; pos[p + 1] = z; pos[p + 2] = -(y0 + j * dx);
         const c = z <= bottom ? THRU : TAG_COLORS[tag[k]] || TAG_COLORS[0];
-        const shade = z < -1e-3 ? 0.86 + 0.14 * Math.max(0, 1 + z / -bottom * 0.0) : 1;
+        const shade = z < -1e-3 ? 1 - 0.5 * Math.min(1, -z / Math.max(1, -bottom)) : 1; // 깊을수록 어둡게
         col[p] = c[0] * shade; col[p + 1] = c[1] * shade; col[p + 2] = c[2] * shade;
         const hl = h[j * nx + Math.max(0, i - 1)], hr = h[j * nx + Math.min(nx - 1, i + 1)];
         const hd = h[Math.max(0, j - 1) * nx + i], hu = h[Math.min(ny - 1, j + 1) * nx + i];
@@ -187,10 +199,10 @@
           let prev = C.SIM.motionPoint(m, 0);
           const n = 24;
           for (let s = 1; s <= n; s++) { const p = C.SIM.motionPoint(m, s / n); arr.push(prev.x, prev.z + 0.02, -prev.y, p.x, p.z + 0.02, -p.y); prev = p; }
-        } else arr.push(m.x0, m.z0 + 0.02, -m.y0, m.x1, m.z1 + 0.02, -m.y1);
+        } else { const za = Math.min(m.z0, zClip), zb = Math.min(m.z1, zClip); if (m.k === 'rapid' && za === zb && m.x0 === m.x1 && m.y0 === m.y1) return; arr.push(m.x0, za + 0.02, -m.y0, m.x1, zb + 0.02, -m.y1); }
       });
       const mk = (arr, color, op) => { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); const l = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color, transparent: true, opacity: op })); pathGroup.add(l); return l; };
-      mk(rap, 0xf2994a, 0.55).name = 'rapid'; mk(feed, 0x12b76a, 0.85).name = 'feed';
+      mk(rap, 0xf2994a, 0.35).name = 'rapid'; mk(feed, 0x12b76a, 0.85).name = 'feed';
       pathGroup.visible = api.showPaths !== false;
       scene.add(pathGroup);
     }
@@ -198,6 +210,7 @@
       clamps.forEach(c => {
         const x0 = Math.min(c.x, c.x + c.w), y0 = Math.min(c.y, c.y + c.h), w = Math.abs(c.w), d = Math.abs(c.h), hh = Math.max(1, c.height);
         const m = new THREE.Mesh(new THREE.BoxGeometry(w, hh, d), new THREE.MeshStandardMaterial({ color: 0xf08c00, transparent: true, opacity: 0.55, roughness: 0.6 }));
+        clipMats.push(m.material);
         m.position.copy(V(x0 + w / 2, y0 + d / 2, hh / 2)); stockGroup.add(m);
       });
     }
@@ -222,10 +235,18 @@
       const seg = tl[i], u = seg.sec > 0 ? Math.min(1, Math.max(0, (t - seg.t0) / seg.sec)) : 1;
       return { i, u, m, p: C.SIM.motionPoint(m, u) };
     }
-    // 시간 t 까지 소재를 깎음 (뒤로 가면 처음부터 다시)
+    // 시간 t 까지 소재를 깎음. 뒤로 가면 저장해 둔 중간 상태(공구 교환·일정 간격)에서 다시 시작
     function advanceTo(t) {
-      if (t < simT - 1e-9) { C.SIM.resetSim(sim); cutIndex = 0; simT = 0; }
-      while (cutIndex < motions.length && tl[cutIndex].t1 <= t) { const m = motions[cutIndex]; C.SIM.cutMotion(sim, m, tools.get(m.t)); cutIndex++; }
+      if (t < simT - 1e-9) {
+        let best = 0; snaps.forEach((v, b) => { if (b > best && tl[b].t0 <= t) best = b; });
+        if (best > 0) { const sn = snaps.get(best); sim.h.set(sn.h); sim.tag.set(sn.tag); sim.dirty = { i0: 0, i1: sim.nx - 1, j0: 0, j1: sim.ny - 1 }; cutIndex = best; }
+        else { C.SIM.resetSim(sim); cutIndex = 0; }
+        simT = 0;
+      }
+      while (cutIndex < motions.length && tl[cutIndex].t1 <= t) {
+        const m = motions[cutIndex]; C.SIM.cutMotion(sim, m, tools.get(m.t)); cutIndex++;
+        if (cutIndex < motions.length && !snaps.has(cutIndex) && (motions[cutIndex].t !== m.t || cutIndex % 1500 === 0)) snaps.set(cutIndex, { h: sim.h.slice(), tag: sim.tag.slice() });
+      }
       const cur = motions[cutIndex];
       if (cur && t > tl[cutIndex].t0) { const u = (t - tl[cutIndex].t0) / Math.max(1e-9, tl[cutIndex].sec); C.SIM.cutMotion(sim, cur, tools.get(cur.t), 0, Math.min(1, u)); }
       simT = t;
@@ -235,7 +256,7 @@
       if (at) {
         curTool = tools.get(at.m.t) || null;
         if (!toolGroup || toolGroup.userData.no !== (curTool && curTool.no)) { buildTool(curTool); if (toolGroup) toolGroup.userData.no = curTool && curTool.no; }
-        if (toolGroup) toolGroup.position.copy(V(at.p.x, at.p.y, at.p.z));
+        if (toolGroup) { toolGroup.position.copy(V(at.p.x, at.p.y, at.p.z)); toolGroup.visible = t < total - 1e-9; } // 가공 완료 상태에서는 공구를 숨겨 결과가 잘 보이게
       }
       if (hooks.onProgress) hooks.onProgress({ t, total, at, tool: curTool });
       render();
@@ -257,9 +278,11 @@
     api.stepOp = dir => { // 다음/이전 공구 교환 지점으로
       if (!tl.length) return;
       const at = toolAt(simT), cur = at ? at.m.t : null;
-      if (dir > 0) { let i = at ? at.i : 0; while (i < motions.length && motions[i].t === cur) i++; api.seek(i < motions.length ? tl[i].t0 + 1e-6 : total); }
+      if (dir > 0) { let i = at ? at.i : 0; while (i < motions.length && motions[i].t === cur) i++; let j = i; while (j < motions.length && motions[j].t === motions[i].t && motions[j].k === 'rapid') j++; if (j >= motions.length || (i < motions.length && motions[j].t !== motions[i].t)) j = i; api.seek(j < motions.length ? tl[j].t0 + 1e-6 : total); } // 다음 공구의 첫 절삭 시작점으로
       else { let i = at ? at.i : 0; while (i > 0 && motions[i - 1].t === cur) i--; let k = Math.max(0, i - 1); const prevT = motions[k] ? motions[k].t : null; while (k > 0 && motions[k - 1].t === prevT) k--; api.seek(i === 0 ? 0 : tl[k].t0); }
     };
+    api.setSection = ys => { sectionOn = ys !== null && ys !== undefined; if (sectionOn) section.constant = -ys; applySection(); };
+    api.sectionOn = () => sectionOn;
     api.setShowPaths = v => { api.showPaths = v; if (pathGroup) pathGroup.visible = v; render(); };
     api.setTheme = th => { theme = th; scene.background = new THREE.Color(th === 'dark' ? 0x12171d : 0xf1f4f8); if (sim) decor(); render(); };
 
@@ -269,8 +292,9 @@
       const first = !sim;
       sim = C.SIM.createSim(data.stock, { maxCells: data.maxCells || 160000 });
       motions = data.motions || []; tools = data.tools; tl = C.SIM.timeline(motions, data.machine);
-      total = tl.length ? tl[tl.length - 1].t1 : 0; simT = 0; cutIndex = 0; playing = false;
-      buildStock(); buildClamps(data.clamps || []); buildPaths(); decor(); buildTool(null);
+      total = tl.length ? tl[tl.length - 1].t1 : 0; simT = 0; cutIndex = 0; playing = false; snaps = new Map();
+      zClip = isFinite(data.zClip) ? data.zClip : Infinity; zTop = isFinite(data.zClip) ? data.zClip + 15 : 50;
+      buildStock(); buildClamps(data.clamps || []); buildPaths(); decor(); buildTool(null); applySection();
       if (first || !keepCamera) api.view('iso');
       // 기본: 가공 완료 상태로 보여줌
       api.seek(data.startAt === 0 ? 0 : total);
