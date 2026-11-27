@@ -24,7 +24,8 @@
 
   // 포켓 공통 매개변수 (공정에 저장)
   // [V0.5] entry: 진입 방식 'helix'(헬리컬, 기본) | 'ramp'(윤곽 따라 3° 경사) | 'drill'(선가공 구멍으로 수직 진입, ex·ey = 진입점)
-  const PARAMS = { shape: 'rect', w: 40, h: 30, cr: 5, dia: 30, stepover: 50, stepdown: 2, allowWall: 0.2, allowFloor: 0.1, poly: null, entry: 'helix', ex: 0, ey: 0 };
+  // [V0.5] 측벽 형상: draft 구배(°, 수직=0, 입구가 도면 치수) · topR 입구 모서리 R · floorR 바닥 모서리 R · profStep 계단 높이
+  const PARAMS = { shape: 'rect', w: 40, h: 30, cr: 5, dia: 30, stepover: 50, stepdown: 2, allowWall: 0.2, allowFloor: 0.1, poly: null, entry: 'helix', ex: 0, ey: 0, draft: 0, topR: 0, floorR: 0, profStep: 0.2 };
   // [V0.5] 단계별 추가 매개변수
   //   중삭(pocketSemi): 앞 단계 여유(allowWall·allowFloor) → 이 단계 여유(leaveWall·leaveFloor), semiStep 0 = 한 번에, > 0 = 그 깊이씩 내려가며
   //   바닥 정삭(pocketFloor): 바닥만 0 으로, 측벽은 앞 단계 여유 그대로
@@ -32,6 +33,24 @@
   const SEMI_PARAMS = Object.assign({}, PARAMS, { leaveWall: 0.1, leaveFloor: 0.05, semiStep: 0 });
   const WALL_PARAMS = Object.assign({}, PARAMS, { wallStep: 0 });
   const ENTRIES = ['helix', 'ramp', 'drill'];
+  /* ---------- [V0.5] 측벽 형상 (구배·입구 R·바닥 R) ----------
+   * off(u): 윗면에서 u 깊이에서 측벽이 도면 윤곽보다 바깥(+)/안쪽(−)으로 있는 거리
+   *   구배: −u·tan(draft) (아래로 갈수록 좁아짐, 입구가 도면 치수)
+   *   입구 R: u < R 이면 +(R − √(R² − (R − u)²))  (모서리를 둥글게 깎아 냄)
+   *   바닥 R: 바닥에서 높이 h < R 이면 −(R − √(R² − (R − h)²))  (바닥과 벽 사이 둥근 살)
+   * 아래로 갈수록 벽이 안쪽으로만 가므로(단조) 평 엔드밀로 위에서부터 계단식으로 깎으면 과삭이 없다.
+   */
+  const hasProf = pk => toNum(pk.draft, 0) > 1e-6 || toNum(pk.topR, 0) > 1e-6 || toNum(pk.floorR, 0) > 1e-6;
+  function profOff(pk, depth, u) {
+    const t = Math.tan(Math.min(89, Math.max(0, toNum(pk.draft, 0))) * Math.PI / 180), Rt = Math.max(0, toNum(pk.topR, 0)), Rf = Math.max(0, toNum(pk.floorR, 0));
+    let o = -u * t;
+    if (Rt > 0 && u < Rt) o += Rt - Math.sqrt(Math.max(0, Rt * Rt - (Rt - u) * (Rt - u)));
+    const hf = depth - u;
+    if (Rf > 0 && hf < Rf) o -= Rf - Math.sqrt(Math.max(0, Rf * Rf - (Rf - hf) * (Rf - hf)));
+    return o;
+  }
+  // 가장 안쪽으로 들어간 거리 (다른 단계가 벽을 건드리지 않도록 이만큼 더 안쪽에서 가공)
+  function profInset(pk, depth) { if (!hasProf(pk)) return 0; let m = 0; for (let i = 0; i <= 200; i++) m = Math.min(m, profOff(pk, depth, depth * i / 200)); return r3(-m + 1e-9); }
   const SHAPES = ['rect', 'circle', 'poly'];
   const G = P.GEOM, MC = P.MILL;
   // 자유 형상 데이터 정규화 (외부 파일 방어: 점 수·좌표 범위 제한)
@@ -67,6 +86,7 @@
   function stepped(total, sd) { const n = Math.max(1, Math.ceil(total / Math.max(0.05, sd) - 1e-9)), out = []; for (let i = 1; i <= n; i++) out.push(-total * i / n); return out; }
   function stageOf(type, pk, depth) {
     const aw0 = toNum(pk.allowWall, 0), af0 = toNum(pk.allowFloor, 0);
+    if (type === 'pocketProfile') return { aw: 0, af: 0, pw: aw0, pf: af0, levels: [] };
     if (type === 'pocketFinish') return { aw: 0, af: 0, pw: aw0, pf: af0, levels: [{ z: -depth, wall: false }] };
     if (type === 'pocketFloor') return { aw: aw0, af: 0, pw: aw0, pf: af0, levels: [{ z: -depth, wall: false }] };
     if (type === 'pocketWall') { const ws = toNum(pk.wallStep, 0); return { aw: 0, af: af0, pw: aw0, pf: af0, levels: (ws > 0 ? stepped(depth - af0, ws) : [-(depth - af0)]).map(z => ({ z, wall: true })) }; }
@@ -82,14 +102,50 @@
     if (o.type === 'pocketRough') return [aw0, af0];
     if (o.type === 'pocketSemi') return [Math.min(aw0, Math.max(0, toNum(o.leaveWall, 0))), Math.min(af0, Math.max(0, toNum(o.leaveFloor, 0)))];
     if (o.type === 'pocketFloor') return [aw0, 0];
-    if (o.type === 'pocketWall') return [0, af0];
+    if (o.type === 'pocketWall' || o.type === 'pocketProfile') return [0, af0];
     return [0, 0];
+  }
+
+  // 측벽 형상이 있으면 다른 단계는 가장 안쪽 벽(바닥 근처)보다 더 안쪽에서만 가공
+  function withInset(st, pk, depth) { const ins = profInset(pk, depth); if (!ins) return st; return Object.assign({}, st, { aw: st.aw + ins, pw: st.pw == null ? null : st.pw + ins }); }
+  // [V0.5] 측벽 형상 정삭: 윗면부터 profStep 씩 내려가며 그 높이의 벽 위치까지 안쪽→바깥 여러 바퀴 (평 엔드밀 계단 근사)
+  const profCache = new Map();
+  function profileMoves(s, tool, c, machine) {
+    const pk = s.pk, rt = tool.dia / 2, depth = -s.z, ins = profInset(pk, depth);
+    const key = JSON.stringify([pk, s.z, s.r, s.feed, tool.dia, c.x, c.y]);
+    if (profCache.has(key)) return profCache.get(key);
+    const F = s.feed, Fr = Math.max(1, Math.round(F * 0.5)), zClear = Math.max(1, toNum(s.r, 3));
+    const reg = G.regionPaths(G.shapeRegion(pk), c.x, c.y), af = toNum(pk.allowFloor, 0);
+    const A0 = toNum(pk.allowWall, 0) + ins, sp = Math.min(0.9 * rt, Math.max(0.05, Math.min(STEPOVER_MAX, toNum(pk.stepover, 40)) / 100 * tool.dia));
+    const dz = Math.max(0.05, Math.min(2, toNum(pk.profStep, 0.2))), us = [];
+    for (let u = dz; u < depth - af - 1e-6; u += dz) us.push(u);
+    us.push(depth - af);
+    let moves = [], err = null;
+    for (const u of us) {
+      const a = -profOff(pk, depth, u); // 이 높이 벽까지 공구 중심 오프셋 = rt + a
+      let prev = A0;
+      if (a > A0 - 1e-4) continue; // 아직 다른 단계가 깎은 범위 안 (깎을 벽 없음)
+      while (prev - a > 1e-4) {
+        const nx = Math.max(a, prev - sp);
+        const r = MC.wallPasses(reg, { rt, aw: nx, pw: prev, zs: [r3(-u)], zClear, F, Fr });
+        if (r.error) { err = r.error; break; }
+        if (moves.length) { const l = moves[moves.length - 1]; moves.push({ g: 0, x: l.x, y: l.y, z: r3(zClear), f: 0 }, { g: 0, x: r.moves[0].x, y: r.moves[0].y, z: r3(zClear), f: 0 }); }
+        moves = moves.concat(r.moves);
+        prev = nx;
+      }
+      if (err) break;
+    }
+    if (!err && !moves.length) err = '깎을 측벽 형상이 없습니다 (구배·R 이 0).';
+    const out = err ? { sx: c.x, sy: c.y, moves: [], error: err } : { sx: moves[0].x, sy: moves[0].y, moves };
+    if (profCache.size > 30) profCache.clear();
+    profCache.set(key, out);
+    return out;
   }
 
   // 자유 형상 경로 (같은 입력이면 다시 계산하지 않음)
   const polyCache = new Map();
   function polyMoves(s, tool, c, machine) {
-    const pk = s.pk, rt = tool.dia / 2, depth = -s.z, st = stageOf(s.type, pk, depth);
+    const pk = s.pk, rt = tool.dia / 2, depth = -s.z, st = withInset(stageOf(s.type, pk, depth), pk, depth);
     const so = Math.max(0.05, Math.min(STEPOVER_MAX, toNum(pk.stepover, 50)) / 100) * tool.dia;
     const key = JSON.stringify([pk, s.type, s.z, s.r, s.feed, tool.dia, c.x, c.y, machine.helical !== false]);
     if (polyCache.has(key)) return polyCache.get(key);
@@ -98,6 +154,7 @@
     const wallCut = st.pw != null && st.pw - st.aw > 1e-6;
     const wl = st.levels.filter(L => L.wall && wallCut).map(L => L.z), fl = st.levels.filter(L => !L.wall).map(L => L.z);
     let moves = [], err = wl.length || fl.length ? null : '이 단계에서 깎을 여유가 없습니다 (앞 단계 여유가 0).';
+    const warns = [];
     if (!err && wl.length) { const r = MC.wallPasses(reg, { rt, aw: st.aw, pw: st.pw, zs: wl, zClear, F, Fr }); if (r.error) err = r.error; else moves = r.moves; }
     if (!err && fl.length) {
       const fast = st.pw != null ? [].concat(...G.offsetEx(reg, -(rt + st.pw)).map(G.exPaths)) : null;
@@ -109,11 +166,12 @@
       });
       if (r.error) err = r.error;
       else {
+        if (r.warn && r.warn.length) warns.push(...r.warn);
         if (moves.length) { const l = moves[moves.length - 1]; moves.push({ g: 0, x: l.x, y: l.y, z: r3(zClear), f: 0 }, { g: 0, x: r.sx, y: r.sy, z: r3(zClear), f: 0 }); }
         moves = moves.concat(r.moves);
       }
     }
-    const out = err ? { sx: c.x, sy: c.y, moves: [], error: err } : { sx: moves[0].x, sy: moves[0].y, moves };
+    const out = err ? { sx: c.x, sy: c.y, moves: [], error: err } : { sx: moves[0].x, sy: moves[0].y, moves, warn: warns };
     if (polyCache.size > 60) polyCache.clear();
     polyCache.set(key, out);
     return out;
@@ -140,7 +198,8 @@
 
   // 포켓 1개의 이동 목록 (절대좌표). 시작점 sx, sy 는 R점 위에서 급속 위치결정할 점
   function pocketMoves(s, tool, c, machine) {
-    if (s.pk && s.pk.shape === 'poly') return polyMoves(s, tool, c, machine);
+    if (s.type === 'pocketProfile') return profileMoves(s, tool, c, machine);
+    if (s.pk && (s.pk.shape === 'poly' || hasProf(s.pk))) return polyMoves(s, tool, c, machine);
     const pk = s.pk, rt = tool.dia / 2, D = tool.dia;
     const depth = -s.z, F = s.feed, Fr = Math.max(1, Math.round(F * 0.5));
     const st = stageOf(s.type, pk, depth);
@@ -267,9 +326,10 @@
       // 자유 형상: 실제 경로를 계산해 공구가 들어가는지·진입 공간이 있는지 확인
       const cleaned = G.cleanRegion(G.shapeRegion(op));
       if (cleaned.length !== 1) add('error', 5, on + ': 자유 형상 윤곽이 서로 꼬여 있거나 여러 조각입니다 (도면을 확인하세요).');
-      const res = polyMoves({ pk: op, type: op.type, z: -d.depth, r: op.r, feed: 100 }, tool, { x: 0, y: 0 }, machine);
+      const res = pocketMoves({ pk: op, type: op.type, z: -d.depth, r: op.r, feed: 100 }, tool, { x: 0, y: 0 }, machine);
       if (res.error) add('error', 5, on + ': ' + res.error);
-      else if (toNum(op.stepover, 50) / 100 * tool.dia > 0.95 * rt + 1e-9) add('info', 9, on + ': 자유 형상은 남는 살이 없도록 경로 간격을 공구 반경의 95%(' + r3(0.95 * rt) + 'mm) 이하로 자동 제한합니다.');
+      else if (res.warn && res.warn.length && kind === 'rough') res.warn.forEach(w => add('warn', 5, on + ': ' + w));
+      if (!res.error && toNum(op.stepover, 50) / 100 * tool.dia > 0.95 * rt + 1e-9) add('info', 9, on + ': 자유 형상은 남는 살이 없도록 경로 간격을 공구 반경의 95%(' + r3(0.95 * rt) + 'mm) 이하로 자동 제한합니다.');
       if (mw > 0 && tool.dia > 0.8 * mw) add('warn', 5, on + ': 공구가 포켓의 가장 넓은 곳에 비해 큽니다.');
       // [V0.5 검토] 공구보다 좁은 목·뾰족한 모서리: 깎이지 않고 남는 부분 안내 (모서리 R 수준을 넘는 것만)
       if (kind === 'rough') {
@@ -303,6 +363,20 @@
         else add('error', 5, on + ': 바로 앞 같은 포켓 공정이 남긴 여유' + (lv ? '(측벽 ' + r3(lv[0]) + ' · 바닥 ' + r3(lv[1]) + ')' : '') + '와 이 공정의 앞 단계 여유(측벽 ' + toNum(op.allowWall, 0) + ' · 바닥 ' + toNum(op.allowFloor, 0) + ')가 다릅니다. 황삭 → 중삭 → 정삭 순서와 여유를 맞추세요.');
       }
     }
+    // [V0.5] 측벽 형상(구배·입구 R·바닥 R)
+    if (hasProf(op) && op.shape !== 'poly') { const res = pocketMoves({ pk: op, type: op.type, z: -d.depth, r: op.r, feed: 100 }, tool, { x: 0, y: 0 }, machine); if (res.error) add('error', 5, on + ': ' + res.error); }
+    if (hasProf(op)) {
+      const dr = toNum(op.draft, 0), Rt = toNum(op.topR, 0), Rf = toNum(op.floorR, 0), ps = toNum(op.profStep, 0.2);
+      if (!(dr >= 0 && dr < 89)) add('error', 5, on + ': 구배는 0° 이상 89° 미만이어야 합니다.');
+      else if (dr > 45) add('warn', 5, on + ': 구배 ' + dr + '° — 벽이 많이 누워 계단(높이 ' + ps + 'mm)이 넓게 보입니다. 계단 높이를 줄이거나 볼 엔드밀 가공을 고려하세요.');
+      if (!(Rt >= 0 && Rf >= 0)) add('error', 5, on + ': 입구 R·바닥 R 은 0 이상이어야 합니다.');
+      if (Rt + Rf > d.depth + EPS) add('error', 5, on + ': 입구 R(' + Rt + ') + 바닥 R(' + Rf + ')이 포켓 깊이(' + d.depth + ')보다 큽니다.');
+      if (!(ps >= 0.05 && ps <= 2)) add('error', 9, on + ': 계단 높이는 0.05~2mm 여야 합니다.');
+      const ins = profInset(op, d.depth);
+      if (op.shape !== 'poly' && mw > 0 && 2 * (rt + aw + ins) >= mw - 0.02) add('error', 5, on + ': 구배·바닥 R 로 바닥이 ' + r3(ins) + 'mm 씩 좁아져 공구 Ø' + tool.dia + ' 가 들어가지 않습니다.');
+      if (op.thru && Rf > 0) add('warn', 5, on + ': 관통 포켓에는 바닥 R 이 의미가 없습니다.');
+      if (kind === 'profile') add('info', 9, on + ': 측벽 형상은 평 엔드밀로 ' + ps + 'mm 계단씩 깎습니다 (곡면은 계단 근사). 구배 ' + dr + '° · 입구 R' + Rt + ' · 바닥 R' + Rf + ', 가장 안쪽 ' + r3(ins) + 'mm');
+    } else if (kind === 'profile') add('error', 5, on + ': 구배·입구 R·바닥 R 이 모두 0 이라 측벽 형상 정삭이 필요 없습니다.');
     if (op.entry === 'drill') {
       // 선가공 구멍: 같은 그룹의 앞 공정 중 진입점에 뚫는 드릴 (지름 ≥ 엔드밀 50%, 끝이 첫 단계 바닥까지)
       const ex = op.shape === 'poly' ? toNum(op.ex, 0) : 0, ey = op.shape === 'poly' ? toNum(op.ey, 0) : 0, zNeed = sg.levels.filter(L => !L.wall).reduce((m, L) => Math.min(m, L.z), 0);
@@ -348,12 +422,14 @@
   P.OPS.register(definePocket('pocketSemi', '포켓 중삭', 'POCKET SEMI', 'semi', 0.2, SEMI_PARAMS));
   P.OPS.register(definePocket('pocketFloor', '포켓 바닥 정삭', 'POCKET FLOOR', 'floor', 0.4, PARAMS));
   P.OPS.register(definePocket('pocketWall', '포켓 측벽 정삭', 'POCKET WALL', 'wall', 0.45, WALL_PARAMS));
+  P.OPS.register(definePocket('pocketProfile', '포켓 측벽 형상(구배·R)', 'POCKET PROFILE', 'profile', 0.47, PARAMS));
   P.OPS.register(definePocket('pocketFinish', '포켓 정삭', 'POCKET FINISH', 'finish', 0.5, PARAMS));
 
   // 프로젝트의 포켓 영역 목록 (독립 NC 검증기의 과삭 검사용: 모델 데이터에서 직접 계산)
   // 포켓 1개의 허용 영역 (검증기용, 절대 좌표). 자유 형상은 다각형 그대로 넘긴다
   function region(o, h, st) {
     const floorZ = -pocketDepth(o, st);
+    if (hasProf(o)) { const rg = { kind: 'area', outer: G.ccw(G.shapeRegion(o).outer).map(p => [p[0] + h.x, p[1] + h.y]), islands: (G.shapeRegion(o).islands || []).map(a => a.map(p => [p[0] + h.x, p[1] + h.y])), floorZ }; rg.prof = { draft: toNum(o.draft, 0), topR: toNum(o.topR, 0), floorR: toNum(o.floorR, 0), depth: -floorZ }; return rg; }
     if (o.shape === 'poly' && o.poly) return { kind: 'area', outer: o.poly.outer.map(p => [p[0] + h.x, p[1] + h.y]), islands: o.poly.islands.map(a => a.map(p => [p[0] + h.x, p[1] + h.y])), floorZ };
     return { shape: o.shape, cx: h.x, cy: h.y, w: toNum(o.w, 0), h: toNum(o.h, 0), cr: toNum(o.cr, 0), dia: toNum(o.dia, 0), floorZ };
   }
@@ -384,5 +460,5 @@
     return true;
   }
 
-  Object.assign(P, { pocketMoves, pocketStage: stageOf, pocketLeave: leaveOf, POCKET_ENTRIES: ENTRIES, pocketRegions, millRegions: pocketRegions, inPocketRegion, pocketExtent: extent, pocketMinWidth: minWidth, pocketDepth, normPoly, POCKET_PARAMS: PARAMS, STEPOVER_MAX });
+  Object.assign(P, { pocketMoves, pocketProfOff: profOff, pocketProfInset: profInset, pocketHasProf: hasProf, pocketStage: stageOf, pocketLeave: leaveOf, POCKET_ENTRIES: ENTRIES, pocketRegions, millRegions: pocketRegions, inPocketRegion, pocketExtent: extent, pocketMinWidth: minWidth, pocketDepth, normPoly, POCKET_PARAMS: PARAMS, STEPOVER_MAX });
 })(typeof globalThis !== 'undefined' ? globalThis : this);

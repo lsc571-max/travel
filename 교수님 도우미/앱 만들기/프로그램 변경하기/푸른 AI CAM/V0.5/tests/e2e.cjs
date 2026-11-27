@@ -312,7 +312,7 @@ function serve() {
     ok('[V0.4] 새 프로젝트: 소재가 먼저 선택되고 가공 추가 안내', (await p3.textContent('#propHead')).includes('소재') && (await p3.textContent('#tree')).includes('가공을 추가'));
     await p3.click('#tree .addbtn.k-pocket'); await sleep(200);
     const pk = await p3.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[0]; return { ops: g.ops.map(o => o.type + ':' + o.toolNo).join(','), holes: g.holes.length, ds: U.downloadState(), match: U.S.nc.verify && U.S.nc.verify.match, nerr: U.S.nc.verify ? U.S.nc.verify.errors.length : -1 }; });
-    ok('[V0.4] + 포켓 → 소재 중앙 1개, 황삭·정삭(T16 Ø10) 자동 구성', pk.ops === 'pocketRough:16,pocketFinish:16' && pk.holes === 1, JSON.stringify(pk));
+    ok('[V0.4] + 포켓 → 소재 중앙 1개, 황삭·바닥 정삭·측벽 정삭(T16 Ø10) 자동 구성', pk.ops === 'pocketRough:16,pocketFloor:16,pocketWall:16' && pk.holes === 1, JSON.stringify(pk));
     ok('[V0.4] 포켓 NC 독립 검증 오류 0 · 생성기 경로와 일치', pk.ds.ok && pk.nerr === 0 && pk.match === true, JSON.stringify(pk));
     ok('[V0.4] 깊이 단면도 표시 (초기점·R점·Z0·바닥 Z)', /초기점 Z50/.test(await p3.textContent('#rightBody .depth')) && /바닥 Z-5/.test(await p3.textContent('#rightBody .depth')));
     await openCode(p3);
@@ -363,7 +363,7 @@ function serve() {
     const dtxt = await p5.textContent('#dlg');
     ok('[V0.5] DXF 불러오기 창: 닫힌 윤곽 3·원 7, Ø6.8 → 탭 M8 추천', /닫힌 윤곽 3개/.test(dtxt) && /원 7개/.test(dtxt) && (await p5.locator('#dlg select').first().inputValue()) === 'tap', dtxt.slice(0, 120));
     await p5.click('#dlg .dfoot button.primary'); await sleep(900);
-    const d5 = await p5.evaluate(() => { const U = window.__PCAM_UI__; return { st: [U.P.stock.sx, U.P.stock.sy, U.P.stock.origin], g: U.P.groups.map(g => g.spec && g.spec.kind), ds: U.downloadState(), ne: U.S.nc.verify ? U.S.nc.verify.errors.length : -1, match: U.S.nc.verify && U.S.nc.verify.match }; });
+    const d5 = await p5.evaluate(() => { const U = window.__PCAM_UI__; return { st: [U.P.stock.sx, U.P.stock.sy, U.P.stock.origin], g: U.P.groups.map(g => g.spec && g.spec.kind), ds: U.downloadState(), ne: U.S.nc.verify ? U.S.nc.verify.errors.length : -1, match: U.S.nc.verify && U.S.nc.verify.match, errs: U.S.V.issues.filter(i => i.level === 'error').map(i => i.msg) }; });
     ok('[V0.5] DXF → 소재 124×84(여유 2) LL, 탭·구멍·원형 포켓·자유 포켓(섬)·바깥 윤곽(마지막)', JSON.stringify(d5.st) === '[124,84,"LL"]' && JSON.stringify(d5.g) === '["tap","drill","pocket","pocket","contour"]', JSON.stringify(d5));
     ok('[V0.5] DXF 가공 전체 검증 통과 · NC 해석 오류 0 · 생성기 경로 일치', d5.ds.ok && d5.ne === 0 && d5.match === true, JSON.stringify(d5));
     // 목록 편집

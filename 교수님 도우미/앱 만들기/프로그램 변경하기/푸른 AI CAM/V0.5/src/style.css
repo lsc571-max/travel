@@ -353,6 +353,26 @@ body.resizing.rows{cursor:row-resize}
 .flow .fl.err .n{background:var(--err);border-color:var(--err);color:#fff}
 .flow .fl.err{color:var(--err)}
 .flow .fl:hover{background:var(--surface)}
+.flow li{position:relative}
+.flow li:not(:last-child)::after{content:'';position:absolute;right:-4px;top:18px;width:5px;height:5px;border-top:1.5px solid var(--line2);border-right:1.5px solid var(--line2);transform:rotate(45deg);pointer-events:none}
+.flow .fl b{font-weight:700;font-size:1em;color:inherit}
+.flow .fl small{font-weight:500;font-size:.86em;color:var(--muted)}
+.nextstep{display:flex;align-items:flex-start;gap:8px;width:100%;margin:-6px 0 14px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);text-align:left;font-size:.88em;line-height:1.4;color:var(--text2)}
+.nextstep .n{flex:none;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:11px;font-weight:700;background:var(--brand);color:#fff}
+.nextstep b{color:var(--text);margin-right:4px}
+.nextstep.err{border-color:var(--err);background:var(--err-soft,var(--surface2))}.nextstep.err .n{background:var(--err)}
+.nextstep.warn{border-color:var(--warn)}.nextstep.warn .n{background:var(--warn)}
+.nextstep.ok .n{background:var(--ok)}
+/* [V0.5] 포켓 가공 단계 (황삭 → 중삭 → 정삭) */
+.stages{display:flex;align-items:stretch;gap:4px;flex-wrap:wrap;margin-bottom:6px}
+.stages .stg{display:flex;flex-direction:column;gap:1px;padding:5px 9px;border-radius:8px;border:1px dashed var(--line2);color:var(--muted);font-weight:600;font-size:.9em;min-width:84px}
+.stages .stg small{font-weight:500;font-size:.82em}
+.stages .stg.on{border-style:solid;border-color:var(--brand);background:var(--brand-soft);color:var(--text)}
+.stages .arr{align-self:center;color:var(--muted);font-style:normal}
+.row.wrap{flex-wrap:wrap;gap:6px 12px}
+.treehint{font-size:.78em;color:var(--muted);margin:-2px 2px 6px}
+.titem input.rename{flex:1;min-width:0;min-height:26px;padding:2px 6px;font:inherit}
+.titem .qa .more{font-size:16px;line-height:1}
 /* 2D 도구 줄: 묶음·표시 팝오버 */
 .bgrp{display:inline-flex;gap:2px}
 details.pop{position:relative}

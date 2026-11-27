@@ -11,9 +11,9 @@
   const P = root.PCAM;
   const { toNum, r3, toolMap } = P;
   const DEF = {
-    contour: { kind: 'contour', shape: 'rect', w: 60, h: 40, cr: 0, dia: 40, poly: null, side: 'out', depth: 5, thru: false, brk: 1, rough: true, finish: true, toolNo: 0, stepdown: 0, allowWall: 0.2, sideWidth: 0, stepover: 50 },
+    contour: { kind: 'contour', shape: 'rect', w: 60, h: 40, cr: 0, dia: 40, sides: 6, rot: 0, poly: null, side: 'out', depth: 5, thru: false, brk: 1, rough: true, finish: true, toolNo: 0, stepdown: 0, allowWall: 0.2, sideWidth: 0, stepover: 50 },
     face: { kind: 'face', depth: 0.5, toolNo: 0, stepdown: 0, stepover: 70, margin: 2 },
-    chamfer: { kind: 'chamfer', shape: 'rect', w: 60, h: 40, cr: 0, dia: 10, poly: null, side: 'out', cw: 0.5, extra: 0.3, toolNo: 0 }
+    chamfer: { kind: 'chamfer', shape: 'rect', w: 60, h: 40, cr: 0, dia: 10, sides: 6, rot: 0, poly: null, side: 'out', cw: 0.5, extra: 0.3, toolNo: 0 }
   };
   function newMillSpec(kind, extra) { return Object.assign(P.clone(DEF[kind]), extra || {}); }
   function normalizeMillSpec(s) {
@@ -23,7 +23,7 @@
       if (k === 'kind') return;
       if (typeof d[k] === 'number') o[k] = toNum(s[k], d[k]);
       else if (typeof d[k] === 'boolean') o[k] = typeof s[k] === 'boolean' ? s[k] : d[k];
-      else if (k === 'shape') o.shape = ['rect', 'circle', 'poly'].includes(s.shape) ? s.shape : 'rect';
+      else if (k === 'shape') o.shape = ['rect', 'circle', 'poly', 'ngon'].includes(s.shape) ? s.shape : 'rect';
       else if (k === 'side') o.side = s.side === 'in' ? 'in' : 'out';
       else if (k === 'poly') o.poly = P.normPoly(s.poly);
     });
@@ -31,7 +31,7 @@
     o.toolNo = Math.max(0, Math.round(o.toolNo || 0));
     return o;
   }
-  const geoOf = sp => ({ shape: sp.shape, w: sp.w, h: sp.h, cr: sp.cr, dia: sp.dia, poly: sp.shape === 'poly' ? sp.poly : null, side: sp.side });
+  const geoOf = sp => P.specGeo(sp);
 
   function pickTool(machine, sp, notes, types, fit, want) {
     if (sp.toolNo > 0) {

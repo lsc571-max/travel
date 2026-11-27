@@ -150,6 +150,7 @@
     const fastOk = (x, y, r) => !!fastPl && G.inPaths(o.fastPaths, x, y) && G.distToPts(fastPl, x, y) >= r + 0.05;
     const Fp = Math.max(1, Math.round(F * 0.3));
     const L1 = G.offsetEx(regPaths, -(rt + aw), aw >= 0.05 ? o.tol : undefined); // 벽 여유가 있으면(황삭) 바깥 루프도 큰 허용 오차
+    const warn = [];
     if (!L1.length) return { error: '공구(+측벽 여유)가 포켓보다 커서 가공할 수 없습니다.' };
     const allowed = [].concat(...L1.map(G.exPaths));
     // [V0.5 검토] 아주 작은 잎(모든 점이 부모 루프에서 공구 반경 안 = 부모 루프가 이미 깎음)은 버림 → 부모가 잎이 되어 넓은 곳에서 진입
@@ -158,10 +159,20 @@
       node.kids = G.offsetEx(G.exPaths(ex), -step, o.tol).map(k => build(k, node)).filter(k => !(k.kids.length === 0 && bestCenter(k.ex).fit + step <= rt - 0.02));
       return node;
     };
-    const roots = L1.map(ex => build(ex, null));
+    // [V0.5 검토] 따로 떨어진 아주 작은 영역(헬리컬·램프 모두 사실상 수직 하강)은 깎지 않고 남김 → 경고 (잔삭 공구로)
+    let skipped = 0;
+    const roots = L1.map(ex => build(ex, null)).filter(r => {
+      if (r.kids.length) return true;
+      const pl = G.fromPath(r.ex.outer), bb = G.bbox([pl]);
+      const tiny = Math.min(0.5 * rt, bestCenter(r.ex).fit - 0.01) < 0.25 * rt && Math.max(bb.x1 - bb.x0, bb.y1 - bb.y0) < rt;
+      if (tiny) skipped++;
+      return !tiny;
+    });
+    if (!roots.length) return { error: '진입할 공간이 너무 좁습니다 (헬리컬·램프가 사실상 수직 하강). 더 작은 엔드밀이나 [선가공 구멍] 진입을 쓰세요.' };
+    if (skipped) warn.push('공구가 안전하게 들어갈 수 없는 좁은 곳 ' + skipped + '군데는 깎지 않고 남깁니다 (섬과 벽 사이 등). 더 작은 엔드밀로 잔삭하세요.');
     const HMIN = 0.25 * rt; // 헬리컬 최소 반경 (작으면 사실상 수직 하강 → 중심 절삭 안 되는 엔드밀 파손)
     const extentOf = pts => { const b = G.bbox([pts]); return Math.max(b.x1 - b.x0, b.y1 - b.y0); };
-    const B = builder(), warn = [];
+    const B = builder();
     let leafErr = null;
     zs.forEach((z, li) => {
       const zPrev = li === 0 ? zEntry : zs[li - 1];
@@ -205,11 +216,29 @@
                 // 헬리컬 끝점에서 가장 가까운 윤곽 점으로 (영역 안 점 → 가장 가까운 경계점 직선은 영역 밖으로 나가지 않음)
                 pts = rotateAt(pts0, bc.x + rh, bc.y).pts;
                 B.push(1, pts[0][0], pts[0][1], z, F);
-              } else {
-                if (extentOf(pts) < rt) leafErr = '진입할 공간이 너무 좁습니다 (헬리컬·램프가 사실상 수직 하강). 더 작은 엔드밀이나 [선가공 구멍] 진입을 쓰세요.';
+              } else if (extentOf(pts) >= rt) {
                 if (cur) B.push(0, pts[0][0], pts[0][1], zClear, 0);
                 B.push(1, pts[0][0], pts[0][1], zPrev, Fr);
                 B.ramp(pts, zPrev, z, Fr);
+              } else {
+                // 잎이 작으면 넓은 조상 윤곽을 따라 램프로 내려간 뒤 잎 시작점으로 (조상 영역 안 직선)
+                let an = node.parent, done = false;
+                while (an && !done) {
+                  const ap = G.fromPath(an.ex.outer);
+                  if (extentOf(ap) >= rt) {
+                    const rp = rotateAt(ap, pts[0][0], pts[0][1]).pts;
+                    const lp = rotateAt(pts0, rp[0][0], rp[0][1]).pts;
+                    if (segInside(allowed, rp[0][0], rp[0][1], lp[0][0], lp[0][1])) {
+                      if (cur) B.push(0, rp[0][0], rp[0][1], zClear, 0);
+                      B.push(1, rp[0][0], rp[0][1], zPrev, Fr);
+                      B.ramp(rp, zPrev, z, Fr);
+                      pts = lp; B.push(1, pts[0][0], pts[0][1], z, F);
+                      done = true;
+                    }
+                  }
+                  an = an.parent;
+                }
+                if (!done) leafErr = '진입할 공간이 너무 좁습니다 (헬리컬·램프가 사실상 수직 하강). 더 작은 엔드밀이나 [선가공 구멍] 진입을 쓰세요.';
               }
             } else {
               if (cur) B.push(0, pts[0][0], pts[0][1], zClear, 0);

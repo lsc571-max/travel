@@ -59,9 +59,20 @@
     return Math.min(R, Math.max(0, toNum(tool.tip, 0)) / 2 + Math.max(0, -z) * Math.tan(toNum(tool.angle, 90) / 2 * Math.PI / 180));
   }
   const TOL = 0.01;
+  // [V0.5] 측벽 형상(구배·입구 R·바닥 R): 윗면에서 깊이 u 인 곳의 벽이 도면 윤곽보다 바깥(+)/안쪽(−)으로 있는 거리 (검증기 자체 계산)
+  function wallShift(pf, u) {
+    const tn = Math.tan(Math.max(0, Math.min(89, pf.draft || 0)) * Math.PI / 180);
+    let o = -Math.max(0, u) * tn;
+    const Rt = pf.topR || 0, Rf = pf.floorR || 0, hf = pf.depth - u;
+    if (Rt > 0 && u < Rt) { const k = Rt - Math.max(0, u); o += Rt - Math.sqrt(Math.max(0, Rt * Rt - k * k)); }
+    if (Rf > 0 && hf < Rf) { const k = Rf - Math.max(0, hf); o -= Rf - Math.sqrt(Math.max(0, Rf * Rf - k * k)); }
+    return o;
+  }
   function regionOk(rg, x, y, z, tool) {
     if (z < rg.floorZ - 0.005) return false;
-    const r = effRad(tool, z - (rg.top || 0)); // [V0.5 검토] 먼저 깎인 면(평면 등) 기준 깊이로 모따기 유효 반경
+    let r = effRad(tool, z - (rg.top || 0)); // [V0.5 검토] 먼저 깎인 면(평면 등) 기준 깊이로 모따기 유효 반경
+    // 평 엔드밀 바닥(z)에서 벽까지 거리: 공구는 z 위로 원통이므로 z 높이의 벽 위치로 판정 (벽은 아래로만 좁아짐)
+    if (rg.prof) r -= wallShift(rg.prof, (rg.top || 0) - z);
     if (!rg.kind) return P.inPocketRegion(rg, x, y, r, TOL); // 사각·원형 포켓 (V0.4 규칙)
     if (rg.kind === 'face') return x >= rg.x0 && x <= rg.x1 && y >= rg.y0 && y <= rg.y1;
     if (rg.kind === 'area') {

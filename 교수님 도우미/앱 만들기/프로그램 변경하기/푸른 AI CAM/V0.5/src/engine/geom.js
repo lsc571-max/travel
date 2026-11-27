@@ -39,9 +39,23 @@
     corner(cx - w / 2 + cr, cy - h / 2 + cr, Math.PI); corner(cx + w / 2 - cr, cy - h / 2 + cr, 1.5 * Math.PI);
     return out;
   }
+  // [V0.5] 정다각형 (변 n, 외접원 반경 R, 회전 rot°, 모서리 R cr). 기본 방향: 아래 변이 수평
+  function ngonPoly(n, R, rotDeg, cr) {
+    n = Math.max(3, Math.min(24, Math.round(toNum(n, 6)))); R = Math.max(0, toNum(R, 0)); cr = Math.max(0, Math.min(toNum(cr, 0), R * Math.cos(Math.PI / n) - 1e-6));
+    const out = [], base = toNum(rotDeg, 0) * Math.PI / 180 - Math.PI / 2 + Math.PI / n, half = Math.PI / n;
+    for (let k = 0; k < n; k++) {
+      const a = base + 2 * Math.PI * k / n;
+      if (cr < 1e-6) { out.push([R * Math.cos(a), R * Math.sin(a)]); continue; }
+      const d = R - cr / Math.cos(half), cx = d * Math.cos(a), cy = d * Math.sin(a);
+      const seg = Math.max(1, Math.ceil(2 * half / (2 * Math.acos(Math.max(-1, 1 - ARC_TOL / cr)))));
+      for (let j = 0; j <= seg; j++) { const t = a - half + 2 * half * j / seg; out.push([cx + cr * Math.cos(t), cy + cr * Math.sin(t)]); }
+    }
+    return out;
+  }
   // 공정의 형상 매개변수 → 영역 (anchor 기준 상대 좌표)
   function shapeRegion(o) {
     if (o.shape === 'circle') return { outer: circlePoly(0, 0, toNum(o.dia, 0) / 2), islands: [] };
+    if (o.shape === 'ngon') return { outer: ngonPoly(o.sides, toNum(o.dia, 0) / 2, o.rot, o.cr), islands: [] };
     if (o.shape === 'poly') {
       const pl = o.poly || {};
       return { outer: Array.isArray(pl.outer) ? ccw(pl.outer) : [], islands: Array.isArray(pl.islands) ? pl.islands.map(cw) : [] };
@@ -97,5 +111,5 @@
     const sol = new CL.Paths(); c.Execute(CL.ClipType.ctDifference, sol, CL.PolyFillType.pftNonZero, CL.PolyFillType.pftNonZero);
     return sol.map(p => Math.abs(CL.Clipper.Area(p)) / (SC * SC)).filter(a => a > 1e-3).sort((a, b) => b - a);
   }
-  P.GEOM = Object.freeze({ unreachable, SC, ARC_TOL, ok: !!CL, toPath, fromPath, area, ccw, cw, bbox, perimeter, circlePoly, rrectPoly, shapeRegion, regionPaths, offsetEx, exPaths, offsetPts, inPaths, segDist, distToPts, cleanRegion, overlapArea });
+  P.GEOM = Object.freeze({ unreachable, ngonPoly, SC, ARC_TOL, ok: !!CL, toPath, fromPath, area, ccw, cw, bbox, perimeter, circlePoly, rrectPoly, shapeRegion, regionPaths, offsetEx, exPaths, offsetPts, inPaths, segDist, distToPts, cleanRegion, overlapArea });
 })(typeof globalThis !== 'undefined' ? globalThis : this);
