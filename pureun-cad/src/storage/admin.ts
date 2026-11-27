@@ -74,7 +74,15 @@ function safeEqual(a: string, b: string) {
   return r === 0;
 }
 
-export async function verifyPassword(pw: string): Promise<'ok' | 'fail' | 'locked' | 'none'> {
+/** 동시에 여러 번 호출되어도 실패 횟수가 빠지지 않도록 순서대로 처리 */
+let queue: Promise<unknown> = Promise.resolve();
+export function verifyPassword(pw: string): Promise<'ok' | 'fail' | 'locked' | 'none'> {
+  const run = queue.then(() => verifyOnce(pw));
+  queue = run.catch(() => {});
+  return run;
+}
+
+async function verifyOnce(pw: string): Promise<'ok' | 'fail' | 'locked' | 'none'> {
   const st = read();
   if (!st) return 'none';
   if (lockRemaining() > 0) return 'locked';

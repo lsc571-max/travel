@@ -1,10 +1,10 @@
 // 간격띄우기(OFFSET)
 import { baseProps, entitySegs } from './entity';
 import {
-  add, angleOf, closestOnSeg, cross, dist, dot, mul, norm, normAng, perpL, samePt, segEnd, segStart, segTangent,
+  add, angleOf, cleanPolyPts, closestOnSeg, segBBox, cross, dist, dot, mul, norm, normAng, perpL, samePt, segEnd, segStart, segTangent,
   sub, TAU, type ArcSeg, type Seg,
 } from './geom';
-import { curveIntersect } from './intersect';
+import { curveIntersect, segIntersect } from './intersect';
 import type { Entity, NewEntity, PVertex, Vec2 } from './types';
 
 export interface OffsetResult {
@@ -124,6 +124,30 @@ export function offsetPolySegs(segs: Seg[], closed: boolean, d: number): { segs:
   return { segs: out };
 }
 
+/** 인접하지 않은 세그먼트끼리 교차하는지 (인접 세그먼트는 공유 끝점 외 교차 여부만 확인) */
+export function selfIntersects(segs: Seg[], closed: boolean): boolean {
+  const n = segs.length;
+  if (n > 4000) return false; // 매우 큰 경우 검사 생략 (성능)
+  const boxes = segs.map(segBBox);
+  const tol = 1e-9;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const a = boxes[i], b = boxes[j];
+      if (a.minX > b.maxX + tol || b.minX > a.maxX + tol || a.minY > b.maxY + tol || b.minY > a.maxY + tol) continue;
+      const adjacent = j === i + 1 || (closed && i === 0 && j === n - 1);
+      for (const h of segIntersect(segs[i], segs[j])) {
+        if (adjacent) {
+          // 공유 끝점에서 만나는 것은 정상
+          const shared = j === i + 1 ? h.t1 > 1 - 1e-7 && h.t2 < 1e-7 : h.t1 < 1e-7 && h.t2 > 1 - 1e-7;
+          if (shared) continue;
+        }
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 export function offsetEntity(e: Entity, d: number, side: number): OffsetResult {
   if (!(d > 0) || !Number.isFinite(d)) return { ok: false, message: '간격은 0보다 커야 합니다.' };
   const base = baseProps(e);
@@ -144,10 +168,15 @@ export function offsetEntity(e: Entity, d: number, side: number): OffsetResult {
       return { ok: true, entity: { type: 'arc', ...base, c: { ...e.c }, r, a0: e.a0, a1: e.a1 } };
     }
     case 'polyline': {
-      const segs = entitySegs(e);
+      // 길이 0 세그먼트(중복 정점)는 제외하고 계산
+      const clean = { ...e, pts: cleanPolyPts(e.pts, e.closed) };
+      const segs = entitySegs(clean);
       if (!segs.length) return { ok: false, message: '정점이 부족한 폴리선입니다.' };
       const r = offsetPolySegs(segs, e.closed, sd);
       if ('error' in r) return { ok: false, message: r.error };
+      if (selfIntersects(r.segs, e.closed)) {
+        return { ok: false, message: '간격띄우기 결과가 자기 자신과 교차하여(가공 시 파고듦) 계산할 수 없습니다. 더 작은 간격을 사용하거나 형상을 나누어 작업하십시오.' };
+      }
       const pts: PVertex[] = r.segs.map((s) => ({ ...segStart(s), b: s.kind === 'arc' ? Math.tan(s.sweep / 4) : 0 }));
       if (!e.closed) pts.push({ ...segEnd(r.segs[r.segs.length - 1]), b: 0 });
       return { ok: true, entity: { type: 'polyline', ...base, pts, closed: e.closed } };

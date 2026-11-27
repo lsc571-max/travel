@@ -4,7 +4,7 @@ import { Engine } from '../commands/engine';
 import { DEFAULT_SETTINGS } from '../commands/types';
 import { fmtNum } from '../core/format';
 import { snapNameKo } from '../core/snap';
-import type { Layer, Linetype, NewEntity, PreservedBlock, PreservedEntity } from '../core/types';
+import type { DxfPair, Layer, Linetype, NewEntity, PreservedBlock, PreservedEntity } from '../core/types';
 import { readDxf } from '../dxf/reader';
 import { writeDxf } from '../dxf/writer';
 import { runBenchmark } from '../perf';
@@ -36,6 +36,7 @@ interface AutoSave {
   preservedBlocks: PreservedBlock[];
   header: Record<string, string>;
   currentLayer: string;
+  tables?: { STYLE: DxfPair[][]; DIMSTYLE: DxfPair[][] };
 }
 
 function createEngine() {
@@ -64,6 +65,7 @@ function snapshot(eng: Engine): AutoSave {
     preservedBlocks: d.preservedBlocks,
     header: d.header,
     currentLayer: d.currentLayer,
+    tables: d.tables,
   };
 }
 

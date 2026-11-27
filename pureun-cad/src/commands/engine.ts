@@ -54,8 +54,11 @@ export class Engine {
   constructor() {
     this.applySettings();
     this.doc.subscribe(() => {
-      // 지워진 객체는 선택에서 제거
-      for (const id of [...this.sel]) if (!this.doc.get(id)) this.sel.delete(id);
+      // 지워진 객체, 꺼지거나 잠긴 레이어로 바뀐 객체는 선택에서 제거
+      for (const id of [...this.sel]) {
+        const e = this.doc.get(id);
+        if (!e || !this.doc.isEditable(e)) this.sel.delete(id);
+      }
       this.dirty.base = this.dirty.sel = this.dirty.over = true;
       this.notify();
     });

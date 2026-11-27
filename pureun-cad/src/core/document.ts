@@ -2,7 +2,7 @@
 import RBush from 'rbush';
 import { entityBBox } from './entity';
 import { unionBBox } from './geom';
-import type { BBox, Entity, Layer, Linetype, NewEntity, PreservedBlock, PreservedEntity } from './types';
+import type { BBox, DxfPair, Entity, Layer, Linetype, NewEntity, PreservedBlock, PreservedEntity } from './types';
 
 /** 기본 제공 선종류 (자체 정의 패턴, 도면 단위 mm 기준) */
 export const DEFAULT_LTYPES: Linetype[] = [
@@ -22,6 +22,8 @@ interface LayerState {
 }
 
 interface Transaction {
+  /** 고유 번호 (명령 안에서 자기 커밋만 되돌릴 때 사용) */
+  id: number;
   label: string;
   /** id → [이전, 이후] (null = 없음) */
   ents: Map<number, [Entity | null, Entity | null]>;
@@ -36,6 +38,8 @@ export class Drawing {
   entities = new Map<number, Entity>();
   preserved: PreservedEntity[] = [];
   preservedBlocks: PreservedBlock[] = [];
+  /** 원본 STYLE·DIMSTYLE 표 항목 */
+  tables: { STYLE: DxfPair[][]; DIMSTYLE: DxfPair[][] } = { STYLE: [], DIMSTYLE: [] };
   /** DXF 헤더 중 보존할 값(단위 등) */
   header: Record<string, string> = {};
   layers = new Map<string, Layer>();
@@ -100,8 +104,13 @@ export class Drawing {
   get(id: number) {
     return this.entities.get(id);
   }
+  /** 레이어 조회. DXF 레이어 이름은 대소문자를 구분하지 않으므로 정확히 일치하지 않으면 대소문자 무시로 찾음 */
   layerOf(e: { layer: string }): Layer {
-    return this.layers.get(e.layer) ?? { name: e.layer, color: 7, on: true, locked: false };
+    const l = this.layers.get(e.layer);
+    if (l) return l;
+    const up = e.layer.toUpperCase();
+    for (const x of this.layers.values()) if (x.name.toUpperCase() === up) return x;
+    return { name: e.layer, color: 7, on: true, locked: false };
   }
   isVisible(e: { layer: string }) {
     return this.layerOf(e).on;
@@ -182,11 +191,22 @@ export class Drawing {
       this.reindexPreserved();
     }
     this.undoStack.push(t);
-    if (this.undoStack.length > this.maxUndo) this.undoStack.shift();
+    // 기록 한도 초과 시 가장 오래된 것 삭제. 명령 묶음이 열려 있으면 시작 위치도 함께 보정
+    if (this.undoStack.length > this.maxUndo) {
+      if (this.groupStart > 0) {
+        this.undoStack.shift();
+        this.groupStart--;
+      } else if (this.groupStart < 0) this.undoStack.shift();
+    }
     this.redoStack = [];
     this.modified = true;
     this.emit();
     return true;
+  }
+  private txSeq = 1;
+  /** @internal */
+  _nextTxId() {
+    return this.txSeq++;
   }
   /** @internal */
   _layerState() {
@@ -208,24 +228,53 @@ export class Drawing {
   // ───── 명령 단위 묶음: 한 명령에서 생긴 여러 커밋을 실행취소 1회로 묶음 ─────
   private groupStart = -1;
   private groupLabel = '';
+  private groupRedoBase = 0;
   beginGroup(label: string) {
     if (this.groupStart >= 0) this.endGroup();
     this.groupStart = this.undoStack.length;
     this.groupLabel = label;
+    this.groupRedoBase = this.redoStack.length;
   }
-  /** 현재 묶음 안에서 되돌릴 수 있는 단계 수 */
-  groupDepth() {
-    return this.groupStart < 0 ? 0 : this.undoStack.length - this.groupStart;
+  /**
+   * 명령 안에서 자기 커밋 하나만 되돌림 (LINE·TRIM의 U 옵션). 다시실행 기록에 남기지 않는다.
+   * 이후 다른 커밋이 같은 객체·레이어를 바꿨다면 되돌리지 않고 false.
+   */
+  revertInGroup(txId: number): boolean {
+    if (this.groupStart < 0) return false;
+    const i = this.undoStack.findIndex((t, k) => k >= this.groupStart && t.id === txId);
+    if (i < 0) return false;
+    const t = this.undoStack[i];
+    for (const later of this.undoStack.slice(i + 1)) {
+      for (const id of later.ents.keys()) if (t.ents.has(id)) return false;
+      if (later.layersAfter && t.layersAfter) return false;
+      if (later.preservedAfter && t.preservedAfter) return false;
+    }
+    for (const [id, [before]] of t.ents) {
+      if (before) this.put(before);
+      else this.del(id);
+    }
+    if (t.layersBefore) this.applyLayerState(t.layersBefore);
+    if (t.preservedBefore) {
+      this.preserved = t.preservedBefore;
+      this.reindexPreserved();
+    }
+    this.undoStack.splice(i, 1);
+    this.modified = true;
+    this.emit();
+    return true;
   }
   endGroup() {
     const start = this.groupStart;
     this.groupStart = -1;
+    if (start < 0) return;
+    // 묶음 안에서 되돌린 단계는 명령이 끝나면 다시실행 대상이 아님
+    if (this.redoStack.length > this.groupRedoBase) this.redoStack.length = this.groupRedoBase;
     if (start < 0 || this.undoStack.length - start <= 1) {
       if (start >= 0 && this.undoStack.length - start === 1) this.undoStack[start].label = this.groupLabel;
       return;
     }
     const parts = this.undoStack.splice(start);
-    const merged: Transaction = { label: this.groupLabel, ents: new Map() };
+    const merged: Transaction = { id: this._nextTxId(), label: this.groupLabel, ents: new Map() };
     for (const t of parts) {
       for (const [id, [b, a]] of t.ents) {
         const prev = merged.ents.get(id);
@@ -304,7 +353,9 @@ export class Drawing {
     header?: Record<string, string>;
     fileName?: string;
     ltypes?: Linetype[];
+    tables?: { STYLE: DxfPair[][]; DIMSTYLE: DxfPair[][] };
   }) {
+    this.tables = data.tables ?? { STYLE: [], DIMSTYLE: [] };
     this.ltypes = new Map(DEFAULT_LTYPES.map((l) => [l.name.toUpperCase(), l]));
     for (const l of data.ltypes ?? []) this.ltypes.set(l.name.toUpperCase(), l);
     this.ltscale = Number(data.header?.['$LTSCALE'] ?? 1) || 1;
@@ -316,16 +367,27 @@ export class Drawing {
     this.nextId = 1;
     this.layers = new Map();
     this.layers.set('0', { name: '0', color: 7, on: true, locked: false });
-    for (const l of data.layers) this.layers.set(l.name, { ...l });
+    const canon = new Map<string, string>([['0', '0']]);
+    for (const l of data.layers) {
+      const k = l.name.toUpperCase();
+      if (canon.has(k)) continue; // 대소문자만 다른 중복 레이어는 첫 항목 사용
+      canon.set(k, l.name);
+      this.layers.set(l.name, { ...l });
+    }
+    // 객체의 레이어 이름을 레이어 표의 이름으로 맞춤 (대소문자 무시) → 잠금·꺼짐 상태가 그대로 적용됨
+    const resolve = (name: string) => {
+      const k = name.toUpperCase();
+      const c = canon.get(k);
+      if (c !== undefined) return c;
+      canon.set(k, name);
+      this.layers.set(name, { name, color: 7, on: true, locked: false });
+      return name;
+    };
     for (const e of data.entities) {
-      if (!this.layers.has(e.layer)) this.layers.set(e.layer, { name: e.layer, color: 7, on: true, locked: false });
-      const ent = { ...e, id: this.nextId++ } as Entity;
+      const ent = { ...e, layer: resolve(e.layer), id: this.nextId++ } as Entity;
       this.entities.set(ent.id, ent);
     }
-    this.preserved = (data.preserved ?? []).map((p) => {
-      if (!this.layers.has(p.layer)) this.layers.set(p.layer, { name: p.layer, color: 7, on: true, locked: false });
-      return { ...p, id: this.nextId++ };
-    });
+    this.preserved = (data.preserved ?? []).map((p) => ({ ...p, layer: resolve(p.layer), id: this.nextId++ }));
     this.preservedBlocks = data.preservedBlocks ?? [];
     this.header = data.header ?? {};
     this.currentLayer = this.layers.has(this.currentLayer) ? this.currentLayer : '0';
@@ -356,7 +418,7 @@ export class TxBuilder {
     private doc: Drawing,
     label: string,
   ) {
-    this.t = { label, ents: new Map() };
+    this.t = { id: doc._nextTxId(), label, ents: new Map() };
   }
   private record(id: number, before: Entity | null, after: Entity | null) {
     const prev = this.t.ents.get(id);
@@ -368,10 +430,7 @@ export class TxBuilder {
     return p ? p[1] : (this.doc.get(id) ?? null);
   }
   add(e: NewEntity): number {
-    const layer = this.doc.layers.get(e.layer);
-    if (layer?.locked) {
-      // AutoCAD와 같이 잠긴 레이어에도 새 객체 작성은 허용
-    }
+    // AutoCAD와 같이 잠긴 레이어에도 새 객체 작성은 허용
     const id = this.doc.newId();
     this.record(id, null, { ...e, id } as Entity);
     return id;
@@ -379,7 +438,7 @@ export class TxBuilder {
   update(e: Entity, opts?: { allowLocked?: boolean }): boolean {
     const cur = this.current(e.id);
     if (!cur) return false;
-    if (!opts?.allowLocked && this.doc.layerOf(cur).locked) {
+    if (!opts?.allowLocked && !this.doc.isEditable(cur)) {
       this.rejected++;
       return false;
     }
@@ -389,7 +448,7 @@ export class TxBuilder {
   remove(id: number): boolean {
     const cur = this.current(id);
     if (!cur) return false;
-    if (this.doc.layerOf(cur).locked) {
+    if (!this.doc.isEditable(cur)) {
       this.rejected++;
       return false;
     }
@@ -411,7 +470,11 @@ export class TxBuilder {
   get size() {
     return this.t.ents.size;
   }
+  /** 커밋 후 트랜잭션 번호 (변경 없으면 0) */
+  committedId = 0;
   commit(): boolean {
-    return this.doc._commit(this.t);
+    const ok = this.doc._commit(this.t);
+    if (ok) this.committedId = this.t.id;
+    return ok;
   }
 }

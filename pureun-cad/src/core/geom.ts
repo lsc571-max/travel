@@ -212,3 +212,23 @@ export function polyArea(pts: PVertex[]): number {
   }
   return a;
 }
+
+/** 길이 0인 세그먼트(연속 중복 정점, 닫힌 폴리선의 마지막=첫 정점)를 제거한 정점 목록 */
+export function cleanPolyPts(pts: PVertex[], closed: boolean, tol = 1e-9): PVertex[] {
+  const out: PVertex[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i];
+    const next = i + 1 < pts.length ? pts[i + 1] : null;
+    // p→next 세그먼트 길이가 0이면 p를 버리고 next가 이후 세그먼트를 담당
+    if (next && Math.abs(p.x - next.x) <= tol && Math.abs(p.y - next.y) <= tol) continue;
+    out.push(p);
+  }
+  if (closed) {
+    while (out.length > 1) {
+      const f = out[0], l = out[out.length - 1];
+      if (Math.abs(f.x - l.x) <= tol && Math.abs(f.y - l.y) <= tol) out.pop();
+      else break;
+    }
+  }
+  return out;
+}

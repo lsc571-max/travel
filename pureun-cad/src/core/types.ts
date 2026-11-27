@@ -46,12 +46,17 @@ export interface PVertex {
   x: number;
   y: number;
   b: number;
+  /** 시작/끝 폭 (DXF 40/41, 보존용) */
+  sw?: number;
+  ew?: number;
 }
 
 export interface PolylineEnt extends EntityBase {
   type: 'polyline';
   pts: PVertex[];
   closed: boolean;
+  /** 고정 폭 (DXF 43, 보존용) */
+  width?: number;
 }
 
 export interface TextEnt extends EntityBase {
@@ -65,6 +70,10 @@ export interface TextEnt extends EntityBase {
   hAlign?: number;
   vAlign?: number;
   p2?: Vec2;
+  /** 문자 스타일 이름(DXF 7), 폭 비율(41), 기울기(51) 보존 */
+  style?: string;
+  wf?: number;
+  oblique?: number;
 }
 
 export type DimKind = 'linear' | 'aligned' | 'diameter' | 'radius';
@@ -86,6 +95,8 @@ export interface DimensionEnt extends EntityBase {
   h: number;
   /** 화살표 크기 */
   arrow: number;
+  /** 치수 스타일 이름(DXF 3) 보존 */
+  dimstyle?: string;
 }
 
 export type Entity = LineEnt | CircleEnt | ArcEnt | PolylineEnt | TextEnt | DimensionEnt;

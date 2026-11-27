@@ -49,7 +49,12 @@ export function findSnap(
   }
   for (const e of ents) for (const s of entitySegs(e)) if (bboxOverlap(segBBox(s), box)) segs.push(s);
   for (const s of extra) if (bboxOverlap(segBBox(s), box)) segs.push(s);
-  if (segs.length > 400) segs.length = 400; // 과밀 영역 계산량 제한
+  if (segs.length > 400) {
+    // 과밀 영역: 커서에 가까운 세그먼트 400개만 사용 (가까운 스냅을 놓치지 않도록 먼저 거리순 정렬)
+    const d = new Map(segs.map((s) => [s, closestOnSeg(s, cursor).d]));
+    segs.sort((a, b) => d.get(a)! - d.get(b)!);
+    segs.length = 400;
+  }
 
   let best: SnapResult | null = null;
   let bestD = Infinity;

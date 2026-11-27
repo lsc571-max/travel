@@ -122,16 +122,18 @@ function cuttersNear(ctx: Ctx, target: Entity, only?: Set<number>): Seg[] {
 
 export const TRIM: CommandFn = function* (ctx) {
   let boundary: Set<number> | undefined;
+  const txIds: number[] = [];
   ctx.setSelection([]);
   ctx.log('빠른 모드: 모든 객체가 자르기 경계로 사용됩니다. (교차하지 않는 객체는 지우지 않고 그대로 둡니다)');
   for (;;) {
     const kws = [{ key: 'B', label: boundary ? '빠른 모드(B)' : '경계 선택(B)' }];
-    if (ctx.doc.groupDepth() > 0) kws.push({ key: 'U', label: '명령 취소(U)' });
+    if (txIds.length) kws.push({ key: 'U', label: '명령 취소(U)' });
     const r = yield { kind: 'entity', prompt: '자를 부분 선택 (Enter: 종료)', keywords: kws, allowNone: true, filter: (id) => ctx.doc.isEditable(ctx.doc.get(id)!) };
     if (r.t === 'none') return;
     if (r.t === 'kw') {
       if (r.k === 'U') {
-        if (ctx.doc.groupDepth() > 0) ctx.doc.undo();
+        const last = txIds.pop();
+        if (last !== undefined && !ctx.doc.revertInGroup(last)) ctx.log('직전 자르기 이후 다른 변경이 있어 취소할 수 없습니다.');
         continue;
       }
       if (boundary) {
@@ -156,9 +158,13 @@ export const TRIM: CommandFn = function* (ctx) {
       continue;
     }
     const tx = ctx.doc.tx('TRIM');
-    tx.remove(target.id);
+    if (!tx.remove(target.id)) {
+      ctx.log('잠긴 레이어 또는 꺼진 레이어의 객체는 자를 수 없습니다.');
+      continue;
+    }
     for (const p of res.pieces) tx.add(p);
     tx.commit();
+    txIds.push(tx.committedId);
   }
 };
 

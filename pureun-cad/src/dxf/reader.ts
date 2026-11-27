@@ -15,6 +15,8 @@ export interface DxfReadResult {
   warnings: string[];
   /** 미지원 객체 종류별 개수 */
   unsupported: Record<string, number>;
+  /** 원본 STYLE·DIMSTYLE 표 항목 (저장 시 재기록) */
+  tables: { STYLE: DxfPair[][]; DIMSTYLE: DxfPair[][] };
   version: string;
   encoding: string;
 }
@@ -156,6 +158,7 @@ export function readDxfText(text: string, encoding = 'utf-8'): DxfReadResult {
     header: {},
     warnings: [],
     unsupported: {},
+    tables: { STYLE: [], DIMSTYLE: [] },
     version: 'AC1009',
     encoding,
   };
@@ -242,6 +245,7 @@ function readTables(body: DxfPair[], res: DxfReadResult, dimStyles: Map<string, 
   const flush = () => {
     if (!cur) return;
     const g = (c: number) => cur!.find((p) => p.code === c)?.value;
+    if ((table === 'STYLE' || table === 'DIMSTYLE') && cur[0].value === table) res.tables[table].push(cur);
     if (table === 'LAYER' && cur[0].value === 'LAYER') {
       const name = unescapeDxf(g(2) ?? '0');
       const color = num(g(62), 7);
@@ -363,9 +367,13 @@ export function convertEntity(re: RawEntity, dimStyles: Map<string, { txt: numbe
         if (p.code === 10) pts.push({ x: fx(num(p.value)), y: 0, b: 0 });
         else if (p.code === 20 && pts.length) pts[pts.length - 1].y = num(p.value);
         else if (p.code === 42 && pts.length) pts[pts.length - 1].b = flipped ? -num(p.value) : num(p.value);
+        else if (p.code === 40 && pts.length && num(p.value)) pts[pts.length - 1].sw = num(p.value);
+        else if (p.code === 41 && pts.length && num(p.value)) pts[pts.length - 1].ew = num(p.value);
       }
       if (pts.length < 2) return { reason: 'LWPOLYLINE(정점 부족)' };
-      return { entity: { type: 'polyline', ...base, pts, closed: (n(70) & 1) === 1 }, z: hasZ };
+      const ent: NewEntity = { type: 'polyline', ...base, pts, closed: (n(70) & 1) === 1 };
+      if (n(43)) ent.width = n(43);
+      return { entity: ent, z: hasZ };
     }
     case 'POLYLINE': {
       const flags = n(70);
@@ -376,10 +384,15 @@ export function convertEntity(re: RawEntity, dimStyles: Map<string, { txt: numbe
         if (v.type !== 'VERTEX') continue;
         const vf = num(get(v, 70));
         if (vf & 16) continue; // 스플라인 프레임 제어점
-        pts.push({ x: fx(num(get(v, 10))), y: num(get(v, 20)), b: (flipped ? -1 : 1) * num(get(v, 42)) });
+        const pv: PVertex = { x: fx(num(get(v, 10))), y: num(get(v, 20)), b: (flipped ? -1 : 1) * num(get(v, 42)) };
+        if (num(get(v, 40))) pv.sw = num(get(v, 40));
+        if (num(get(v, 41))) pv.ew = num(get(v, 41));
+        pts.push(pv);
       }
       if (pts.length < 2) return { reason: 'POLYLINE(정점 부족)' };
-      return { entity: { type: 'polyline', ...base, pts, closed: (flags & 1) === 1 }, z: hasZ };
+      const ent: NewEntity = { type: 'polyline', ...base, pts, closed: (flags & 1) === 1 };
+      if (n(40) && n(40) === n(41, n(40))) ent.width = n(40);
+      return { entity: ent, z: hasZ };
     }
     case 'TEXT': {
       if (!ocsOk) return { reason: 'TEXT(3D 방향)' };
@@ -398,6 +411,9 @@ export function convertEntity(re: RawEntity, dimStyles: Map<string, { txt: numbe
         ent.vAlign = va;
         ent.p2 = { x: fx(n(11)), y: n(21) };
       }
+      if (g(7) && g(7)!.toUpperCase() !== 'STANDARD') ent.style = unescapeDxf(g(7)!);
+      if (g(41) !== undefined && n(41, 1) !== 1) ent.wf = n(41, 1);
+      if (n(51)) ent.oblique = n(51);
       return { entity: ent, z: hasZ };
     }
     case 'DIMENSION': {
@@ -408,7 +424,14 @@ export function convertEntity(re: RawEntity, dimStyles: Map<string, { txt: numbe
       const P = (c: number): Vec2 => ({ x: n(c), y: n(c + 10) });
       let override = unescapeDxf(g(1) ?? '');
       if (override === '<>') override = '';
-      const common = { ...base, h: st.txt * st.scale, arrow: st.asz * st.scale, ...(override ? { textOverride: override } : {}) };
+      const dsName = unescapeDxf(g(3) ?? 'STANDARD');
+      const common = {
+        ...base,
+        h: st.txt * st.scale,
+        arrow: st.asz * st.scale,
+        ...(override ? { textOverride: override } : {}),
+        ...(dsName.toUpperCase() !== 'STANDARD' ? { dimstyle: dsName } : {}),
+      };
       const blk = g(2);
       if (dt === 0)
         return { entity: { type: 'dimension', kind: 'linear', ...common, p1: P(13), p2: P(14), loc: P(10), rot: n(50) }, dimBlock: blk };

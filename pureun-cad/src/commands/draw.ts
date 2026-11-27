@@ -11,6 +11,8 @@ export const LINE: CommandFn = function* (ctx) {
   const r = yield { kind: 'point', prompt: '첫 번째 점 지정' };
   if (r.t !== 'point') return;
   const pts: Vec2[] = [r.p];
+  /** 이 명령이 만든 선분 커밋 번호 (U 옵션으로 자기 선분만 되돌림) */
+  const txIds: number[] = [];
   let segs = 0;
   for (;;) {
     const prev = pts[pts.length - 1];
@@ -20,12 +22,12 @@ export const LINE: CommandFn = function* (ctx) {
     const q = yield { kind: 'point', prompt: '다음 점 지정', base: prev, keywords: kws, allowNone: true, preview: (p) => [lineEnt(ctx, prev, p)] };
     if (q.t === 'none') return;
     if (q.t === 'kw' && q.k === 'U') {
-      if (segs > 0 && ctx.doc.groupDepth() > 0) {
-        ctx.doc.undo();
+      if (segs > 0 && ctx.doc.revertInGroup(txIds[txIds.length - 1])) {
+        txIds.pop();
         pts.pop();
         segs--;
         ctx.lastPoint = pts[pts.length - 1];
-      }
+      } else if (segs > 0) ctx.log('마지막 선분 이후 다른 변경이 있어 취소할 수 없습니다.');
       continue;
     }
     if (q.t === 'kw' && q.k === 'C') {
@@ -43,6 +45,7 @@ export const LINE: CommandFn = function* (ctx) {
     const tx = ctx.doc.tx('LINE');
     tx.add(lineEnt(ctx, prev, q.p));
     tx.commit();
+    txIds.push(tx.committedId);
     pts.push(q.p);
     segs++;
   }
@@ -197,9 +200,11 @@ export const PLINE: CommandFn = function* (ctx) {
   if (r0.t !== 'point') return;
   const pts: PVertex[] = [{ ...r0.p, b: 0 }];
   let arcMode = false;
+  let committed = false;
   const poly = (list: PVertex[], closed = false): NewEntity => ({ type: 'polyline', ...base(ctx), pts: list.map((p) => ({ ...p })), closed });
   const finish = (closed: boolean) => {
-    if (pts.length < 2) return;
+    if (committed || pts.length < 2) return;
+    committed = true;
     const tx = ctx.doc.tx('PLINE');
     tx.add(poly(pts, closed));
     tx.commit();
@@ -252,7 +257,7 @@ export const PLINE: CommandFn = function* (ctx) {
     }
   } finally {
     // ESC로 끝낸 경우에도 지금까지 그린 폴리선 유지 (AutoCAD와 동일)
-    if (pts.length >= 2 && ctx.doc.groupDepth() === 0) finish(false);
+    finish(false);
   }
 };
 

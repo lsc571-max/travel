@@ -1,6 +1,6 @@
 // 자르기(TRIM): 선택한 부분을 경계 교차점 사이에서 제거
 import { baseProps, entitySegs } from './entity';
-import { angleOf, closestOnSeg, DEG, normDeg, segPoint, type Seg } from './geom';
+import { angleOf, cleanPolyPts, closestOnSeg, DEG, normDeg, segPoint, type Seg } from './geom';
 import { segIntersect } from './intersect';
 import type { Entity, NewEntity, PVertex } from './types';
 
@@ -79,8 +79,11 @@ function entitySegsOfPoly(pts: PVertex[], closed: boolean) {
   return entitySegs({ type: 'polyline', id: 0, layer: '0', pts, closed });
 }
 
-export function trimEntity(target: Entity, pick: { x: number; y: number }, cutters: Seg[]): TrimResult {
-  if (target.type === 'text' || target.type === 'dimension') return { ok: false, pieces: [], message: '문자·치수는 자를 수 없습니다.' };
+export function trimEntity(original: Entity, pick: { x: number; y: number }, cutters: Seg[]): TrimResult {
+  if (original.type === 'text' || original.type === 'dimension') return { ok: false, pieces: [], message: '문자·치수는 자를 수 없습니다.' };
+  // 길이 0 세그먼트(중복 정점)는 계산에서 제외
+  const target: Entity = original.type === 'polyline' ? { ...original, pts: cleanPolyPts(original.pts, original.closed) } : original;
+  if (target.type === 'polyline' && target.pts.length < 2) return { ok: false, pieces: [], message: '정점이 부족한 폴리선입니다.' };
   const segs = entitySegs(target);
   const n = segs.length;
   if (!n) return { ok: false, pieces: [], message: '자를 수 없는 객체입니다.' };
@@ -103,9 +106,22 @@ export function trimEntity(target: Entity, pick: { x: number; y: number }, cutte
     const ranges: [number, number][] = [];
     if (lo > UTOL) ranges.push([0, lo]);
     if (hi < n - UTOL) ranges.push([hi, n]);
-    return { ok: true, pieces: ranges.map(([a, b]) => buildPiece(target, a, b, base)!).filter(Boolean) };
+    const pieces = ranges.map(([a, b]) => buildPiece(target, a, b, base)).filter((x): x is NewEntity => !!x);
+    if (!pieces.length) return { ok: false, pieces: [], message: '남는 부분이 없어 자를 수 없습니다. (지우려면 ERASE를 사용하십시오)' };
+    return { ok: true, pieces };
   }
 
+  // 닫힌 객체: 시작점(u=0)과 끝점(u=n)은 같은 점이므로 하나로 합침
+  {
+    const w = cuts.map((u) => {
+      let x = ((u % n) + n) % n;
+      if (x > n - UTOL) x = 0;
+      return x;
+    });
+    w.sort((a, b) => a - b);
+    cuts = [];
+    for (const u of w) if (!cuts.length || u - cuts[cuts.length - 1] > UTOL) cuts.push(u);
+  }
   // 닫힌 객체: 절단점 2개 이상 필요
   if (target.type === 'circle') {
     // 원은 각도 기준 (세그먼트 1개, u = 0~1)
@@ -131,7 +147,8 @@ export function trimEntity(target: Entity, pick: { x: number; y: number }, cutte
     return { ok: true, pieces: [{ type: 'arc', ...base, c: { ...target.c }, r: target.r, a0, a1 }] };
   }
   const piece = buildPiece(target, keep0, keep1, base);
-  return { ok: true, pieces: piece ? [piece] : [] };
+  if (!piece) return { ok: false, pieces: [], message: '남는 부분이 없어 자를 수 없습니다. (지우려면 ERASE를 사용하십시오)' };
+  return { ok: true, pieces: [piece] };
 }
 
 function buildPiece(target: Entity, u0: number, u1: number, base: ReturnType<typeof baseProps>): NewEntity | null {
