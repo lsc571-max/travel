@@ -639,3 +639,10 @@ table.tbl th,.pill,.badge,.hud3 .assume,.hud3 .xyz,.testtag,.nextstep .nt small,
 .simbar .bands em{font-size:12px}
 #btnMore{flex:none}
 @media (max-width:900px){table.tbl button.sm{min-width:40px;justify-content:center}}
+/* 아이콘을 한 단계 더 크게 */
+.titem:not(.mini) .tile{--s:44px}
+.titem:not(.mini){min-height:60px}
+.addpal .tile.lg{--s:52px}
+.addpal button{min-height:92px}
+#top .ibtn svg,#top .tbtn svg{width:21px;height:21px}
+.prophead .tile{--s:40px}

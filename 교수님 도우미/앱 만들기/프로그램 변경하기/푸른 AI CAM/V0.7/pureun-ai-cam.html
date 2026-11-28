@@ -649,6 +649,13 @@ table.tbl th,.pill,.badge,.hud3 .assume,.hud3 .xyz,.testtag,.nextstep .nt small,
 .simbar .bands em{font-size:12px}
 #btnMore{flex:none}
 @media (max-width:900px){table.tbl button.sm{min-width:40px;justify-content:center}}
+/* 아이콘을 한 단계 더 크게 */
+.titem:not(.mini) .tile{--s:44px}
+.titem:not(.mini){min-height:60px}
+.addpal .tile.lg{--s:52px}
+.addpal button{min-height:92px}
+#top .ibtn svg,#top .tbtn svg{width:21px;height:21px}
+.prophead .tile{--s:40px}
 
 </style>
 </head>
@@ -16558,7 +16565,9 @@ DEALINGS IN THE SOFTWARE.
     // [V0.7] 접힌 줄 때문에 오류가 가려지지 않도록: 입력칸에 붙지 않은 이 가공의 오류·경고를 기본 치수 바로 아래에 모음
     const seen = new Set(), left = [];
     FLD.list.filter(i => !FLD.used.has(i)).sort((a, b) => (a.level === 'error' ? 0 : 1) - (b.level === 'error' ? 0 : 1)).forEach(i => { const t = i.msg.replace(/^\[[^\]]*\]\s*(공정 \d+ \([^)]*\):\s*)?/, ''); if (!seen.has(t)) { seen.add(t); left.push({ level: i.level, t }); } });
-    let al = gp ? gp.alerts : '';
+    const usedMsg = [...FLD.used].map(i => i.msg);
+    const notes = gp ? gp.noteList.filter(n => !usedMsg.some(m => m.includes(n.msg))).map(n => n.html).join('') + gp.alerts : '';
+    let al = notes ? '<div class="alerts">' + notes + '</div>' : '';
     if (left.length) al += '<div class="alerts">' + left.slice(0, 4).map(i => '<div class="note ' + i.level + '">' + (i.level === 'error' ? '✖ ' : '⚠ ') + esc(i.t) + '</div>').join('') +
       (left.length > 4 ? '<div class="row" style="margin-top:6px">' + u.btn('외 ' + (left.length - 4) + '건 — 검증 결과 열기', () => openDrawer('check'), 'sm') + '</div>' : '') + '</div>';
     return h.replace(MARK, () => al);
@@ -16596,7 +16605,8 @@ DEALINGS IN THE SOFTWARE.
             : op.type === 'chamferMill' ? ' · C' + op.cw : (op.q && C.OPS.get(op.type).ui.q ? ' · Q' + op.q : '');
       rows += '<div class="genrow"><span class="num" style="background:' + col + '">' + (i + 1) + '</span><span class="nm">' + esc(C.opLabel(op, m)) + '</span><small>' + (d ? '끝 Z' + uf(d.z) + ' · ' : '') + 'S' + c.rpm + ' F' + c.feed + extra + '</small></div>';
     });
-    res.notes.forEach(n => { const s = '<div class="note ' + n.level + '">' + (n.level === 'error' ? '✖ ' : n.level === 'warn' ? '⚠ ' : 'ℹ ') + esc(n.msg) + '</div>'; if (n.level === 'info') info += s; else alerts += s; });
+    const noteList = []; // 오류·경고 안내 (입력칸 아래에 이미 같은 말이 붙었으면 groupBody0 에서 뺌)
+    res.notes.forEach(n => { const s = '<div class="note ' + n.level + '">' + (n.level === 'error' ? '✖ ' : n.level === 'warn' ? '⚠ ' : 'ℹ ') + esc(n.msg) + '</div>'; if (n.level === 'info') info += s; else noteList.push({ msg: n.msg, html: s }); });
     res.missing.forEach(mm => {
       const lbl = mm.type === 'tap' ? '탭 M' + mm.dia + '×' + mm.pitch : mm.type === 'center' ? '센터 드릴' : mm.type === 'endmill' ? '평 엔드밀 Ø' + mm.dia : mm.type === 'facemill' ? '페이스밀 Ø' + mm.dia : mm.type === 'chamfer' ? '모따기 공구 Ø' + mm.dia + ' 90°' : '드릴 Ø' + mm.dia;
       alerts += '<div class="row" style="margin-top:6px">' + u.btn(ico('i-plus') + '공구 추가: ' + lbl, () => {
@@ -16608,7 +16618,7 @@ DEALINGS IN THE SOFTWARE.
     const tools = [...new Set(g.ops.map(o => o.toolNo))];
     const edit = '<details class="adv" data-sec="adv-' + g.id + '"' + (S.openSec['adv-' + g.id] ? ' open' : '') + '><summary>공정 상세 편집</summary><small>여기서 바꾸면 이 가공은 "직접 구성"으로 전환됩니다.</small>' +
       opCards(u, g.ops, fn => { mutate(() => { fn(); g.spec = null; }); toast('직접 구성으로 전환했습니다.', 'warn'); }) + '</details>';
-    return { rows: '<div class="gen">' + rows + info + '</div>', alerts: alerts ? '<div class="alerts">' + alerts + '</div>' : '', sum: g.ops.length ? g.ops.length + '단계 · ' + tools.map(t => 'T' + t).join(' ') : '공정 없음', edit };
+    return { rows: '<div class="gen">' + rows + info + '</div>', noteList, alerts, sum: g.ops.length ? g.ops.length + '단계 · ' + tools.map(t => 'T' + t).join(' ') : '공정 없음', edit };
   }
   /* ---------- [V0.7] 간편 입력 양식: 기본(항상 보임) / 옵션(한 번 눌러 펼침) / 고급 으로 나눠 돌려줌 ----------
    * { basic, opt, optSum, adv, advSum, res }  res = 자동 구성 결과 (공정·안내·없는 공구)
