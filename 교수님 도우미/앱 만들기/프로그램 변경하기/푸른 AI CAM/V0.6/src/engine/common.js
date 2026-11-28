@@ -132,7 +132,7 @@
     return {
       id: uid('m'), name: 'MC-1 FANUC 3축', control: 'FANUC',
       travel: { x: 800, y: 450, z: 500 }, maxRpm: 8000, maxTapRpm: 3000, maxFeed: 10000, magazine: 24,
-      rigidTap: true, rigidM03: false, endY: true, helical: true, g76: true, rapid: 12000, tcSec: 6, verified: false, verifiedBy: '', verifiedAt: '', verifyNote: '',
+      rigidTap: true, rigidM03: false, endY: true, helical: true, g76: true, rapid: 12000, tcSec: 6, verified: false, verifiedBy: '', verifiedAt: '', verifyNote: '', approvals: [], history: [], zMin: -500, memKB: 0,
       tools: [
         { no: 1, type: 'center', name: '스팟 드릴', dia: 6, angle: 90, mat: 'CARBIDE', flute: 10 },
         { no: 2, type: 'drill', name: '드릴', dia: 3.3, angle: 118, mat: 'HSS', flute: 33 },

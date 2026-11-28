@@ -26,12 +26,84 @@
     contour: { ico: 'i-contour', cls: 'k-contour', label: '윤곽', color: '#0e8fa3' },
     face: { ico: 'i-face', cls: 'k-face', label: '평면', color: '#5b7083' },
     chamfer: { ico: 'i-chamfer', cls: 'k-chamfer', label: '모따기', color: '#d6336c' },
+    ream: { ico: 'i-ream', cls: 'k-ream', label: '리머(H7)', color: '#1d7f8c' }, // [V0.6]
+    bore: { ico: 'i-bore', cls: 'k-bore', label: '보링', color: '#6d5bd0' },
     custom: { ico: 'i-custom', cls: 'k-custom', label: '직접 구성', color: '#64748b' }
   };
   const SIM_RES = { l: 60000, m: 160000, h: 400000 };
-  const TOOL_BAND = { center: '#14a37f', drill: '#2f6fed', tap: '#8b5cf6', endmill: '#ee8a10', facemill: '#5b7083', chamfer: '#d6336c' };
+  const TOOL_BAND = { center: '#14a37f', drill: '#2f6fed', tap: '#8b5cf6', endmill: '#ee8a10', facemill: '#5b7083', chamfer: '#d6336c', reamer: '#1d7f8c', boring: '#6d5bd0' };
   const MILL_KINDS = ['pocket', 'contour', 'face', 'chamfer'];
  const shapeTxt = sp => sp.shape === 'circle' ? '원형 Ø' + sp.dia : sp.shape === 'ngon' ? (sp.sides || 6) + '각 Ø' + sp.dia : sp.shape === 'poly' ? 'DXF 형상' + (sp.poly && sp.poly.name ? ' ' + sp.poly.name.replace(/^도면 /, '#') : '') : '사각 ' + sp.w + '×' + sp.h + (sp.cr > 0 ? ' R' + sp.cr : '');
+
+  /* ---------------- [V0.6] 용어집 (처음 쓰는 분을 위한 풀이) ---------------- */
+  const GLOSS = [
+    ['R점', '구멍·포켓 가공에서 공구가 급속(G00)으로 내려오는 높이입니다. 소재 윗면 위 몇 mm. 여기부터는 절삭 이송으로 내려갑니다.'],
+    ['초기점', '공구를 바꾼 뒤나 구멍 사이를 옮겨 다닐 때의 안전 높이(Z). 클램프·바이스보다 높아야 합니다. G98 이면 구멍마다 이 높이로 올라옵니다.'],
+    ['복귀', 'G98 = 구멍 사이를 초기점 높이로 이동(안전), G99 = R점 높이로 이동(빠르지만 클램프·턱에 주의).'],
+    ['깊이 기준', '자동 = 포켓 안 구멍처럼 다른 가공의 바닥 안에 있으면 그 바닥부터 깊이를 잽니다 (도면 치수 방식).'],
+    ['관통 여유', '끝까지 뚫을 때 소재 아래로 더 내려가는 거리. 소재 아래 받침(패럴렐) 틈(하부 여유)보다 작아야 테이블을 깎지 않습니다.'],
+    ['관통', '소재를 끝까지 뚫거나 잘라냅니다. 소재 아래에 받침(패럴렐)을 두고 하부 여유를 입력하세요.'],
+    ['하부 여유', '소재 밑면과 테이블(바이스 바닥) 사이 틈. 관통 가공이 이 안에서만 내려가도록 검사합니다.'],
+    ['센터 드릴', '드릴이 미끄러지지 않도록 구멍 자리를 먼저 살짝 찍는 공구(스팟 드릴).'],
+    ['펙', 'G73·G83: 조금씩 들어갔다 빠지며 칩을 끊거나 배출하는 드릴 사이클. 깊은 구멍에 씁니다.'],
+    ['사이클', '고정 사이클 — G81 일반 드릴, G73 고속 펙, G83 심공, G84 탭, G85 리머, G76 정밀 보링.'],
+    ['탭 끝', '탭 공구 끝이 내려가는 깊이. 도면의 "완전 나사 깊이"보다 2~3 피치 더 깊게 잡습니다.'],
+    ['리지드', '리지드 탭(M29): 주축 회전과 이송을 동기화해 홀더 없이 탭을 냅니다.'],
+    ['직경부', '드릴 끝 원뿔을 뺀, 구멍이 완성 지름인 깊이. 도면 구멍 깊이는 보통 이 깊이입니다.'],
+    ['경로 간격', '포켓에서 한 바퀴와 다음 바퀴 사이 거리(공구 지름의 %). 클수록 빠르지만 공구 부하가 큽니다 (40~50% 권장).'],
+    ['줄 간격', '평면 가공에서 줄 사이 간격(공구 지름의 %). 페이스밀은 60~75%.'],
+    ['절입', '한 번에 Z 로 깎아 내려가는 깊이. 0 이면 재질·공구로 자동 계산합니다.'],
+    ['측벽', '벽 쪽에 남겨 두는 두께(여유). 황삭은 여유를 남기고 정삭이 마지막에 깎아 치수를 맞춥니다.'],
+    ['바닥 남김', '바닥에 남겨 두는 두께(여유). 바닥 정삭이 마지막에 깎습니다.'],
+    ['중삭', '황삭과 정삭 사이 단계. 여유를 고르게 줄여 정삭 부하를 일정하게 합니다. 한 번에 또는 정한 깊이씩.'],
+    ['단 깊이', '측벽을 깎을 때 이 깊이씩 나눠 내려갑니다. 0 이면 한 번에 전체 높이를 깎습니다.'],
+    ['진입', '깎이지 않은 소재로 엔드밀을 곧장 내리면 공구가 부러집니다. 헬리컬(돌면서), 램프(비스듬히), 선가공 구멍(드릴 구멍으로) 중 고릅니다.'],
+    ['구배', '벽이 수직에서 기울어진 각도. 입구가 도면 치수이고 아래로 갈수록 좁아집니다. 평 엔드밀 계단으로 근사합니다.'],
+    ['계단 높이', '구배·R 을 평 엔드밀로 깎을 때 한 계단 높이. 작을수록 매끈하지만 오래 걸립니다.'],
+    ['입구 R', '포켓 윗 모서리를 둥글게 깎는 반지름.'],
+    ['바닥 R', '포켓 바닥과 벽이 만나는 곳의 둥근 반지름.'],
+    ['코너 R', '사각 모양의 네 모서리 둥글기. 공구 반경보다 작으면 공구 반경만큼 둥글게 남습니다 (모서리 릴리프 구멍으로 해결).'],
+    ['맞변', '다각형의 평행한 두 변 사이 거리 (육각 렌치 크기처럼).'],
+    ['꼭짓점 지름', '다각형 꼭짓점을 지나는 원의 지름.'],
+    ['측면 제거 폭', '윤곽 바깥(또는 안쪽)에 남은 소재 폭. 여러 바퀴로 나눠 깎습니다.'],
+    ['모따기 폭', 'C 모따기 크기 (C0.5 = 모서리를 0.5mm 깎음).'],
+    ['날장', '공구의 유효 날 길이 = 깎을 수 있는 최대 깊이.'],
+    ['돌출', '홀더(척) 끝에서 공구 끝까지 길이. 가공 깊이보다 길어야 홀더가 소재에 닿지 않습니다.'],
+    ['홀더', '공구를 잡는 척·콜렛의 바깥 지름. 클램프 위를 지나갈 때 닿는지 검사합니다.'],
+    ['H 측정', '장비에서 잰 공구 길이 보정값(H). G54 Z 와 함께 Z 행정(오버트래블)을 검사합니다.'],
+    ['G54 Z', '장비 화면의 공작물 좌표계 Z 값(머신 좌표). 입력하면 공구가 Z 행정 밖으로 나가는지 검사합니다.'],
+    ['Z 행정 하한', '장비 Z 축이 내려갈 수 있는 머신 좌표 한계 (예: −500).'],
+    ['NC 메모리', '장비에 저장할 수 있는 프로그램 크기. 넘으면 공구별로 나눠 저장하거나 DNC 로 보냅니다.'],
+    ['첫 가공', '공정마다 M00 으로 멈추고 이송을 낮춘 확인용 NC. 드라이런 → 싱글 블록 → 시편 순서로 확인합니다.'],
+    ['재시작', '공구별 재시작 블록(N100, N200…). 공구가 부러지면 그 번호부터 다시 시작합니다.'],
+    ['날 빼기', 'G76 보링: 바닥에서 주축을 정위치에 세운 뒤 날을 벽에서 Q 만큼 떼고 올라와 벽을 긁지 않습니다.'],
+    ['완성 지름', '리머·보링으로 만든 최종 구멍 지름. H7 은 끼워맞춤 공차 등급입니다.'],
+    ['공정 순서', '공구 교환 최소화 = 같은 공구를 모아 가공(빠름). 목록 순서 = 위에서부터 그대로.'],
+    ['구멍 순서', '같은 공구로 여러 구멍을 뚫는 순서. 최단 거리가 보통 가장 빠릅니다.'],
+    ['원점', '프로그램 X0 Y0 의 위치 (소재 왼쪽 아래 모서리 등). Z0 은 소재 윗면입니다.'],
+    ['좌표계', 'G54~G59 공작물 좌표계. 장비에 원점 값을 입력한 번호와 같아야 합니다.']
+  ];
+  function glossFind(label) { const t = String(label).replace(/<[^>]*>/g, ''); return GLOSS.find(g => t.includes(g[0])) || null; }
+  // 지금 그리는 가공의 오류·경고를 관련 입력칸에 연결 (칸 이름의 핵심 낱말로)
+  let FLD = null;
+  const FKEYS = [['깊이', /깊이|두께/], ['가로', /가로|크기|폭|소재 범위|벗어/], ['세로', /세로|크기|폭|소재 범위|벗어/], ['지름', /지름|직경|Ø/], ['코너 R', /코너 R/], ['공구', /공구|엔드밀|드릴|리머|보링 바|탭 M/], ['측벽', /측벽 여유|측벽/], ['바닥', /바닥 여유/], ['경로 간격', /경로 간격/], ['절입', /절입/], ['관통 여유', /관통 여유|하부 여유/], ['모따기 폭', /모따기/], ['구배', /구배/], ['계단', /계단/], ['입구 R', /입구 R/], ['바닥 R', /바닥 R/], ['진입', /진입|선가공|램프|헬리컬/], ['날 빼기', /G76|Q/]];
+  function fieldIssue(label) {
+    if (!FLD || !FLD.list.length) return null;
+    const t = String(label).replace(/<[^>]*>/g, ''), k = FKEYS.find(x => t.includes(x[0]));
+    if (!k) return null;
+    const cands = FLD.list.filter(x => !FLD.used.has(x) && k[1].test(x.msg));
+    if (!cands.length) return null;
+    const i = cands.find(x => quickFix(x)) || cands.find(x => x.level === 'error') || cands[0]; // 바로 고칠 수 있는 것·오류 먼저
+    FLD.used.add(i);
+    return { level: i.level === 'error' ? 'err' : 'warn', msg: i.msg, fix: quickFix(i) };
+  }
+  // 바로 고치기 버튼 (흔한 오류)
+  function quickFix(i) {
+    const g = FLD && FLD.g, sp = g && g.spec; if (!sp) return '';
+    const u = FLD.u, sz = P.stock.sz;
+    if (/소재 두께.*이상|\[관통\]을 체크/.test(i.msg) && 'thru' in sp) return '<span class="qfix">' + u.btn('관통으로 바꾸기', () => mutate(() => { sp.thru = true; }), 'sm') + u.btn('깊이를 ' + uf(C.r3(sz - 1)) + '(두께−1)로', () => mutate(() => { if ('tapDepth' in sp && sp.kind === 'tap') sp.tapDepth = C.r3(sz - 1); else sp.depth = C.r3(sz - 1); }), 'sm') + '</span>';
+    return '';
+  }
 
   /* ---------------- 상태 ---------------- */
   let DB = null;           // 저장 데이터
@@ -39,7 +111,7 @@
   const S = {
     sel: { kind: 'stock', gid: null, hid: null },
     vmode: '2d', drawer: false, bottomTab: 'check', mpanel: 'view', mode: 'select',
-    arrKind: 'single', arr: {}, bundleSel: null, pathStep: 0, showPath: true, showNC: false, sec: { on: false, y: 0 },
+    arrKind: 'single', arr: {}, bundleSel: null, pathStep: 0, showPath: true, showNC: false, sec: { on: false, y: 0 }, flow: { saved: '', viewed: '' }, // [V0.6] 확인(3D 본 NC 해시)·저장(저장한 NC 해시)
     view: { scale: 3, cx: 75, cy: 50, fitted: false },
     undo: [], redo: [],
     V: null, nc: { text: '', hits: [], cuts: [], blocked: '', verify: null, edited: false, editText: '', editVerify: null },
@@ -75,6 +147,8 @@
     const key = () => sc + ':' + (++n);
     return {
       num(val, fn, a) { const k = key(); binds.set(k, el => { const raw = el.value.trim(); const v = parseFloat(raw); if (raw === '' || !isFinite(v)) { toast('숫자를 입력하세요.', 'err'); renderAll(); return; } fn(v); }); return '<input type="number" step="any" inputmode="decimal" data-k="' + k + '" value="' + esc(fmtN(val)) + '" ' + (a || '') + '>'; },
+      // [V0.6] 비워 두면 null (선택 입력)
+      optnum(val, fn, a) { const k = key(); binds.set(k, el => { const raw = el.value.trim(); if (raw === '') return fn(null); const v = parseFloat(raw); if (!isFinite(v)) { toast('숫자를 입력하거나 비워 두세요.', 'err'); renderAll(); return; } fn(v); }); return '<input type="number" step="any" inputmode="decimal" placeholder="미입력" data-k="' + k + '" value="' + (val === null || val === undefined ? '' : esc(fmtN(val))) + '" ' + (a || '') + '>'; },
       int(val, fn, a) { const k = key(); binds.set(k, el => { const v = el.value.trim() === '' ? NaN : Number(el.value); if (!Number.isInteger(v)) { toast('정수를 입력하세요.', 'err'); renderAll(); return; } fn(v); }); return '<input type="number" step="1" inputmode="numeric" data-k="' + k + '" value="' + esc(val) + '" ' + (a || '') + '>'; },
       text(val, fn, a) { const k = key(); binds.set(k, el => fn(el.value)); return '<input type="text" data-k="' + k + '" value="' + esc(val) + '" ' + (a || '') + '>'; },
       color(val, fn) { const k = key(); binds.set(k, el => fn(el.value)); return '<input type="color" data-k="' + k + '" value="' + esc(val) + '" title="표시 색상" aria-label="표시 색상">'; },
@@ -82,7 +156,13 @@
       check(val, fn, label, a) { const k = key(); binds.set(k, el => fn(el.checked)); return '<label class="chk"><input type="checkbox" data-k="' + k + '"' + (val ? ' checked' : '') + ' ' + (a || '') + '>' + esc(label) + '</label>'; },
       btn(label, fn, cls, a) { const k = key(); acts.set(k, fn); return '<button type="button" data-a="' + k + '" class="' + (cls || '') + '" ' + (a || '') + '>' + label + '</button>'; },
       act(fn) { const k = key(); acts.set(k, fn); return k; },
-      fld(label, inner, hint) { return '<label class="fld"' + (hint ? ' title="' + esc(hint) + '"' : '') + '><span>' + label + '</span>' + inner + '</label>'; }
+      // [V0.6] 이름 옆 ⓘ (눌러서 설명·용어 풀이), 이 칸과 관련된 오류·경고는 칸 아래에 바로 표시
+      fld(label, inner, hint) {
+        const term = glossFind(label), tip = [hint, term ? term[0] + ': ' + term[1] : ''].filter(Boolean).join('\n\n');
+        const fi = fieldIssue(label);
+        return '<label class="fld' + (fi ? ' f' + fi.level : '') + '"><span>' + label + (tip ? ' <button type="button" class="gi" data-tip="' + esc(tip) + '" aria-label="설명">ⓘ</button>' : '') + '</span>' + inner +
+          (fi ? '<em class="fmsg">' + (fi.level === 'err' ? '✖ ' : '⚠ ') + esc(fi.msg.replace(/^\[[^\]]*\]\s*(공정 \d+ \([^)]*\)|[^:]{0,40}):\s*/, '')) + '</em>' + (fi.fix || '') : '') + '</label>';
+      }
     };
   }
   // change 처리는 포커스 이동(Tab) 이후 실행하여 다음 입력칸 포커스를 유지
@@ -127,7 +207,7 @@
     const m = machine();
     S.V = C.validateProject(P, m);
     const g = C.generateNC(P, m, S.V.plan);
-    S.nc.text = g.text; S.nc.hits = g.hits; S.nc.cuts = g.cuts || []; S.nc.blocked = g.blocked || '';
+    S.nc.text = g.text; S.nc.hits = g.hits; S.nc.cuts = g.cuts || []; S.nc.blocked = g.blocked || ''; S.nc.hash = g.hash || '';
     S.nc.verify = g.text ? C.verifyNC(g.text, verifyCtx(m, { expected: g.hits, expectedCuts: g.cuts || [] })) : null;
     // 재검증한 수정본도 소재·장비·클램프가 바뀌면 현재 조건으로 다시 검사 (이전 통과 결과 재사용 금지)
     if (S.nc.edited && S.nc.editVerify) S.nc.editVerify = C.verifyNC(S.nc.editText, verifyCtx(m, { expected: null }));
@@ -152,6 +232,12 @@
     const cut = tl[tl.length - 1].t1, tc = runs.length * C.toNum(m.tcSec, 6);
     return { cut, tc, total: cut + tc, runs, changes: runs.length };
   }
+  // [V0.6] 장비 승인 상태 표시 (가공 종류 × 버전)
+  function approvalHTML(m) {
+    const cur = (m.approvals || []).filter(a => a.ver === C.VERSION), old = (m.approvals || []).filter(a => a.ver !== C.VERSION);
+    if (!cur.length) return '<span class="pill warn">' + C.VERSION + ' 미승인' + (old.length ? ' (이전 버전 승인 ' + old.length + '건은 무효)' : '') + ' — NC 는 "검증용(TEST)"</span><br>';
+    return '<span class="pill ok">' + C.VERSION + ' 승인 ' + cur.length + '건</span><ul class="hist">' + cur.map(a => '<li>' + esc(a.kinds.map(k => (C.OPS.get(k) || {}).label || k).join(', ')) + ' <small>· ' + esc(a.by) + ' · ' + esc(a.at) + (a.hash ? ' · NC ' + esc(a.hash) : '') + (a.note ? ' · ' + esc(a.note) : '') + '</small></li>').join('') + '</ul>';
+  }
   const isUnverified = i => i.cat === 11 && /실가공 검증 전/.test(i.msg);
   // 같은 내용의 G코드 오류·경고는 한 건으로 묶음 (여러 줄)
   function groupMsgs(list) { const m = new Map(); list.forEach(x => { const g = m.get(x.msg); if (g) g.lines.push(x.line); else m.set(x.msg, { msg: x.msg, lines: [x.line] }); }); return [...m.values()]; }
@@ -174,7 +260,7 @@
       if (!S.nc.verify) return { ok: false, why: 'G코드가 없습니다' };
       if (S.nc.verify.errors.length) return { ok: false, why: 'NC 해석 검증 오류 ' + S.nc.verify.errors.length + '건' };
     }
-    return { ok: true, test: !machine().verified };
+    return { ok: true, test: !C.approvalOf(machine(), S.V.plan).ok }; // [V0.6] 가공 종류 × 버전 승인
   }
 
   /* ---------------- 전체 렌더 ---------------- */
@@ -218,6 +304,8 @@
     else if (sp.kind === 'contour') s = shapeTxt(sp) + (sp.side === 'in' ? ' 안쪽' : ' 바깥') + (sp.thru ? ' 관통' : ' 깊이 ' + sp.depth);
     else if (sp.kind === 'face') return '소재 전체 · 깊이 ' + sp.depth;
     else if (sp.kind === 'chamfer') s = 'C' + sp.cw + ' ' + (sp.side === 'in' ? '안쪽' : '바깥') + ' · ' + shapeTxt(sp);
+    else if (sp.kind === 'ream') s = 'Ø' + sp.dia + 'H7' + (sp.thru ? ' 관통' : ' 깊이 ' + sp.depth);
+    else if (sp.kind === 'bore') s = '보링 Ø' + sp.dia + (sp.thru ? ' 관통' : ' 깊이 ' + sp.depth);
     else s = 'Ø' + sp.dia + (sp.thru ? ' 관통' : ' 깊이 ' + sp.depth);
     return s + ' · ' + n + '개';
   }
@@ -243,8 +331,9 @@
       ['소재', '크기·재질', st.sx > 0 && st.sy > 0 && st.sz > 0 ? 'ok' : 'err', () => select('stock'), { err: '소재 크기(가로·세로·두께)와 재질을 입력하세요.' }],
       ['원점·NC', '원점·번호', zIss0.some(i => i.level === 'error') ? 'err' : zIss0.some(i => i.level === 'warn') ? 'warn' : 'ok', () => select('nc'), { err: '원점·NC 출력 설정의 빨간 항목을 고치세요.', warn: '원점·NC 출력 설정의 경고를 확인하세요.' }],
       ['가공' + (P.groups.length ? ' ' + P.groups.length : ''), '구멍·포켓…', !P.groups.length ? 'todo' : gst.includes('err') ? 'err' : gst.includes('warn') ? 'warn' : 'ok', () => { if (P.groups.length) select('group', (P.groups[gst.indexOf('err')] || P.groups[gst.indexOf('warn')] || P.groups[0]).id); }, { todo: '아래 [+ 구멍]·[+ 탭]·[+ 포켓]… 또는 [도면 불러오기]로 가공을 추가하세요.', err: '빨간 ! 표시 가공을 눌러 오류를 고치세요.', warn: '노란 표시 가공의 경고를 확인하세요.' }],
-      ['확인', '3D·검사', !P.groups.length ? 'todo' : !ds.ok ? 'err' : (c.w + c.nw) ? 'warn' : 'ok', () => { S.vmode = '3d'; openDrawer('check'); }, { todo: '가공을 추가하면 3D 시뮬레이션과 검사 결과를 볼 수 있습니다.', err: '[확인]을 눌러 NC 를 막는 오류를 확인하세요.', warn: '[확인]을 눌러 3D 시뮬레이션과 경고를 확인하세요.' }],
-      ['NC 저장', '파일 받기', !ds.ok ? 'todo' : 'ok', () => doDownload(), { todo: '오류를 모두 고치면 NC 를 저장할 수 있습니다.' }]
+      // [V0.6] 확인 = 지금 NC 를 3D 로 본 뒤에만 ✓, 저장 = 지금 NC 를 저장한 뒤에만 ✓ (추가만 해도 ✓ 되던 문제 수정)
+      ['확인', '3D·검사', !P.groups.length ? 'todo' : !ds.ok ? 'err' : S.flow.viewed !== S.nc.hash ? 'todo' : (c.w + c.nw) ? 'warn' : 'ok', () => { S.vmode = '3d'; openDrawer('check'); }, { todo: P.groups.length ? '[확인]을 눌러 3D 시뮬레이션으로 가공 모습을 보고 검사 결과를 확인하세요.' : '가공을 추가하면 3D 시뮬레이션과 검사 결과를 볼 수 있습니다.', err: '[확인]을 눌러 NC 를 막는 오류를 확인하세요.', warn: '[확인]을 눌러 3D 시뮬레이션과 경고를 확인하세요.' }],
+      ['NC 저장', '파일 받기', !ds.ok ? 'todo' : S.flow.saved === S.nc.hash ? 'ok' : 'todo', () => doDownload(), { todo: ds.ok ? '[NC 저장]을 눌러 파일을 받으세요 (첫 가공이면 [원점·NC 출력]에서 첫 가공 모드를 켜세요).' : '오류를 모두 고치면 NC 를 저장할 수 있습니다.' }]
     ];
     let h = '<ol class="flow" aria-label="작업 순서">' + flow.map((f, i) => '<li><button type="button" class="fl ' + f[2] + '" data-a="' + u.act(f[3]) + '" title="' + (i + 1) + '단계: ' + f[0] + ' (' + f[1] + ') — ' + ({ ok: '완료', warn: '경고 확인', err: '오류 — 눌러서 고치기', todo: '아직 안 함' })[f[2]] + '"><span class="n">' + (f[2] === 'ok' ? '✓' : f[2] === 'err' ? '!' : i + 1) + '</span><b>' + f[0] + '</b><small>' + f[1] + '</small></button></li>').join('') + '</ol>';
     const nx = flow.findIndex(f => f[2] !== 'ok'), nf = flow[nx];
@@ -269,13 +358,16 @@
       u.btn(ico('i-contour') + '+ 윤곽', () => addGroup('contour'), 'addbtn k-contour', 'title="부품 바깥(또는 안쪽) 윤곽 따라 깎기, 관통 절단 가능"') +
       u.btn(ico('i-face') + '+ 평면', () => addGroup('face'), 'addbtn k-face', 'title="소재 윗면 고르기 (페이스밀)"') +
       u.btn(ico('i-chamfer') + '+ 모따기', () => addGroup('chamfer'), 'addbtn k-chamfer', 'title="모서리 C 모따기 (바깥·안쪽·구멍 입구)"') + '</div>' +
+      '<div class="addrow two">' +
+      u.btn(ico('i-ream') + '+ 리머(H7)', () => addGroup('ream'), 'addbtn k-ream', 'title="정밀 구멍 H7: 센터 → 밑구멍 드릴 → 리머 G85"') +
+      u.btn(ico('i-bore') + '+ 보링', () => addGroup('bore'), 'addbtn k-bore', 'title="정밀 보링: 센터 → 밑구멍 → G76 보링 바"') + '</div>' +
       u.btn(ico('i-dxf') + '도면(DXF) 불러오기', () => importDXF(), 'dxfbtn', 'title="CAD 에서 저장한 DXF 파일의 원·닫힌 선을 읽어 구멍·탭·윤곽·포켓을 자동으로 만듭니다"');
     // 요약
     const holes = P.groups.reduce((s, g) => s + g.holes.length, 0);
     const tools = new Set(S.V.plan.steps.map(s => s.toolNo));
     h += '<div class="tsum">위치 <b>' + holes + '</b>개 · 공정 <b>' + S.V.plan.steps.length + '</b>단계 · 공구 <b>' + tools.size + '</b>개' +
       (S.est ? '<br>예상 가공 시간 <b>약 ' + fmtSec(S.est.total) + '</b> <small>(추정)</small>' : '') +
-      '<br><small>장비: ' + esc(m.name) + (m.verified ? ' · 실가공 검증 완료' : ' · 실가공 검증 전') + '</small></div>';
+      '<br><small>장비: ' + esc(m.name) + (C.approvalOf(m, S.V.plan).ok ? ' · 이 프로젝트 가공 모두 실가공 승인' : ' · 실가공 검증 전' + (m.approvals.length ? ' (일부 승인)' : '')) + '</small></div>';
     $('#tree').innerHTML = h;
   }
   /* ---------- [V0.5] 작업 목록 편집: 복사·붙여넣기·복제·삭제·순서 ---------- */
@@ -580,7 +672,13 @@
       u.fld('깊이 기준', u.select(set.depthRef === 'auto' ? 'auto' : 'top', [['auto', '먼저 가공된 바닥 기준 (자동, 권장)'], ['top', '항상 소재 윗면 Z0 기준']], v => mutate(() => { set.depthRef = v; })), set.depthRef === 'auto' ? '포켓 안 구멍·포켓 안 포켓·평면 뒤 가공은 그 바닥에서부터 깊이를 재고, 이미 깎인 높이에서 시작합니다 (빈 공간 공회전 없음)' : '모든 깊이를 원래 윗면(Z0)에서 잽니다 (V0.4 이전 방식)') +
       u.fld('구멍 순서', u.select(set.pathOrder, [['nearest', '최단 거리(근사)'], ['zigzag', '지그재그(행)'], ['input', '입력 순서']], v => mutate(() => { set.pathOrder = v; }))) + '</div>';
     h += '<h3>출력 옵션</h3>' + u.check(set.coolant, v => mutate(() => { set.coolant = v; }), '절삭유 M08/M09') + u.check(set.m01, v => mutate(() => { set.m01 = v; }), '공구 교환 전 선택 정지 M01') +
-      u.check(set.seqNo, v => mutate(() => { set.seqNo = v; }), '시퀀스 번호(N) 출력');
+      u.check(set.seqNo, v => mutate(() => { set.seqNo = v; }), '시퀀스 번호(N) 출력' + (set.restart ? ' (재시작 블록을 쓰면 꺼짐)' : '')) +
+      u.check(set.restart, v => mutate(() => { set.restart = v; }), '공구별 재시작 블록 (N100·N200… — 공구가 부러지면 그 공구부터 다시)');
+    // [V0.6] 첫 가공 모드 · 머신 좌표
+    h += '<h3>첫 가공 (실장비 확인)</h3>' + u.check(set.firstRun, v => mutate(() => { set.firstRun = v; }), '<b>첫 가공 모드</b> — 공정마다 진입 전 M00 정지, 절삭 이송 낮춤') +
+      (set.firstRun ? u.fld('첫 가공 절삭 이송 (%)', u.num(set.firstFeed, v => mutate(() => { set.firstFeed = Math.max(10, Math.min(100, Math.round(v))); }), 'min="10" max="100"'), '탭은 동기 이송이라 그대로 (오버라이드 100%)') : '') +
+      '<div class="grid2">' + u.fld('G54 Z (머신 좌표, 선택)', u.optnum(set.g54Z, v => mutate(() => { set.g54Z = v === null ? null : Math.min(0, v); })), '장비의 공작물 좌표계 Z 값. 공구 H 측정값과 함께 Z 행정(오버트래블)을 검사') + '<span></span></div>' +
+      '<small>첫 가공 순서: ① 첫 가공 모드 NC 로 Z를 띄운 드라이런 → ② 싱글 블록 → ③ 시편 가공·측정 → ④ 관리자가 그 가공 종류를 승인.</small>';
     return h;
   }
   function changeOrigin(v) {
@@ -602,11 +700,18 @@
 
   /* ---------------- 가공 그룹 속성 ---------------- */
   function groupBody(u, g) {
+    FLD = { g, u, used: new Set(), list: S.V.issues.filter(i => i.ref && i.ref.gid === g.id && (i.level === 'error' || i.level === 'warn')) };
+    try { return groupBody0(u, g); } finally { FLD = null; }
+  }
+  function groupBody0(u, g) {
     const mode = kindOf(g);
     let h = '<h3>가공 방법</h3><div class="kindgrid" role="radiogroup" aria-label="가공 방법">' +
-      ['drill', 'tap', 'pocket', 'contour', 'face', 'chamfer', 'custom'].map(k => u.btn(ico(KIND[k].ico) + (k === 'custom' ? '직접 구성' : KIND[k].label), () => setGroupMode(g, k), (mode === k ? 'on ' : '') + KIND[k].cls, 'role="radio" aria-checked="' + (mode === k) + '"')).join('') + '</div>';
-    h += depthDiagram(g); // Z값을 먼저 보이게 (입력 칸 위)
-    h += refNote(g);
+      ['drill', 'tap', 'ream', 'bore', 'pocket', 'contour', 'face', 'chamfer', 'custom'].map(k => u.btn(ico(KIND[k].ico) + (k === 'custom' ? '직접 구성' : KIND[k].label), () => setGroupMode(g, k), (mode === k ? 'on ' : '') + KIND[k].cls, 'role="radio" aria-checked="' + (mode === k) + '"')).join('') + '</div>';
+    // [V0.6] 입력(모양·크기·깊이) → 위치 → Z값 단면도 순서 (단면도는 접을 수 있음, 휴대폰은 처음에 접힘)
+    // 위치가 하나뿐이면(포켓·윤곽 등 대부분) 맨 위에서 바로 X·Y 입력
+    if (g.holes.length === 1 && mode !== 'face') { const h1 = g.holes[0]; h += '<div class="grid2 toppos">' + u.fld((MILL_KINDS.includes(mode) ? '기준점(중심) ' : '위치 ') + 'X', u.num(h1.x, v => mutate(() => { h1.x = C.r3(v); }))) + u.fld((MILL_KINDS.includes(mode) ? '기준점(중심) ' : '위치 ') + 'Y', u.num(h1.y, v => mutate(() => { h1.y = C.r3(v); }))) + '</div>'; }
+    const diag = depthDiagram(g) + refNote(g);
+    if (diag) h += sec('dd-' + g.id, '깊이 단면도 (Z값)', !mobile()) + diag + '</details>';
     if (mode === 'pocket') h += pocketForm(u, g);
     else if (mode === 'contour') h += contourForm(u, g);
     else if (mode === 'face') h += faceForm(u, g);
@@ -666,7 +771,7 @@
       const lbl = mm.type === 'tap' ? '탭 M' + mm.dia + '×' + mm.pitch : mm.type === 'center' ? '센터 드릴' : mm.type === 'endmill' ? '평 엔드밀 Ø' + mm.dia : mm.type === 'facemill' ? '페이스밀 Ø' + mm.dia : mm.type === 'chamfer' ? '모따기 공구 Ø' + mm.dia + ' 90°' : '드릴 Ø' + mm.dia;
       h += '<div class="row" style="margin-top:6px">' + u.btn(ico('i-plus') + '공구 추가: ' + lbl, () => {
         let added = null;
-        dbChange(() => { added = C.addMissingTool(m, mm); if (m.verified) { m.verified = false; toast('장비 공구가 바뀌어 실가공 검증 승인이 해제되었습니다.', 'warn'); } });
+        dbChange(() => { added = C.addMissingTool(m, mm); if (m.verified || m.approvals.length) { C.revoke(m, '공구 추가'); toast('장비 공구가 바뀌어 실가공 검증 승인이 해제되었습니다.', 'warn'); } });
         if (added) toast('T' + added.no + ' 공구를 추가했습니다. 날 길이·재질을 [장비·공구]에서 확인하세요.', 'ok');
       }, 'sm primary') + '</div>';
     });
@@ -690,6 +795,16 @@
       h += '<div class="opinfo">피치 <b>' + sp.tapP + '</b> · 기초 드릴 추천 <b>Ø' + (rec ? rec.dia : '-') + '</b> · 탭 이송 F = S × ' + sp.tapP + ' (자동)' + (sp.thru ? '' : '<br>탭 끝 기준 깊이입니다. 도면의 완전 나사 깊이가 기준이면 2~3피치(' + C.r3(2 * sp.tapP) + '~' + C.r3(3 * sp.tapP) + 'mm)를 더해 입력하세요.') + '</div>';
       h += '<div class="row">' + u.check(sp.thru, set(v => { sp.thru = v; }), '관통') + u.check(sp.center, set(v => { sp.center = v; }), '센터 드릴') +
         u.select(sp.tapMode, [['auto', '탭 방식: 자동' + (m.rigidTap ? '(리지드)' : '(일반)')], ['rigid', '리지드 탭 (M29)'], ['tap', '일반 탭 (홀더)']], set(v => { sp.tapMode = v; })) + '</div>';
+    } else if (sp.kind === 'ream' || sp.kind === 'bore') {
+      // [V0.6] 리머(H7)·정밀 보링
+      const ft = [...new Set(m.tools.filter(t => t.type === (sp.kind === 'ream' ? 'reamer' : 'boring')).map(t => t.dia))].sort((a, b) => a - b);
+      h += '<div class="grid2">' + u.fld(sp.kind === 'ream' ? '완성 지름 Ø (H7 등)' : '보링 지름 Ø (mm)', u.num(sp.dia, set(v => { sp.dia = v; }))) +
+        u.fld(sp.thru ? '깊이 (관통)' : '깊이 (완성 지름 부분, mm)', u.num(sp.depth, set(v => { sp.depth = v; }), sp.thru ? 'disabled' : '')) + '</div>';
+      if (ft.length) h += '<div class="chips"><small>보유 ' + (sp.kind === 'ream' ? '리머' : '보링 바') + ':</small>' + ft.map(d => u.btn('Ø' + d, () => mutate(() => { sp.dia = d; }), 'sm chip' + (d === sp.dia ? ' on' : ''))).join('') + '</div>';
+      h += '<div class="row">' + u.check(sp.thru, set(v => { sp.thru = v; }), '관통') + u.check(sp.center, set(v => { sp.center = v; }), '센터 드릴') + (sp.kind === 'bore' && m.g76 !== false ? u.fld('G76 날 빼기 Q (mm)', u.num(sp.q, set(v => { sp.q = v; }), 'style="width:80px"')) : '') + '</div>';
+      h += '<div class="opinfo">' + (sp.kind === 'ream'
+        ? '순서: 센터 → 밑구멍 드릴(지름 −0.2~0.4) → <b>리머 G85</b> (이송으로 들어가고 이송으로 나옴 — 벽 긁힘 없음). 첫 구멍은 핀 게이지로 확인하세요.'
+        : '순서: 센터 → 밑구멍(드릴, 없으면 원형 포켓) → <b>' + (m.g76 !== false ? 'G76 정밀 보링</b> (바닥에서 주축 정위치 후 Q 만큼 날을 떼고 나옴). 떼는 방향은 장비 파라미터와 보링 바 날 방향을 맞추세요.' : 'G86 보링</b> (장비 G76 미지원 — 복귀 자국 주의)')) + '</div>';
     } else {
       const drills = [...new Set(m.tools.filter(t => t.type === 'drill').map(t => t.dia))].sort((a, b) => a - b);
       h += '<div class="grid2">' + u.fld('구멍 지름 Ø (mm)', u.num(sp.dia, set(v => { sp.dia = v; }))) +
@@ -698,7 +813,7 @@
       h += '<div class="row">' + u.check(sp.thru, set(v => { sp.thru = v; }), '관통') + u.check(sp.center, set(v => { sp.center = v; }), '센터 드릴') +
         (sp.thru ? '' : u.select(sp.depthMode, [['full', '깊이 = 유효 깊이(직경부)'], ['tip', '깊이 = 드릴 끝']], set(v => { sp.depthMode = v; }))) + '</div>';
     }
-    h += '<div class="row">' + u.select(sp.cycle, [['auto', '드릴 사이클: 자동 (깊이/지름 비율)'], ['drill', 'G81 일반'], ['peck', 'G73 고속 펙 (칩 끊기)'], ['deep', 'G83 심공 (완전 후퇴)']], set(v => { sp.cycle = v; })) +
+    h += '<div class="row">' + u.select(sp.cycle, [['auto', (sp.kind === 'ream' || sp.kind === 'bore' ? '밑구멍 ' : '') + '드릴 사이클: 자동 (깊이/지름 비율)'], ['drill', 'G81 일반'], ['peck', 'G73 고속 펙 (칩 끊기)'], ['deep', 'G83 심공 (완전 후퇴)']], set(v => { sp.cycle = v; })) +
       (sp.thru ? u.fld('관통 여유(mm)', u.num(sp.brk, set(v => { sp.brk = v; }), 'style="width:80px"')) : '') + '</div>';
     h += genBlock(u, g, C.planHoleSpec(sp, m, P.stock)) + '</div>';
     return h;
@@ -1024,6 +1139,12 @@
     if (!S.drawer && !(mobile() && S.mpanel === 'bottom')) { if (el.innerHTML) { el.innerHTML = ''; U('bc'); U('cd'); } return; }
     if (S.bottomTab === 'check') el.innerHTML = bottomCheck(); else { el.innerHTML = bottomCode(); bindCode(); }
   }
+  // [V0.6] 같은 원인(앞의 '[그룹] 공정 n (이름):' 만 다른) 오류·경고는 한 건으로 묶고 '외 n곳' 표시
+  function groupIss(list) {
+    const m = new Map();
+    list.forEach(i => { const core = i.msg.replace(/^\[[^\]]*\]\s*(공정 \d+ \([^)]*\)|[^:]{0,40}):\s*/, ''); const g = m.get(core); if (g) g.n++; else m.set(core, { msg: i.msg, ref: i.ref, n: 1 }); });
+    return [...m.values()].map(g => ({ msg: g.n > 1 ? g.msg + ' (같은 내용 외 ' + (g.n - 1) + '곳)' : g.msg, ref: g.ref }));
+  }
   function bottomCheck() {
     U('bc'); // 이 영역의 이전 핸들러 정리
     const c = counts(), ds = downloadState(), iss = S.V.issues;
@@ -1032,10 +1153,10 @@
     else if (ds.test || c.w || c.nw) h += '<div class="banner warn">' + ico('i-warn') + 'NC 저장 가능' + (ds.test ? ' — <u>검증용(TEST)</u> 표시: 장비 실가공 검증 전' : '') + (c.w + c.nw ? ' · 경고 ' + (c.w + c.nw) + '건 확인' : '') + '</div>';
     else h += '<div class="banner ok">' + ico('i-check') + '모든 자동 검증 통과 — NC 저장 가능</div>';
     const vr0 = c.vr, todo = [];
-    iss.filter(i => i.level === 'error').forEach(i => todo.push({ lv: 'err', msg: i.msg, a: regActBc(i.ref) }));
+    groupIss(iss.filter(i => i.level === 'error')).forEach(i => todo.push({ lv: 'err', msg: i.msg, a: regActBc(i.ref) }));
     const lineTxt = g => 'G코드 ' + (g.lines.length > 1 ? g.lines.length + '곳(' + g.lines[0] + '행 등): ' : (g.lines[0] ? g.lines[0] + '행: ' : ''));
     if (vr0) groupMsgs(vr0.errors).forEach(g => todo.push({ lv: 'err', msg: lineTxt(g) + g.msg, a: regActLine(g.lines[0]) }));
-    iss.filter(i => i.level === 'warn' && !isUnverified(i)).forEach(i => todo.push({ lv: 'warn', msg: i.msg, a: regActBc(i.ref) }));
+    groupIss(iss.filter(i => i.level === 'warn' && !isUnverified(i))).forEach(i => todo.push({ lv: 'warn', msg: i.msg, a: regActBc(i.ref) }));
     if (vr0) groupMsgs(vr0.warnings).forEach(g => todo.push({ lv: 'warn', msg: lineTxt(g) + g.msg, a: regActLine(g.lines[0]) }));
     if (!P.groups.length) todo.length = 0;
     h += '<div class="todo"><b>' + (todo.length ? '확인할 내용 ' + todo.length + '건' : (P.groups.length ? '확인할 내용 없음' : '아직 가공이 없습니다 — 왼쪽 [+ 구멍] [+ 탭] [+ 포켓]으로 시작하세요')) + '</b>' + (todo.length ? '<ul>' + todo.slice(0, 60).map(t => '<li class="' + t.lv + '" data-a="' + t.a + '" role="button" tabindex="0">' + (t.lv === 'err' ? '✖ ' : '⚠ ') + esc(t.msg) + '</li>').join('') + '</ul>' + (todo.length > 60 ? '<small>그 외 ' + (todo.length - 60) + '건은 아래 상세에서 확인</small>' : '') : '') + '</div>';
@@ -1066,7 +1187,7 @@
       st(vr ? !vr.errors.some(x => /해석|소수점|주소|코드|형식|괄호|원호/.test(x.msg)) : false, '② NC 문법', 'FANUC 주소·소수점·지원 코드·원호(I·J) 검사') +
       st(vr ? !vr.errors.some(x => /충돌|범위|경로|급속|하강|바닥|과삭|포켓/.test(x.msg)) : false, '③ 이동 경로', '모달 상태 시뮬레이션: 소재·클램프·하부 충돌, 포켓 벽·바닥 과삭') +
       st(c.e === 0, '④ 입력값 한계', '좌표·깊이·조건·장비 한계 (모델 검증 11항목)') +
-      st(m.verified ? true : null, '⑤ 실장비 테스트', m.verified ? '검증 완료: ' + esc(m.verifiedBy) + ' ' + esc(m.verifiedAt) : '미실시 — 드라이런(Z 띄움)·싱글 블록·시편 가공 후 관리자 승인 필요');
+      (() => { const ap = C.approvalOf(m, S.V.plan); return st(ap.ok ? true : null, '⑤ 실장비 테스트', ap.ok ? '이 프로젝트의 가공 종류가 모두 ' + C.VERSION + ' 에서 승인됨' : '미승인 가공: ' + esc(ap.missing.map(k => (C.OPS.get(k) || {}).label || k).join(', ')) + ' — [첫 가공 모드]로 드라이런·싱글 블록·시편 가공 후 관리자 승인'); })();
     h += '</div></div></details>';
     h += '<p><small>자동 검증과 3D 시뮬레이션은 실제 가공 안전을 보장하지 않습니다. 최초 가공은 반드시 작업자가 공회전·싱글 블록으로 확인하세요.</small></p>';
     return h;
@@ -1159,28 +1280,86 @@
     function fallback() { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (e) { toast('복사 실패: 직접 선택하여 복사하세요.', 'err'); } ta.remove(); }
   }
   function ncFileName(ds) { return (ds.test ? 'TEST_' : '') + 'O' + String(P.programNo).padStart(4, '0') + '_' + (C.ncText(P.name, 20).replace(/[^A-Z0-9_-]+/g, '_') || 'PROGRAM') + (S.nc.edited ? '_EDIT' : '') + '.nc'; }
+  // [V0.6] 가공 기록 추가 (지우지 않음)
+  function addRecord(r) {
+    DB.records = (DB.records || []).concat([Object.assign({ at: new Date().toISOString().slice(0, 16).replace('T', ' '), project: P.name, machine: machine().name }, r)]).slice(-3000);
+    saveDB();
+  }
+  // 수정한 NC 는 해시를 다시 계산해 넣음
+  function withHash(text, tag) {
+    const L = text.split(/\r?\n/).filter(l => !/^\(NC HASH /.test(l)), h = C.ncHash(L.join('\n')), oi = L.findIndex(l => /^\s*O\d/.test(l));
+    L.splice(oi >= 0 ? oi + 1 : 1, 0, '(NC HASH ' + h + ' - ' + tag + ')');
+    return { text: L.join('\n'), hash: h };
+  }
   function doDownload() {
     const ds = downloadState();
     if (!ds.ok) { beep(); toast('NC 생성 차단: ' + ds.why, 'err'); openDrawer('check'); return; }
-    let text = S.nc.edited ? S.nc.editText : S.nc.text;
-    if (S.nc.edited && !/USER EDITED/.test(text)) {
-      const L = text.split(/\r?\n/), oi = L.findIndex(l => /^\s*O\d/.test(l));
-      L.splice(oi >= 0 ? oi + 1 : 1, 0, '(USER EDITED - REVERIFIED ' + new Date().toISOString().slice(0, 10) + ')');
-      text = L.join('\n');
+    let text = S.nc.edited ? S.nc.editText : S.nc.text, hash = S.nc.hash;
+    if (S.nc.edited) {
+      if (!/USER EDITED/.test(text)) {
+        const L = text.split(/\r?\n/), oi = L.findIndex(l => /^\s*O\d/.test(l));
+        L.splice(oi >= 0 ? oi + 1 : 1, 0, '(USER EDITED - REVERIFIED ' + new Date().toISOString().slice(0, 10) + ')');
+        text = L.join('\n');
+      }
+      const w = withHash(text, 'USER EDITED'); text = w.text; hash = w.hash;
     }
+    const m = machine(), kb = Math.ceil(text.length / 1024), tooBig = m.memKB > 0 && kb > m.memKB;
+    const nTools = (S.V.plan.steps || []).filter(s => s.toolChange).length;
     const checks = ['공구 길이 보정(H)·공작물 좌표계(' + P.settings.wcs + ') 값을 장비에 입력·확인', 'Z를 띄운 드라이런(공회전)과 싱글 블록으로 첫 가공 확인 예정', '클램프·지그 위치와 소재 하부 여유 확인' + (/G84/.test(text) ? ' · 탭 가공 시 오버라이드 100%' : '')];
-    openDlg('NC 저장', () => (ds.test ? '<div class="banner warn">' + ico('i-warn') + '실가공 검증 전 장비용 <b>검증용(TEST)</b> 파일입니다. 파일 이름에 TEST_ 가 붙습니다.</div>' : '') +
+    const chkOk = () => { if ([...document.querySelectorAll('#dlg .ncChk')].some(x => !x.checked)) { beep(); toast('가공 전 점검 항목을 모두 확인하세요.', 'err'); return false; } return true; };
+    const fileName = () => { let name = [...($('#ncFileName').value || '')].filter(ch => ch.charCodeAt(0) >= 32).join('').trim().replace(/[\\/:*?"<>|]+/g, '_') || ncFileName(ds); if (!/\.(nc|txt|tap|ncc|eia)$/i.test(name)) name += '.nc'; if (ds.test && !/^TEST_/.test(name)) name = 'TEST_' + name; return name; };
+    const kinds = [...new Set((S.V.plan.steps || []).map(s => s.type))].join(',');
+    openDlg('NC 저장', () => (ds.test ? '<div class="banner warn">' + ico('i-warn') + '실가공 검증 전 가공이 있어 <b>검증용(TEST)</b> 파일입니다. 파일 이름에 TEST_ 가 붙습니다.</div>' : '') +
+      (tooBig ? '<div class="banner warn">' + ico('i-warn') + 'NC 크기 ' + kb + 'KB 가 장비 메모리 ' + m.memKB + 'KB 보다 큽니다. <b>공구별로 나눠 저장</b>하거나 DNC(외부 운전)로 보내세요.</div>' : '') +
+      (P.settings.firstRun ? '<div class="note info">첫 가공 모드 NC 입니다: 공정마다 M00 정지, 절삭 이송 ' + P.settings.firstFeed + '%.</div>' : '') +
       '<label class="fld"><span>파일 이름</span><input type="text" id="ncFileName" value="' + esc(ncFileName(ds)) + '" maxlength="80"></label>' +
       '<p><b>가공 전 점검</b> <small>(모두 확인해야 저장됩니다)</small></p>' + checks.map((c, i) => '<label class="chk"><input type="checkbox" class="ncChk" id="ncChk' + i + '"> ' + esc(c) + '</label>').join('') +
-      '<p><small>' + (text.split('\n').length) + '줄 · ' + (S.est ? '예상 가공 시간 약 ' + fmtSec(S.est.total) + ' (추정) · ' : '') + '자동 검증은 실제 가공 안전을 보장하지 않습니다.</small></p>',
-    u => u.btn('취소', () => closeDlg(), '') + u.btn(ico('i-save') + '저장', () => {
-      if ([...document.querySelectorAll('#dlg .ncChk')].some(x => !x.checked)) { beep(); return toast('가공 전 점검 항목을 모두 확인하세요.', 'err'); }
-      let name = [...($('#ncFileName').value || '')].filter(ch => ch.charCodeAt(0) >= 32).join('').trim().replace(/[\\/:*?"<>|]+/g, '_') || ncFileName(ds);
-      if (!/\.(nc|txt|tap|ncc|eia)$/i.test(name)) name += '.nc';
-      if (ds.test && !/^TEST_/.test(name)) name = 'TEST_' + name; // 실가공 검증 전 파일은 항상 TEST 표시
-      downloadText(name, text.replace(/\r?\n/g, '\r\n') + '\r\n', 'text/plain');
-      closeDlg(); toast(name + ' 저장', 'ok');
-    }, 'primary'));
+      '<p><small>' + (text.split('\n').length) + '줄 · ' + kb + 'KB · NC 해시 <b>' + esc(hash || '-') + '</b> · ' + (S.est ? '예상 가공 시간 약 ' + fmtSec(S.est.total) + ' (추정) · ' : '') + '자동 검증은 실제 가공 안전을 보장하지 않습니다. 저장하면 [가공 기록]에 남습니다.</small></p>',
+    u => u.btn('취소', () => closeDlg(), '') +
+      (nTools > 1 && !S.nc.edited ? u.btn('공구별로 나눠 저장 (' + nTools + '개)', () => { if (!chkOk()) return; saveSplit(ds, fileName()); }, tooBig ? 'primary' : '', 'title="공구마다 따로 된 NC 프로그램(O번호 +1씩). 각 파일은 앞 파일이 깎은 상태를 이어받아 따로 검증합니다."') : '') +
+      u.btn(ico('i-save') + '저장', () => {
+        if (!chkOk()) return;
+        const name = fileName();
+        downloadText(name, text.replace(/\r?\n/g, '\r\n') + '\r\n', 'text/plain');
+        addRecord({ kind: 'save', file: name, hash, test: !!ds.test, lines: text.split('\n').length, kinds });
+        S.flow.saved = hash; closeDlg(); toast(name + ' 저장 · 가공 기록에 남김', 'ok'); renderAll();
+      }, tooBig ? '' : 'primary'));
+  }
+  // [V0.6] 공구별 분할 저장: 각 파일을 따로 만들고, 앞 파일 상태를 이어받아 독립 검증기로 다시 검사 → 하나라도 오류면 저장 안 함
+  function saveSplit(ds, baseName) {
+    const m = machine(), parts = C.planByTool(S.V.plan), out = [];
+    let carry = null;
+    for (let k = 0; k < parts.length; k++) {
+      const p2 = Object.assign({}, P, { programNo: P.programNo + k });
+      if (p2.programNo > 9999) { beep(); return toast('프로그램 번호가 9999 를 넘습니다. O번호를 줄이세요.', 'err'); }
+      const g = C.generateNC(p2, m, parts[k], {});
+      const v = C.verifyNC(g.text, verifyCtx(m, { expected: g.hits, expectedCuts: g.cuts || [], carryIn: carry }));
+      if (v.errors.length || !v.match) { beep(); return toast('공구별 파일 ' + (k + 1) + ' 검증 실패: ' + (v.errors[0] ? v.errors[0].msg : '경로 불일치') + ' — 저장하지 않았습니다.', 'err'); }
+      carry = v.carry;
+      const t = parts[k].steps[0].tool;
+      out.push({ name: baseName.replace(/(\.[a-z]+)$/i, '') + '_' + String(k + 1).padStart(2, '0') + '_T' + String(t.no).padStart(2, '0') + '.nc', text: g.text, hash: g.hash, lines: g.lines, o: p2.programNo });
+    }
+    out.forEach((f, k) => setTimeout(() => { downloadText(f.name, f.text.replace(/\r?\n/g, '\r\n') + '\r\n', 'text/plain'); addRecord({ kind: 'save', file: f.name + ' (O' + f.o + ')', hash: f.hash, test: !!ds.test, lines: f.lines, kinds: [...new Set(parts[k].steps.map(s => s.type))].join(',') }); }, k * 450));
+    S.flow.saved = S.nc.hash; closeDlg();
+    toast('공구별 NC ' + out.length + '개를 저장합니다 (O' + P.programNo + '~O' + (P.programNo + out.length - 1) + '). 브라우저가 여러 파일 받기를 물으면 허용하세요.', 'ok');
+    setTimeout(renderAll, out.length * 450 + 100);
+  }
+  // [V0.6] 가공 기록 보기·결과 입력·CSV 내보내기
+  function openRecords() {
+    S.recSel = S.recSel || null;
+    openDlg('가공 기록', u => {
+      const rs = (DB.records || []).slice().reverse();
+      let h = '<p><small>NC 저장과 작업 결과가 지워지지 않고 쌓입니다 (최근 3000건). NC 해시로 어떤 파일로 가공했는지 확인합니다. 해시는 파일 맨 위 <code>(NC HASH …)</code> 줄에 있습니다.</small></p>';
+      h += '<div class="sect"><b>작업 결과 추가</b><div class="grid3"><label class="fld"><span>NC 해시</span><input type="text" id="rcHash" maxlength="12" value="' + esc(S.nc.hash || '') + '"></label><label class="fld"><span>작업자</span><input type="text" id="rcBy" maxlength="40"></label><label class="fld"><span>결과</span><select id="rcRes"><option>정상</option><option>치수 불량</option><option>중단</option><option>충돌·사고</option></select></label></div><label class="fld"><span>측정·메모 (H/G54 값, 측정값, 이상 내용)</span><input type="text" id="rcNote" maxlength="300"></label>' +
+        u.btn('기록 추가', () => { const by = $('#rcBy').value.trim(); if (!by) return toast('작업자를 입력하세요.', 'err'); addRecord({ kind: 'result', hash: $('#rcHash').value.trim().toUpperCase(), by, result: $('#rcRes').value, note: $('#rcNote').value.trim() }); openRecords(); toast('작업 결과를 기록했습니다.', 'ok'); }, 'sm primary') + '</div>';
+      h += '<div class="row">' + u.btn('CSV 로 내보내기', () => {
+        const q = v => '"' + String(v === undefined ? '' : v).replace(/"/g, '""') + '"';
+        const csv = '\ufeff' + ['일시,종류,프로젝트,장비,파일,NC 해시,TEST,줄 수,가공 종류,작업자,결과,메모'].concat((DB.records || []).map(r => [r.at, r.kind === 'save' ? 'NC 저장' : '작업 결과', r.project, r.machine, r.file, r.hash, r.test ? 'TEST' : '', r.lines || '', r.kinds, r.by, r.result, r.note].map(q).join(','))).join('\r\n');
+        downloadText('가공기록_' + new Date().toISOString().slice(0, 10) + '.csv', csv, 'text/csv');
+      }, 'sm') + '</div>';
+      h += '<div class="tblwrap"><table class="tbl"><tr><th>일시</th><th>종류</th><th>프로젝트 · 파일</th><th>NC 해시</th><th>결과·메모</th></tr>' + (rs.length ? rs.slice(0, 200).map(r => '<tr><td><small>' + esc(r.at) + '</small></td><td>' + (r.kind === 'save' ? 'NC 저장' + (r.test ? ' <span class="pill warn">TEST</span>' : '') : '작업 결과') + '</td><td>' + esc(r.project) + '<br><small>' + esc(r.file || '') + '</small></td><td><code>' + esc(r.hash) + '</code></td><td>' + esc(r.result || '') + (r.by ? ' <small>· ' + esc(r.by) + '</small>' : '') + (r.note ? '<br><small>' + esc(r.note) + '</small>' : '') + '</td></tr>').join('') : '<tr><td colspan="5"><small>아직 기록이 없습니다.</small></td></tr>') + '</table></div>';
+      return h;
+    }, u => u.btn('닫기', () => closeDlg(), 'primary'));
   }
 
   /* ---------------- 가운데: 2D/3D 도구 ---------------- */
@@ -1366,6 +1545,8 @@
     S.sim.total = r.total; S.sim.tl = r.timeline;
     v.setSpeed(S.sim.speed); v.setShowPaths(S.sim.showPaths);
     renderSimbar();
+    // [V0.6] 새 NC 를 처음 열면 '가공 전(소재)' 상태에서 시작 → 재생을 눌러 처음부터 봄. 확인 단계 ✓ 표시
+    if (S.flow.viewed !== S.nc.hash) { S.flow.viewed = S.nc.hash; try { v.seek(0); } catch (e) { /* 일부 환경 */ } const rg = $('#simRange'); if (rg) rg.value = 0; setTimeout(renderTree, 0); }
     updateHUD(lastProg);
   }
   // 단면 위치: 선택한 가공의 선택 위치 → 첫 위치 → 소재 중앙 (Y)
@@ -1374,6 +1555,12 @@
     if (!S.sim.section) { V3.setSection(null); return; }
     const g = curGroup(), h = g ? (g.holes.find(x => x.id === S.sel.hid) || g.holes[0]) : null, r = C.stockRect(P.stock);
     V3.setSection(h ? h.y : (r.y0 + r.y1) / 2);
+  }
+  // [V0.6] 공정 경계 눈금 (마우스를 올리면 공정 이름)
+  function opTicks(tl, mo, total) {
+    let h = '', prev = null;
+    mo.forEach((m, i) => { const c = opCaption(m.line); if (c && c !== prev) { if (prev !== null) h += '<i class="tick" style="left:' + (tl[i].t0 / total * 100).toFixed(3) + '%" title="' + esc(c) + '"></i>'; prev = c; } });
+    return h;
   }
   function renderSimbar() {
     const tl = S.sim.tl, mo = S.sim.motions, total = S.sim.total || 1;
@@ -1392,7 +1579,7 @@
       '<button class="play" id="simPlay" title="재생 (Space)" aria-label="재생">' + ico('i-play') + '</button>' +
       '<button class="ibtn" id="simNext" title="다음 공구로" aria-label="다음 공구로">' + ico('i-next') + '</button>' +
       '<button class="ibtn" id="simEnd" title="가공 완료 상태" aria-label="가공 완료 상태로">' + ico('i-end') + '</button>' +
-      '<div class="tline"><div class="bands">' + bands + '</div><input type="range" id="simRange" min="0" max="1000" step="1" value="1000" aria-label="시뮬레이션 시간 위치"></div>' +
+      '<div class="tline"><div class="bands">' + bands + '</div>' + opTicks(tl, mo, total) + '<input type="range" id="simRange" min="0" max="1000" step="1" value="1000" aria-label="시뮬레이션 시간 위치"></div>' +
       '<span class="time" id="simTime" title="절삭·이동 시간 (공구 교환 시간은 상태 표시줄 예상 시간에 포함)">' + clock(total) + ' / ' + clock(total) + '</span>' + (S.est ? '<small class="time" title="공구 교환 ' + S.est.changes + '회 × ' + machine().tcSec + '초">+교환 ' + Math.round(S.est.tc) + '초</small>' : '') +
       '<select id="simSpeed" title="재생 속도" aria-label="재생 속도">' + [1, 2, 5, 10, 25, 50, 100].map(s => '<option value="' + s + '"' + (s === S.sim.speed ? ' selected' : '') + '>' + s + '×</option>').join('') + '</select>';
     $('#simPlay').onclick = () => { if (V3.isPlaying()) V3.pause(); else V3.play(); };
@@ -1415,6 +1602,17 @@
       '<div class="box" id="hudTool"><b>공구 없음</b><div class="xyz"><b>X -</b><b>Y -</b><b>Z -</b></div><small>-</small></div>' +
       '<div class="box aux"><div class="legend">' + leg + '</div><div class="assume" title="실제 NC 를 독립 해석한 이동으로 소재 높이맵(격자 ' + C.r3(Math.sqrt((P.stock.sx * P.stock.sy) / SIM_RES[S.sim.res])) + 'mm 내외)을 깎습니다. 홀더 간섭·가감속·나사산 모양은 반영하지 않습니다.">ⓘ 높이맵 근사 시뮬레이션 · 깊을수록 어둡게</div><div id="hudHover" class="assume">소재 위에 마우스를 올리면 X·Y·Z 표시</div></div>';
   }
+  let capSrc = '', capArr = [];
+  function opCaption(line) {
+    const text = S.nc.edited ? S.nc.editText : S.nc.text;
+    if (text !== capSrc) {
+      capSrc = text; capArr = [];
+      const steps = (S.V && S.V.plan && S.V.plan.steps) || [];
+      let cur = '';
+      text.split('\n').forEach((l, i) => { const mm = /^\(OP(\d+) /.exec(l); if (mm) { const st = steps.find(x => x.idx === +mm[1]); cur = mm[1] + '번 공정 · ' + (st ? C.OP_TYPES[st.type].label : l.slice(1, 40)); } capArr[i + 1] = cur; });
+    }
+    return capArr[line] || '';
+  }
   function updateHUD(p) {
     if (!p) return;
     const rg = $('#simRange'), tt = $('#simTime'), el = $('#hudTool');
@@ -1424,7 +1622,9 @@
     if (!p.at) { el.innerHTML = '<b>대기</b>'; return; }
     const m = p.at.m, t = p.tool, pt = p.at.p;
     const what = m.k === 'rapid' ? 'G00 급속 이동' : m.k === 'drill' ? (m.code || '') + ' 사이클 절삭' : m.k === 'arc' ? (m.ccw ? 'G03' : 'G02') + ' 원호 절삭' : 'G01 직선 절삭';
-    el.innerHTML = '<b>' + (t ? esc(C.toolLabel(t)) : 'T' + m.t) + '</b>' +
+    // [V0.6] 지금 어느 공정인지 자막 (G코드의 (OPn …) 주석 기준)
+    const op = opCaption(m.line);
+    el.innerHTML = (op ? '<div class="opcap">' + esc(op) + '</div>' : '') + '<b>' + (t ? esc(C.toolLabel(t)) : 'T' + m.t) + '</b>' +
       '<div class="xyz"><b>X ' + uf(C.r3(pt.x)) + '</b><b>Y ' + uf(C.r3(pt.y)) + '</b><b>Z ' + uf(C.r3(pt.z)) + '</b></div>' +
       '<small>' + what + (m.k !== 'rapid' && m.f ? ' · F' + m.f : '') + ' · G코드 ' + m.line + '행 · ' + Math.round(p.total ? p.t / p.total * 100 : 100) + '%</small>';
   }
@@ -1455,9 +1655,9 @@
   function machineBody(u) {
     const m = machine();
     let h = '<h3>장비 선택</h3><div class="row">' +
-      u.select(m.id, DB.machines.map(x => [x.id, x.name + (x.verified ? ' ✔' : '')]), v => mutate(() => { P.machineId = v; })) +
+      u.select(m.id, DB.machines.map(x => [x.id, x.name + (x.approvals.length ? ' ✔' : '')]), v => mutate(() => { P.machineId = v; })) +
       u.btn('+ 새 장비', () => { const n = C.defaultMachine(); n.name = '새 장비 ' + (DB.machines.length + 1); DB.machines.push(n); mutate(() => { P.machineId = n.id; }); }, 'sm') +
-      u.btn('복제', () => { const n = C.clone(m); n.id = C.uid('m'); n.name = m.name + ' 복사'; n.verified = false; n.verifiedBy = ''; n.verifiedAt = ''; DB.machines.push(n); mutate(() => { P.machineId = n.id; }); }, 'sm') +
+      u.btn('복제', () => { const n = C.clone(m); n.id = C.uid('m'); n.name = m.name + ' 복사'; C.revoke(n); n.history = []; DB.machines.push(n); mutate(() => { P.machineId = n.id; }); }, 'sm') +
       u.btn('삭제', () => {
         if (DB.machines.length < 2) return toast('장비는 최소 1대 필요합니다.', 'err');
         const used = Object.values(DB.projects).filter(p => p.machineId === m.id && p.id !== P.id).length;
@@ -1465,30 +1665,30 @@
         DB.machines = DB.machines.filter(x => x !== m); mutate(() => { P.machineId = DB.machines[0].id; });
       }, 'sm danger') +
       u.btn('적합성 확인', () => openFitReport(), 'sm', 'title="현재 장비·소재로 모든 공정 묶음 점검"') + '</div>';
-    h += '<div class="sect"><b>실가공 검증 상태</b>' + (m.verified
-      ? '<span class="pill ok">검증 완료</span> <small>' + esc(m.verifiedBy) + ' · ' + esc(m.verifiedAt) + '</small><br><small>' + esc(m.verifyNote) + '</small>'
-      : '<span class="pill warn">미검증 - NC는 "검증용(TEST)"으로 표시</span>') +
-      '<br><small>검증 상태 변경은 관리자 설정(설정 창의 ⚙ 아이콘)에서만 가능합니다.</small></div>';
-    const dm = (fn) => v => dbChange(() => { fn(v); if (m.verified) { m.verified = false; toast('장비 설정이 바뀌어 실가공 검증 상태가 해제되었습니다.', 'warn'); } });
+    h += '<div class="sect"><b>실가공 검증 상태</b> ' + approvalHTML(m) + '<small>검증 상태 변경은 관리자 설정(설정 창의 ⚙ 아이콘)에서만 가능합니다.</small></div>';
+    const dm = (fn) => v => dbChange(() => { fn(v); if (m.verified || m.approvals.length) { C.revoke(m, '장비 설정 변경'); toast('장비 설정이 바뀌어 실가공 검증 상태가 해제되었습니다.', 'warn'); } });
     h += '<h3>장비 설정</h3>' + u.fld('장비 이름', u.text(m.name, dm(v => { m.name = v.slice(0, 60) || '장비'; })));
     h += '<div class="grid3" style="margin-top:6px">' +
       u.fld('X 행정', u.num(m.travel.x, dm(v => { m.travel.x = v; }))) + u.fld('Y 행정', u.num(m.travel.y, dm(v => { m.travel.y = v; }))) + u.fld('Z 행정', u.num(m.travel.z, dm(v => { m.travel.z = v; }))) +
       u.fld('최대 회전수', u.num(m.maxRpm, dm(v => { m.maxRpm = v; }))) + u.fld('탭 최대 회전수', u.num(m.maxTapRpm, dm(v => { m.maxTapRpm = v; }))) + u.fld('최대 절삭 이송', u.num(m.maxFeed, dm(v => { m.maxFeed = v; }))) +
       u.fld('매거진 공구 수', u.int(m.magazine, dm(v => { m.magazine = v; }))) + u.fld('급속 이송 (시간 추정용)', u.num(m.rapid, v => dbChange(() => { m.rapid = Math.min(100000, Math.max(1000, v)); }))) + u.fld('공구 교환 시간 (초)', u.num(m.tcSec, v => dbChange(() => { m.tcSec = Math.min(120, Math.max(0, v)); }))) +
       u.fld('제어기 (포스트프로세서)', u.select(m.control, C.POST.all().map(x => [x.id, x.label, x.status !== 'ready']), dm(v => { if (C.POST.get(v)) m.control = v; }))) + '</div>';
-    h += u.check(m.rigidTap, dm(v => { m.rigidTap = v; }), '리지드 탭(M29) 지원') + u.check(m.rigidM03, dm(v => { m.rigidM03 = v; }), '리지드 탭 전에 S__ M03 출력 (장비 파라미터에 따름)') + u.check(m.endY, dm(v => { m.endY = v; }), '종료 시 Y축 원점 복귀 (G91 G28 Y0.)') + u.check(m.helical, dm(v => { m.helical = v; }), '헬리컬 보간 지원 (포켓 진입 G03 + Z)');
+    h += u.check(m.rigidTap, dm(v => { m.rigidTap = v; }), '리지드 탭(M29) 지원') + u.check(m.rigidM03, dm(v => { m.rigidM03 = v; }), '리지드 탭 전에 S__ M03 출력 (장비 파라미터에 따름)') + u.check(m.endY, dm(v => { m.endY = v; }), '종료 시 Y축 원점 복귀 (G91 G28 Y0.)') + u.check(m.helical, dm(v => { m.helical = v; }), '헬리컬 보간 지원 (포켓 진입 G03 + Z)') +
+      u.check(m.g76 !== false, dm(v => { m.g76 = v; }), 'G76 정밀 보링 지원 (주축 정위치 · Q 날 빼기)') +
+      '<div class="grid3" style="margin-top:6px">' + u.fld('Z 행정 하한 (머신 좌표)', u.num(m.zMin, dm(v => { m.zMin = Math.min(0, v); })), 'G54 Z·H 를 입력하면 최저점이 이 안인지 검사') + u.fld('NC 메모리 (KB, 0=모름)', u.num(m.memKB || 0, v => dbChange(() => { m.memKB = Math.max(0, v); })), '넘으면 공구별 나눠 저장 안내') + '<span></span></div>';
 
-    h += '<h3>공구 목록 <small>(' + m.tools.length + '개)</small></h3><div class="tblwrap"><table class="tbl"><tr><th>T</th><th>종류</th><th>직경(mm)</th><th title="드릴: 선단각 · 탭: 피치 · 엔드밀: 날 수">각(°)/피치(mm)/날수</th><th>재질</th><th title="유효 날 길이(가공 가능한 최대 깊이)">날장(mm)</th><th></th></tr>';
+    h += '<h3>공구 목록 <small>(' + m.tools.length + '개)</small></h3><div class="tblwrap"><table class="tbl"><tr><th>T</th><th>종류</th><th>직경(mm)</th><th title="드릴: 선단각 · 탭: 피치 · 엔드밀: 날 수">각(°)/피치(mm)/날수</th><th>재질</th><th title="유효 날 길이(가공 가능한 최대 깊이)">날장(mm)</th><th title="홀더 끝에서 공구 끝까지 길이 (0 = 미입력 → 홀더 간섭 검사 생략)">돌출(mm)</th><th title="홀더(척) 바깥 지름 (클램프 간섭 검사)">홀더Ø</th><th title="장비에서 측정한 공구 길이 보정값 H (머신 Z 행정 검사)">H 측정</th><th></th></tr>';
     m.tools.slice().sort((a, b) => a.no - b.no).forEach(t => {
       h += '<tr><td style="width:56px">' + u.int(t.no, dm(v => { t.no = v; })) + '</td><td>' + u.select(t.type, Object.keys(C.TOOL_TYPES).map(k => [k, C.TOOL_TYPES[k]]), dm(v => { const n = C.normalizeTool(Object.assign({}, t, { type: v })); Object.keys(t).forEach(k => delete t[k]); Object.assign(t, n); })) + '</td>' +
         '<td>' + u.num(t.dia, dm(v => { t.dia = v; })) + '</td>' +
         '<td>' + (t.type === 'tap' ? u.num(t.pitch, dm(v => { t.pitch = v; }), 'title="피치(mm)"') : t.type === 'endmill' ? u.int(t.z, dm(v => { t.z = Math.max(1, Math.min(12, v)); }), 'title="날 수"') : u.num(t.angle, dm(v => { t.angle = v; }), 'title="선단각(°)"')) + '</td>' +
         '<td>' + u.select(t.mat, [['HSS', 'HSS'], ['CARBIDE', '초경']], dm(v => { t.mat = v; })) + '</td>' +
         '<td>' + u.num(t.flute, dm(v => { t.flute = v; }), 'title="유효 날 길이(mm)"') + '</td>' +
+        '<td>' + u.num(t.stick || 0, dm(v => { t.stick = Math.max(0, v); }), 'title="돌출 길이(mm), 0 = 미입력"') + '</td><td>' + u.num(t.holderDia || 0, dm(v => { t.holderDia = Math.max(0, v); }), 'title="홀더 지름(mm)"') + '</td><td>' + u.num(t.hVal || 0, v => dbChange(() => { t.hVal = Math.max(0, v); }), 'title="H 측정값(mm)"') + '</td>' +
         '<td>' + u.btn('✕', () => { if (confirm('T' + t.no + ' 공구를 삭제할까요?')) dm(() => { m.tools.splice(m.tools.indexOf(t), 1); })(); }, 'sm danger', 'aria-label="공구 삭제"') + '</td></tr>';
     });
-    h += '</table></div><div class="row" style="margin-top:6px">' + u.btn('+ 드릴', () => addTool('drill'), 'sm') + u.btn('+ 탭', () => addTool('tap'), 'sm') + u.btn('+ 센터 드릴', () => addTool('center'), 'sm') + u.btn('+ 평 엔드밀', () => addTool('endmill'), 'sm') + '</div>';
-    h += '<small>직경: 탭은 호칭경(M8 → 8). 날장: 가공 가능한 최대 깊이 (포켓 깊이·드릴 깊이 검사에 사용).</small>';
+    h += '</table></div><div class="row" style="margin-top:6px">' + u.btn('+ 드릴', () => addTool('drill'), 'sm') + u.btn('+ 탭', () => addTool('tap'), 'sm') + u.btn('+ 센터 드릴', () => addTool('center'), 'sm') + u.btn('+ 평 엔드밀', () => addTool('endmill'), 'sm') + u.btn('+ 리머', () => addTool('reamer'), 'sm') + u.btn('+ 보링 바', () => addTool('boring'), 'sm') + '</div>';
+    h += '<small>직경: 탭은 호칭경(M8 → 8), 보링 바는 맞춰 둔 완성 지름. 날장: 가공 가능한 최대 깊이. <b>돌출</b>·<b>홀더Ø</b>를 넣으면 홀더가 소재·클램프에 닿는지 검사하고, <b>H 측정</b>과 [원점·NC 출력]의 G54 Z 를 넣으면 Z 행정을 검사합니다.</small>';
     S.tdc = S.tdc || { d: 8, p: 1.25 };
     const rec = C.tapDrill(S.tdc.d, S.tdc.p);
     h += '<h3>미터 나사 기초 드릴 추천</h3><div class="grid3">' +
@@ -1500,7 +1700,7 @@
     function addTool(type) {
       const used = new Set(m.tools.map(t => t.no)); let no = 1; while (used.has(no)) no++;
       const base = { no, type, dia: type === 'tap' ? 6 : type === 'endmill' ? 6 : 5, pitch: 1, angle: type === 'center' ? 90 : 118, flute: type === 'center' ? 10 : type === 'endmill' ? 15 : 40, z: 3, mat: type === 'endmill' ? 'CARBIDE' : 'HSS', name: '' };
-      dbChange(() => { m.tools.push(C.normalizeTool(base)); if (m.verified) m.verified = false; });
+      dbChange(() => { m.tools.push(C.normalizeTool(base)); C.revoke(m, '공구 추가'); });
     }
   }
   function bundleBody(u) {
@@ -1663,11 +1863,13 @@
     h += '<table class="sh-t"><tr><th>장비</th><td>' + esc(m.name) + ' (' + esc(m.control) + ')</td><th>NC 파일</th><td>' + esc(ds.ok ? ncFileName(ds) : '-') + '</td></tr>' +
       '<tr><th>소재</th><td>' + esc(C.MATERIALS[st.material] ? C.MATERIALS[st.material].label : st.material) + ' · ' + st.sx + ' × ' + st.sy + ' × ' + st.sz + ' mm</td><th>원점</th><td>' + esc(C.ORIGIN_LABEL[st.origin]) + ' · Z0 = 소재 윗면 · ' + esc(set.wcs) + '</td></tr>' +
       '<tr><th>초기점</th><td>Z' + set.initialZ + ' (' + (set.retract === 'G98' ? 'G98 초기점 복귀' : 'G99 R점 복귀') + ')</td><th>하부 여유</th><td>' + C.toNum(st.under, 0) + ' mm</td></tr>' +
-      '<tr><th>예상 시간</th><td>' + (S.est ? '약 ' + fmtSec(S.est.total) + ' (절삭·이동 ' + fmtSec(S.est.cut) + ' + 공구 교환 ' + S.est.changes + '회)' : '-') + '</td><th>클램프</th><td>' + (P.clamps.length ? P.clamps.map((cl, i) => '#' + (i + 1) + ' X' + cl.x + ' Y' + cl.y + ' ' + cl.w + '×' + cl.h + ' H' + cl.height).join('<br>') : '없음') + '</td></tr></table>';
-    h += '<h2>공구표</h2><table class="sh-t"><tr><th>T</th><th>공구</th><th>날장</th><th>재질</th><th>사용 공정</th><th>시간(추정)</th><th>확인</th></tr>';
+      '<tr><th>예상 시간</th><td>' + (S.est ? '약 ' + fmtSec(S.est.total) + ' (절삭·이동 ' + fmtSec(S.est.cut) + ' + 공구 교환 ' + S.est.changes + '회)' : '-') + '</td><th>클램프</th><td>' + (P.clamps.length ? P.clamps.map((cl, i) => '#' + (i + 1) + ' X' + cl.x + ' Y' + cl.y + ' ' + cl.w + '×' + cl.h + ' H' + cl.height).join('<br>') : '없음') + '</td></tr>';
+    h += '<tr><th>NC 해시</th><td colspan="3"><b>' + esc(S.nc.hash || '-') + '</b> <small>(NC 파일 맨 위 (NC HASH …) 줄과 같아야 이 지시서의 파일입니다)</small>' + (set.firstRun ? ' · <b>첫 가공 모드</b> (공정마다 M00, 이송 ' + set.firstFeed + '%)' : '') + (set.restart ? ' · 공구별 재시작 블록 N100…' : '') + '</td></tr>';
+    h += '</table>' + sheetLayout();
+    h += '<h2>공구표</h2><table class="sh-t"><tr><th>T</th><th>공구</th><th>날장</th><th>돌출</th><th>재질</th><th>사용 공정</th><th>시간(추정)</th><th>H 장비값</th><th>확인</th></tr>';
     used.forEach(no => {
       const t = tm.get(no), ss = steps.filter(s => s.toolNo === no);
-      h += '<tr><td>T' + String(no).padStart(2, '0') + '</td><td>' + (t ? esc(C.toolLabel(t).replace(/^T\d+\s*/, '')) : '없음') + '</td><td>' + (t ? t.flute : '-') + '</td><td>' + (t ? (t.mat === 'CARBIDE' ? '초경' : 'HSS') : '-') + '</td><td>' + ss.map(s => esc(C.OP_TYPES[s.type].label)).join(', ') + '</td><td>' + (runSec.has(no) ? fmtSec(runSec.get(no)) : '-') + '</td><td class="box"></td></tr>';
+      h += '<tr><td>T' + String(no).padStart(2, '0') + '</td><td>' + (t ? esc(C.toolLabel(t).replace(/^T\d+\s*/, '')) : '없음') + '</td><td>' + (t ? t.flute : '-') + '</td><td>' + (t && t.stick ? t.stick + (t.holderDia ? ' / Ø' + t.holderDia : '') : '<small>미입력</small>') + '</td><td>' + (t ? (t.mat === 'CARBIDE' ? '초경' : 'HSS') : '-') + '</td><td>' + ss.map(s => esc(C.OP_TYPES[s.type].label)).join(', ') + '</td><td>' + (runSec.has(no) ? fmtSec(runSec.get(no)) : '-') + '</td><td>' + (t && t.hVal ? t.hVal + ' <small>(측정값)</small>' : '') + '</td><td class="box"></td></tr>';
     });
     h += '</table><h2>가공 순서</h2><table class="sh-t"><tr><th>#</th><th>공정</th><th>공구</th><th>개수</th><th>R점 Z</th><th>공구 끝 Z</th><th>S</th><th>F</th></tr>';
     steps.forEach(s => {
@@ -1677,8 +1879,36 @@
     const warns = S.V.issues.filter(i => i.level !== 'info' && !(i.cat === 11 && /실가공 검증 전/.test(i.msg))).slice(0, 20);
     if (warns.length || (c.vr && c.vr.warnings.length)) h += '<h2>확인 사항</h2><ul>' + warns.map(i => '<li>' + (i.level === 'error' ? '[오류] ' : '[경고] ') + esc(i.msg) + '</li>').join('') + (c.vr ? c.vr.warnings.slice(0, 10).map(x => '<li>[G코드 ' + x.line + '행] ' + esc(x.msg) + '</li>').join('') : '') + '</ul>';
     h += '<h2>가공 전 점검</h2><ul class="sh-check"><li>공구 길이 보정(H)·공작물 좌표계(' + esc(set.wcs) + ') 입력</li><li>Z를 띄운 드라이런(공회전) 확인</li><li>싱글 블록으로 첫 구멍·포켓 진입 확인</li><li>클램프·지그 위치, 소재 하부 여유 확인</li><li>탭 가공 시 이송·주축 오버라이드 100%</li></ul>';
+    // [V0.6] 첫 가공 확인 서명란 (드라이런 → 싱글 블록 → 시편 측정)
+    h += '<h2>첫 가공 확인</h2><table class="sh-t"><tr><th>단계</th><th>내용</th><th>결과</th><th>확인자 · 시각</th></tr>' +
+      [['① 드라이런', 'Z 를 띄우고(또는 첫 가공 모드 M00 마다) 경로·클램프 확인'], ['② 싱글 블록', '공구 교환·H·' + set.wcs + '·첫 진입 확인'], ['③ 시편 가공', '위치·깊이·치수(게이지) 측정 → 가공 기록에 결과 입력']].map(r => '<tr><td>' + r[0] + '</td><td>' + esc(r[1]) + '</td><td class="box"></td><td></td></tr>').join('') + '</table>';
     h += '<table class="sh-t sh-sign"><tr><th>작성</th><td></td><th>확인</th><td></td><th>작업자</th><td></td></tr></table>';
     h += '<p class="sh-foot">푸른 AI CAM ' + C.VERSION + ' · 예상 시간은 급속 ' + m.rapid + 'mm/min, 공구 교환 ' + m.tcSec + '초 기준 추정치입니다 (가감속 미반영). 자동 검증은 실제 가공 안전을 보장하지 않습니다.</p></div>';
+    return h;
+  }
+  // [V0.6] 작업지시서 배치도(소재·원점·클램프·가공 위치 번호) + 좌표표
+  function sheetLayout() {
+    const st = P.stock, r = C.stockRect(st), W = 640, pad = 28, tm = C.toolMap(machine());
+    const sc = Math.min((W - 2 * pad) / Math.max(1, r.x1 - r.x0), 300 / Math.max(1, r.y1 - r.y0)), H = (r.y1 - r.y0) * sc + 2 * pad;
+    const X = x => pad + (x - r.x0) * sc, Y = y => H - pad - (y - r.y0) * sc;
+    let svg = '<svg class="sh-lay" viewBox="0 0 ' + W + ' ' + H.toFixed(0) + '" width="100%" role="img" aria-label="배치도">';
+    svg += '<rect x="' + X(r.x0) + '" y="' + Y(r.y1) + '" width="' + ((r.x1 - r.x0) * sc).toFixed(1) + '" height="' + ((r.y1 - r.y0) * sc).toFixed(1) + '" fill="#eef2f6" stroke="#5c6b7a" stroke-width="1.2"/>';
+    P.clamps.forEach((c, i) => { svg += '<rect x="' + X(Math.min(c.x, c.x + c.w)).toFixed(1) + '" y="' + Y(Math.max(c.y, c.y + c.h)).toFixed(1) + '" width="' + (Math.abs(c.w) * sc).toFixed(1) + '" height="' + (Math.abs(c.h) * sc).toFixed(1) + '" fill="#f4d9bf" stroke="#c46a12" stroke-dasharray="4 2"/><text x="' + X(c.x).toFixed(1) + '" y="' + (Y(Math.max(c.y, c.y + c.h)) - 3).toFixed(1) + '" font-size="10" fill="#9a4d06">클램프' + (i + 1) + '</text>'; });
+    const rows = []; let n = 0;
+    P.groups.forEach(g => {
+      const e = G.extentOf(g, tm);
+      g.holes.forEach(hh => {
+        if (!C.isNum(hh.x) || !C.isNum(hh.y)) return;
+        n++; rows.push([n, g.name, hh.x, hh.y, S.gzLabel ? S.gzLabel.get(g.id) : '']);
+        if (e.face) return;
+        if (e.pocket && e.rect) svg += '<rect x="' + (X(hh.x - e.w / 2)).toFixed(1) + '" y="' + (Y(hh.y + e.h / 2)).toFixed(1) + '" width="' + (e.w * sc).toFixed(1) + '" height="' + (e.h * sc).toFixed(1) + '" rx="' + (Math.min(e.cr || 0, e.w / 2, e.h / 2) * sc).toFixed(1) + '" fill="none" stroke="' + g.color + '" stroke-width="1.2"/>';
+        else svg += '<circle cx="' + X(hh.x).toFixed(1) + '" cy="' + Y(hh.y).toFixed(1) + '" r="' + Math.max(2.5, (e.d || 3) / 2 * sc).toFixed(1) + '" fill="none" stroke="' + g.color + '" stroke-width="1.2"/>';
+        svg += '<text x="' + (X(hh.x) + 4).toFixed(1) + '" y="' + (Y(hh.y) - 4).toFixed(1) + '" font-size="10" font-weight="700" fill="#1f2937">' + n + '</text>';
+      });
+    });
+    svg += '<path d="M' + X(0) + ',' + Y(0) + 'h28M' + X(0) + ',' + Y(0) + 'v-28" stroke="#d62728" stroke-width="2"/><circle cx="' + X(0) + '" cy="' + Y(0) + '" r="3.5" fill="#111"/><text x="' + (X(0) + 5) + '" y="' + (Y(0) + 13) + '" font-size="10">' + esc(P.settings.wcs) + ' 원점</text></svg>';
+    let h = '<h2>배치도 · 좌표표</h2><div class="sh-lwrap">' + svg + '</div>';
+    if (rows.length) h += '<table class="sh-t sh-coord"><tr><th>#</th><th>가공</th><th>X</th><th>Y</th><th>깊이</th></tr>' + rows.slice(0, 120).map(r2 => '<tr><td>' + r2[0] + '</td><td>' + esc(r2[1]) + '</td><td>' + uf(r2[2]) + '</td><td>' + uf(r2[3]) + '</td><td>' + esc(r2[4] || '') + '</td></tr>').join('') + '</table>' + (rows.length > 120 ? '<small>처음 120개만 표시</small>' : '');
     return h;
   }
   function openSheet() {
@@ -1718,7 +1948,7 @@
   }
   function exportProject() {
     const m = machine();
-    const data = { type: 'pcam-project', version: C.VERSION, exportedAt: new Date().toISOString(), project: P, machine: Object.assign(C.clone(m), { verified: false }) };
+    const data = { type: 'pcam-project', version: C.VERSION, exportedAt: new Date().toISOString(), project: P, machine: Object.assign(C.clone(m), { verified: false, approvals: [] }) };
     downloadText((P.name.replace(/[\\/:*?"<>|]+/g, '_') || 'project') + '.pcam.json', JSON.stringify(data, null, 1), 'application/json');
   }
   function importProject(txt) {
@@ -1727,7 +1957,7 @@
     const p = C.normalizeProject(d.project); p.id = C.uid('p'); p.updatedAt = new Date().toISOString();
     if (p.importWarnings) { p.importWarnings.forEach(w => toast(w, 'err')); delete p.importWarnings; }
     if (d.machine) {
-      const m = C.normalizeMachine(d.machine); m.verified = false; m.verifiedBy = ''; m.verifiedAt = '';
+      const m = C.normalizeMachine(d.machine); C.revoke(m, '다른 곳에서 가져옴');
       const ex = DB.machines.find(x => x.id === m.id);
       if (!ex) { DB.machines.push(m); toast('장비 "' + m.name + '" 를 추가했습니다 (실가공 검증 상태는 관리자 재승인 필요).', 'warn'); }
       p.machineId = m.id;
@@ -1744,6 +1974,36 @@
     document.documentElement.dataset.fs = DB.settings.fs || 'm';
     if (V3 && V3.ok) V3.setTheme(dark ? 'dark' : 'light');
   }
+  // [V0.6] 도움말: 처음 사용 순서 · 용어집(검색) · 안전 수칙 · 단축키
+  function openHelp() {
+    S.helpQ = S.helpQ || '';
+    openDlg('도움말 · 용어집', u => {
+      let h = '<div class="help"><h3>처음 사용 순서</h3><ol class="howto">' +
+        '<li><b>소재</b>: 왼쪽 [소재·고정]에서 크기·재질·클램프를 넣습니다.</li>' +
+        '<li><b>원점·NC</b>: 원점 위치(G54), 초기점, 첫 가공 모드를 정합니다.</li>' +
+        '<li><b>가공 추가</b>: [+ 구멍]·[+ 탭]·[+ 포켓]… 또는 [도면(DXF) 불러오기]. 크기·깊이만 넣으면 공구와 조건이 자동으로 정해집니다.</li>' +
+        '<li><b>위치</b>: 2D 화면에서 [위치 추가]로 찍거나 표에 X·Y 를 넣습니다. 포켓은 □ 손잡이로 크기를 끌어 바꿉니다.</li>' +
+        '<li><b>확인</b>: 아래 [검증 결과]의 빨간 항목을 눌러 고치고, [3D 시뮬레이션]으로 처음부터 재생해 봅니다.</li>' +
+        '<li><b>NC 저장</b>: 가공 전 점검을 체크하고 저장합니다. 처음 쓰는 장비·가공은 <b>첫 가공 모드</b>로 드라이런 → 싱글 블록 → 시편 순서로 확인하세요.</li></ol>' +
+        '<h3>용어집</h3>' + u.text(S.helpQ, v => { S.helpQ = v; openHelp(); }, 'placeholder="찾을 낱말 (예: R점, 구배, 날장)"') +
+        '<dl class="gloss">' + GLOSS.filter(g => !S.helpQ || g[0].includes(S.helpQ) || g[1].includes(S.helpQ)).map(g => '<dt>' + esc(g[0]) + '</dt><dd>' + esc(g[1]) + '</dd>').join('') + '</dl>' +
+        '<h3>안전 수칙</h3><ul><li>자동 검증·3D 시뮬레이션은 실제 가공 안전을 보장하지 않습니다.</li><li>장비에 넣기 전 H(공구 길이)·G54 값, 클램프 위치, 하부 여유를 확인하세요.</li><li>TEST 표시 NC 는 실장비 승인 전 파일입니다. 관리자가 가공 종류별로 승인해야 TEST 가 사라집니다.</li><li>가공 기록에 결과(정상·불량·충돌)를 남기면 같은 사고를 막을 수 있습니다.</li></ul>' +
+        '<h3>단축키</h3><p><small>F1 도움말 · Ctrl+Z/Y 되돌리기 · Ctrl+C/V/D 복사·붙여넣기·복제 · Delete 삭제 · F2 이름 · Alt+↑↓ 순서 · Space 3D 재생</small></p></div>';
+      return h;
+    }, u => u.btn('닫기', () => closeDlg(), 'primary'));
+  }
+  // ⓘ 설명 풍선
+  function showTip(b) {
+    closeTip();
+    const d = document.createElement('div'); d.className = 'tippop'; d.id = 'tippop'; d.setAttribute('role', 'tooltip');
+    d.textContent = b.dataset.tip; document.body.appendChild(d);
+    const r = b.getBoundingClientRect(), w = Math.min(320, window.innerWidth - 16);
+    d.style.width = w + 'px'; d.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left - 20)) + 'px';
+    const below = r.bottom + 6 + d.offsetHeight < window.innerHeight; d.style.top = (below ? r.bottom + 6 : r.top - 6 - d.offsetHeight) + 'px';
+  }
+  function closeTip() { const t = $('#tippop'); if (t) t.remove(); }
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.gi'); if (b) { e.preventDefault(); e.stopPropagation(); if ($('#tippop') && $('#tippop').textContent === b.dataset.tip) closeTip(); else showTip(b); return; } if (!e.target.closest || !e.target.closest('#tippop')) closeTip(); }, true);
+  document.addEventListener('keydown', e => { if (e.key === 'F1') { e.preventDefault(); openHelp(); } if (e.key === 'Escape') closeTip(); });
   function openSettings() {
     S.admin.clicks = [];
     openDlg('설정', u => {
@@ -1755,7 +2015,7 @@
         '<small>머리글 아이콘과 화면·서랍 탭은 <b>끌어서</b> 원하는 순서·묶음으로 옮길 수 있습니다. 패널 경계를 끌면 크기가 바뀝니다.</small></div>';
       h += '<div class="sect"><b>소리·언어</b>' + u.check(s.sound, v => { s.sound = v; saveDB(); if (v) beep(); }, 'NC 생성 차단·검증 오류 시 경고음') +
         '<small>화면은 한국어, NC 파일 주석은 장비 호환을 위해 영문(ASCII)으로 출력됩니다.</small></div>';
-      h += '<div class="sect"><b>공유·버전</b><div class="row">' + u.btn(ico('i-share') + '공유 링크·QR코드', () => openShare(), 'sm') + u.btn('업그레이드 / 버전 정보', () => openVersion(), 'sm') + '</div>' +
+      h += '<div class="sect"><b>공유·버전</b><div class="row">' + u.btn(ico('i-share') + '공유 링크·QR코드', () => openShare(), 'sm') + u.btn('업그레이드 / 버전 정보', () => openVersion(), 'sm') + u.btn('가공 기록 (' + (DB.records || []).length + ')', () => openRecords(), 'sm', 'title="NC 저장·작업 결과 기록 (NC 해시로 추적)"') + u.btn('도움말·용어집', () => openHelp(), 'sm') + '</div>' +
         '<small class="ver">푸른 AI CAM ' + C.VERSION + ' (' + C.BUILD_DATE + ')</small></div>';
       h += '<div class="sect"><b>데이터 백업·복원</b><div class="row">' +
         u.btn('전체 백업 (JSON)', () => backupAll(), 'sm') + u.btn('백업 복원', () => pickFile('.json', restoreAll), 'sm') + '</div>' +
@@ -1783,7 +2043,7 @@
     if (!confirm('현재 브라우저의 모든 데이터를 백업 파일 내용으로 바꿉니다. 계속할까요?\n(복원 전 현재 데이터를 자동 백업합니다)')) return;
     backupAll();
     const nd = { schema: 1, machines: d.db.machines.map(C.normalizeMachine), bundles: (d.db.bundles || []).map(b => { const n = C.normalizeBundle(b); if (n.importWarnings) { toast(n.importWarnings[0], 'err'); delete n.importWarnings; } return n; }), projects: {}, settings: Object.assign({}, DB.settings, d.db.settings || {}) };
-    nd.machines.forEach(m => { m.verified = false; });
+    nd.machines.forEach(m => { C.revoke(m, '백업 복원'); });
     Object.values(d.db.projects || {}).forEach(p => { const n = C.normalizeProject(p); if (n.importWarnings) { toast('[' + n.name + '] ' + n.importWarnings[0], 'err'); delete n.importWarnings; } nd.projects[n.id] = n; });
     if (!nd.machines.length) throw new Error('장비 정보가 없습니다.');
     if (!Object.keys(nd.projects).length) { const n = C.newProject(nd.machines[0]); nd.projects[n.id] = n; }
@@ -1864,7 +2124,7 @@
       u.btn('비밀번호 재설정', () => {
         if (prompt('재설정하려면 "재설정" 을 입력하세요.') !== '재설정') return;
         try { localStorage.removeItem(ADMIN_KEY); } catch (e) { /* 저장소 접근 불가 */ }
-        DB.machines.forEach(m => { m.verified = false; m.verifiedBy = ''; m.verifiedAt = ''; });
+        DB.machines.forEach(m => { C.revoke(m, '관리자 전체 해제'); });
         saveDB(true); closeDlg($('#dlg2')); renderAll(); toast('관리자 비밀번호를 재설정했습니다. 다시 등록하세요.', 'warn');
       }, 'sm danger') + '</details>',
       u => u.btn('확인', async () => {
@@ -1893,21 +2153,28 @@
     if (!S.admin.authed || Date.now() > S.admin.until) { S.admin.authed = false; return openAdminAuth(); }
     const d = openDlg('관리자 설정', u => {
       let h = '<div class="adm"><b>⚠ 관리자 모드</b> <small>창을 닫거나 10분이 지나면 자동 종료되며 다시 인증해야 합니다.</small></div>';
-      h += '<h3>장비 실가공 검증 승인</h3><p><small>실제 머시닝센터에서 아래 시험을 마친 장비만 승인하세요. 승인 전 NC 파일은 "검증용(TEST)"으로 표시됩니다. 장비 설정을 바꾸면 승인이 자동 해제됩니다.</small></p>';
+      h += '<h3>장비 실가공 검증 승인 <small>(가공 종류 × 앱 버전 ' + esc(C.VERSION) + ')</small></h3><p><small>실제 머시닝센터에서 <b>그 가공 종류를</b> 시편으로 깎아 확인한 것만 승인하세요. 승인되지 않은 가공이 하나라도 있으면 NC 는 "검증용(TEST)"입니다. 버전이 바뀌거나 장비·공구 설정을 바꾸면 승인은 다시 받아야 합니다. 승인·해제 이력은 지워지지 않습니다.</small></p>';
+      const used = [...new Set((S.V.plan.steps || []).map(st => st.type))];
       DB.machines.forEach(m => {
-        h += '<div class="sect"><b>' + esc(m.name) + ' ' + (m.verified ? '<span class="pill ok">승인됨 · ' + esc(m.verifiedBy) + ' · ' + esc(m.verifiedAt) + '</span>' : '<span class="pill warn">미승인</span>') + '</b>';
-        if (m.verified) h += u.btn('승인 해제', () => { m.verified = false; m.verifiedBy = ''; m.verifiedAt = ''; saveDB(true); renderAll(); openAdminPanel(); }, 'sm danger');
-        else {
-          const id = m.id.replace(/[^a-z0-9]/gi, '');
-          h += '<label class="chk"><input type="checkbox" id="vc1' + id + '">Z를 띄운 드라이런(공회전)으로 경로 확인</label><label class="chk"><input type="checkbox" id="vc2' + id + '">싱글 블록 운전으로 공구 교환·보정·사이클 확인</label><label class="chk"><input type="checkbox" id="vc3' + id + '">시편 실가공 후 위치·깊이·나사 게이지 확인</label>' +
-            '<div class="grid2"><label class="fld"><span>확인자</span><input type="text" id="vby' + id + '" maxlength="40"></label><label class="fld"><span>메모 (사용 파라미터 등)</span><input type="text" id="vno' + id + '" maxlength="200"></label></div>' +
-            u.btn('검증 완료 승인', () => {
-              if (![1, 2, 3].every(k => $('#vc' + k + id).checked)) return toast('세 가지 실장비 시험을 모두 확인하세요.', 'err');
-              const by = $('#vby' + id).value.trim(); if (!by) return toast('확인자를 입력하세요.', 'err');
-              m.verified = true; m.verifiedBy = by; m.verifiedAt = new Date().toISOString().slice(0, 10); m.verifyNote = $('#vno' + id).value.trim();
-              saveDB(true); renderAll(); openAdminPanel(); toast('실가공 검증을 승인했습니다.', 'ok');
-            }, 'sm primary');
-        }
+        const id = m.id.replace(/[^a-z0-9]/gi, ''), ap = C.approvalOf(m, S.V.plan);
+        h += '<div class="sect"><b>' + esc(m.name) + '</b> ' + approvalHTML(m);
+        if (m.approvals.length) h += u.btn('모든 승인 해제', () => { C.revoke(m, '관리자 해제'); saveDB(true); renderAll(); openAdminPanel(); }, 'sm danger');
+        const kinds = C.OPS.ready().map(d => d.id).filter(k => k !== 'pocket');
+        h += '<details' + (ap.ok ? '' : ' open') + '><summary>새 승인 추가</summary><div class="apkinds">' + kinds.map(k => '<label class="chk"><input type="checkbox" class="apk' + id + '" value="' + esc(k) + '"' + (used.includes(k) && !ap.approved.includes(k) ? ' checked' : '') + '>' + esc((C.OPS.get(k) || {}).label || k) + (used.includes(k) ? ' <small>(이 프로젝트)</small>' : '') + '</label>').join('') + '</div>' +
+          '<label class="chk"><input type="checkbox" id="vc1' + id + '">[첫 가공 모드] NC 로 Z를 띄운 드라이런(공회전) 경로 확인</label><label class="chk"><input type="checkbox" id="vc2' + id + '">싱글 블록 운전으로 공구 교환·H·G54·사이클 확인</label><label class="chk"><input type="checkbox" id="vc3' + id + '">시편 실가공 후 위치·깊이·치수(게이지) 측정 확인</label>' +
+          '<div class="grid2"><label class="fld"><span>확인자</span><input type="text" id="vby' + id + '" maxlength="40"></label><label class="fld"><span>시편 NC 해시</span><input type="text" id="vha' + id + '" maxlength="12" value="' + esc(S.nc.hash || '') + '"></label></div><label class="fld"><span>측정 결과·메모</span><input type="text" id="vno' + id + '" maxlength="300" placeholder="예: Ø6H7 게이지 통과, 포켓 깊이 10.01"></label>' +
+          u.btn('선택한 가공 승인', () => {
+            const sel = [...document.querySelectorAll('.apk' + id)].filter(x => x.checked).map(x => x.value);
+            if (!sel.length) return toast('승인할 가공 종류를 고르세요.', 'err');
+            if (![1, 2, 3].every(k => $('#vc' + k + id).checked)) return toast('세 가지 실장비 시험을 모두 확인하세요.', 'err');
+            const by = $('#vby' + id).value.trim(); if (!by) return toast('확인자를 입력하세요.', 'err');
+            const at = new Date().toISOString().slice(0, 16).replace('T', ' '), note = $('#vno' + id).value.trim(), hash = $('#vha' + id).value.trim().toUpperCase();
+            m.approvals.push(C.normApproval({ kinds: sel, ver: C.VERSION, hash, by, at, note }));
+            m.verified = true; m.verifiedBy = by; m.verifiedAt = at.slice(0, 10); m.verifyNote = note;
+            m.history = (m.history || []).concat([{ at, what: '승인 (' + C.VERSION + '): ' + sel.map(k => (C.OPS.get(k) || {}).label || k).join(', ') + (hash ? ' · NC ' + hash : '') + (note ? ' · ' + note : ''), by }]).slice(-500);
+            saveDB(true); renderAll(); openAdminPanel(); toast('선택한 가공을 승인했습니다.', 'ok');
+          }, 'sm primary') + '</details>';
+        if (m.history && m.history.length) h += '<details><summary>승인·해제 이력 (' + m.history.length + ')</summary><ul class="hist">' + m.history.slice().reverse().slice(0, 30).map(x => '<li><small>' + esc(x.at) + '</small> ' + esc(x.what) + (x.by ? ' <small>· ' + esc(x.by) + '</small>' : '') + '</li>').join('') + '</ul></details>';
         h += '</div>';
       });
       h += '<h3>관리자 비밀번호 변경</h3><div class="grid3"><label class="fld"><span>현재 비밀번호</span><input type="password" id="cpw0" autocomplete="current-password"></label><label class="fld"><span>새 비밀번호</span><input type="password" id="cpw1" autocomplete="new-password"></label><label class="fld"><span>새 비밀번호 확인</span><input type="password" id="cpw2" autocomplete="new-password"></label></div>' +
@@ -1948,6 +2215,8 @@
     $('#btnDownload').onclick = doDownload;
     $('#btnShare').onclick = openShare;
     $('#btnSettings').onclick = openSettings;
+    $('#btnHelp').onclick = openHelp;
+    $('#btnMore').onclick = () => { const t = $('#top'), on = !t.classList.contains('more'); t.classList.toggle('more', on); $('#btnMore').setAttribute('aria-expanded', on); };
     $('#btnTheme').onclick = () => { DB.settings.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; applyTheme(); saveDB(); renderAll(); };
     $('#tab2d').onclick = () => setVMode('2d'); $('#tab3d').onclick = () => setVMode('3d');
     $('#drawerClose').onclick = () => { S.drawer = false; S.view.fitted = false; renderAll(); };

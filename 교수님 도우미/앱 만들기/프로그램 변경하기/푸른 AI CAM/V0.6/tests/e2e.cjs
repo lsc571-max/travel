@@ -201,13 +201,16 @@ function serve() {
   const rec = await page.evaluate(() => localStorage.getItem('pcam.admin.v1'));
   ok('비밀번호 원문 미저장 (PBKDF2 해시)', rec && !rec.includes('Pureun2026') && rec.includes('"iter":150000'));
   // 승인: 체크 없이 → 거부, 체크 후 승인
-  await page.locator('#dlg2 button:has-text("검증 완료 승인")').first().click(); await sleep(100);
-  ok('실장비 시험 체크 없이 승인 불가', !(await page.evaluate(() => window.__PCAM_UI__.DB.machines[0].verified)));
-  await page.locator('#dlg2 input[type=checkbox]').nth(0).check(); await page.locator('#dlg2 input[type=checkbox]').nth(1).check(); await page.locator('#dlg2 input[type=checkbox]').nth(2).check();
-  await page.locator('#dlg2 input[type=text]').first().fill('홍길동');
-  await page.locator('#dlg2 button:has-text("검증 완료 승인")').first().click(); await sleep(150);
+  // [V0.6] 승인은 가공 종류 × 버전: 이 프로젝트 가공 종류가 미리 체크됨
+  await page.locator('#dlg2 button:has-text("선택한 가공 승인")').first().click(); await sleep(100);
+  ok('실장비 시험 체크 없이 승인 불가', (await page.evaluate(() => window.__PCAM_UI__.DB.machines[0].approvals.length)) === 0);
+  for (const k of [1, 2, 3]) await page.locator('#dlg2 input[id^="vc' + k + '"]').first().check();
+  await page.locator('#dlg2 input[id^="vby"]').first().fill('홍길동');
+  await page.locator('#dlg2 input[id^="vno"]').first().fill('시편 측정 OK');
+  await page.locator('#dlg2 button:has-text("선택한 가공 승인")').first().click(); await sleep(150);
   s = await st();
-  ok('관리자 승인 후 TEST 표시 해제', await page.evaluate(() => window.__PCAM_UI__.DB.machines[0].verified) && s.ds.ok && !s.ds.test, JSON.stringify(s.ds));
+  const ap = await page.evaluate(() => { const m = window.__PCAM_UI__.DB.machines[0]; return { n: m.approvals.length, ver: m.approvals[0] && m.approvals[0].ver, hist: m.history.length }; });
+  ok('[V0.6] 관리자 승인(이 프로젝트 가공 종류·현재 버전) 후 TEST 표시 해제 · 이력 남김', ap.n === 1 && ap.hist >= 1 && s.ds.ok && !s.ds.test, JSON.stringify([ap, s.ds]));
   // 관리자 창 닫기 → 재진입 시 비밀번호 필요
   await page.click('#dlg2 .dhead button[aria-label="닫기"]'); await sleep(100);
   for (let i = 0; i < 5; i++) await page.click('#gsGear');
@@ -241,7 +244,7 @@ function serve() {
   // 전체 백업
   const dlb = page.waitForEvent('download'); await page.click('#dlg button:has-text("전체 백업")'); const db = await dlb;
   const bak = fs.readFileSync(await db.path(), 'utf8');
-  ok('전체 백업 JSON (관리자 해시 제외)', bak.includes('"pcam-backup"') && !bak.includes('pcam.admin') && !bak.includes('"hash"'));
+  ok('전체 백업 JSON (관리자 해시 제외)', bak.includes('"pcam-backup"') && !bak.includes('pcam.admin') && !bak.includes('"salt"') && !bak.includes('"iter"') /* [V0.6] NC 해시(승인·기록)는 남고 관리자 비밀번호 해시·솔트는 없어야 함 */);
   await page.click('#dlg .dhead button[aria-label="닫기"]');
 
   // 12. 새로 고침 후 데이터 유지
@@ -456,6 +459,67 @@ function serve() {
     await c7.close();
   }
 
+  // 14-4. [V0.6] 작업 순서 ✓·입력칸 오류·바로 고치기·도움말·리머/보링·첫 가공 모드·공구별 분할 저장·가공 기록·작업지시서
+  {
+    const c8 = await browser.newContext({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
+    const p8 = await c8.newPage(); const e8 = [];
+    p8.on('pageerror', e => e8.push(e.message)); p8.on('console', m => { if (m.type() === 'error') e8.push(m.text()); }); p8.on('dialog', d => d.accept());
+    await p8.goto('file://' + HTML); await sleep(400);
+    await p8.click('#btnProjects'); await p8.click('#dlg button:has-text("새 프로젝트")'); await sleep(200);
+    await p8.click('#tree .addbtn.k-pocket'); await sleep(300);
+    const fl = async () => p8.evaluate(() => [...document.querySelectorAll('#tree .flow .fl')].map(x => x.className.replace('fl ', '')));
+    let f = await fl();
+    ok('[V0.6] 가공만 추가하면 ④ 확인·⑤ 저장은 아직 ✓ 아님 (예전 오표시 수정)', f[3] === 'todo' && f[4] === 'todo' && /3D 시뮬레이션/.test(await p8.textContent('#tree .nextstep')), JSON.stringify(f));
+    await p8.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[0]; U.mutate(() => { g.spec.depth = 30; }); }); await sleep(250);
+    ok('[V0.6] 입력칸 옆 오류 표시 (깊이 칸 빨강 + 이유)', await p8.locator('#rightBody .fld.ferr').count() >= 1 && /두께|날 길이/.test(await p8.textContent('#rightBody .fld.ferr .fmsg')));
+    await p8.click('#rightBody .qfix button:has-text("두께")'); await sleep(250);
+    ok('[V0.6] 바로 고치기 → 깊이 = 두께 − 1', await p8.evaluate(() => window.__PCAM_UI__.P.groups[0].spec.depth) === 19);
+    await p8.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[0]; U.mutate(() => { g.spec.depth = 8; }); }); await sleep(200);
+    await p8.click('#rightBody .gi >> nth=0'); await sleep(100);
+    ok('[V0.6] ⓘ 누르면 용어 풀이 풍선', await p8.locator('#tippop').count() === 1);
+    await p8.keyboard.press('Escape'); await p8.keyboard.press('F1'); await sleep(200);
+    ok('[V0.6] F1 도움말·용어집', /용어집/.test(await p8.textContent('#dlg')) && (await p8.locator('#dlg .gloss dt').count()) > 30);
+    await p8.click('#dlg .dhead button[aria-label="닫기"]');
+    await p8.click('#tree .addbtn.k-bore'); await sleep(300);
+    await p8.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[1]; U.mutate(() => { g.holes.push({ id: 'hb1', x: 35, y: 30 }); }); }); await sleep(250);
+    const bo = await p8.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[1]; return { ops: g.ops.map(o => o.type).join(','), ok: U.downloadState().ok, g76: /G76 /.test(U.S.nc.text) }; });
+    ok('[V0.6] + 보링 → 센터·원형 포켓 밑구멍·G76 보링, 검증 통과', bo.ops === 'center,pocketRough,bore' && bo.ok && bo.g76, JSON.stringify(bo));
+    await p8.click('#tree .addbtn.k-ream'); await sleep(300);
+    ok('[V0.6] + 리머(H7) → 밑구멍 드릴 없으면 [공구 추가] 안내', /공구 추가|Ø5\.8/.test(await p8.textContent('#rightBody')));
+    await p8.click('#rightBody button:has-text("공구 추가")').catch(() => {}); await sleep(300);
+    await p8.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[2]; U.mutate(() => { g.holes.push({ id: 'hr1', x: 120, y: 75 }); }); }); await sleep(250);
+    const re = await p8.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[2]; return { ops: g.ops.map(o => o.type).join(','), ds: U.downloadState(), nc: /G85 /.test(U.S.nc.text) }; });
+    ok('[V0.6] 리머 공구 추가 후 센터·드릴·리머(G85), 검증 통과', re.ops === 'center,drill,ream' && re.ds.ok && re.nc, JSON.stringify(re));
+    // 첫 가공 모드 + 재시작 블록
+    await p8.evaluate(() => { const U = window.__PCAM_UI__; U.mutate(() => { U.P.settings.firstRun = true; U.P.settings.restart = true; }); }); await sleep(300);
+    const fr = await p8.evaluate(() => { const t = window.__PCAM_UI__.S.nc.text; return { m00: (t.match(/^M00$/gm) || []).length, n: (t.match(/^N\d00 /gm) || []).length, ok: window.__PCAM_UI__.downloadState().ok }; });
+    ok('[V0.6] 첫 가공 모드: 공정마다 M00 · 공구별 재시작 블록 N100…, 검증 통과', fr.m00 >= 5 && fr.n >= 4 && fr.ok, JSON.stringify(fr));
+    // 3D 를 보면 ④ ✓
+    await p8.click('#tab3d'); await sleep(1800);
+    ok('[V0.6] 3D 를 처음 열면 0초(가공 전)부터 · 공정 자막', (await p8.inputValue('#simRange')) === '0' && (await p8.locator('#simbar .tick').count()) >= 1);
+    await p8.click('#tab2d'); await sleep(200);
+    f = await fl();
+    ok('[V0.6] 3D 확인 뒤 ④ 확인 단계 완료 표시', f[3] === 'ok' || f[3] === 'warn', JSON.stringify(f));
+    // 공구별 분할 저장
+    await p8.click('#btnDownload'); await sleep(200);
+    for (const cb of await p8.locator('#dlg .ncChk').all()) await cb.check();
+    const dls = []; p8.on('download', d => dls.push(d.suggestedFilename()));
+    await p8.click('#dlg button:has-text("공구별로 나눠 저장")'); await sleep(5000);
+    const nTools = await p8.evaluate(() => window.__PCAM_UI__.S.V.plan.steps.filter(s => s.toolChange).length);
+    ok('[V0.6] 공구별로 나눠 저장 → 공구 수만큼 파일 (TEST_…_01_T..)', dls.length === nTools && dls.every(n => /^TEST_.*_\d\d_T\d\d\.nc$/.test(n)), JSON.stringify(dls));
+    f = await fl();
+    ok('[V0.6] 저장 뒤 ⑤ NC 저장 완료 표시 · 가공 기록 남음', f[4] === 'ok' && (await p8.evaluate(() => window.__PCAM_UI__.DB.records.length)) === nTools, JSON.stringify(f));
+    await p8.click('#btnSettings'); await p8.click('#dlg button:has-text("가공 기록")'); await sleep(200);
+    ok('[V0.6] 가공 기록 창: 저장 기록·NC 해시', (await p8.locator('#dlg table.tbl tr').count()) > nTools && /NC 저장/.test(await p8.textContent('#dlg')));
+    await p8.click('#dlg .dhead button[aria-label="닫기"]');
+    await p8.click('#btnSheet'); await sleep(300);
+    const sh = await p8.textContent('#dlg');
+    ok('[V0.6] 작업지시서: 배치도·좌표표·NC 해시·첫 가공 확인 서명란', /배치도/.test(sh) && /NC 해시/.test(sh) && /첫 가공 확인/.test(sh) && (await p8.locator('#dlg svg.sh-lay').count()) === 1);
+    if (SHOT) await p8.screenshot({ path: path.join(SHOT, 'e2e-11-sheet.png') });
+    ok('[V0.6] 과정 전체 화면 오류 없음', e8.length === 0, e8.join('|'));
+    await c8.close();
+  }
+
   // 14. 모바일 화면
   const mob = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const mp = await mob.newPage(); const mErr = [];
@@ -479,6 +543,8 @@ function serve() {
   await mp.touchscreen.tap(mb.x + mb.width / 2, mb.y + mb.height / 2); await sleep(200);
   const n1 = await mp.evaluate(() => window.__PCAM_UI__.P.groups[0].holes.length);
   ok('모바일: 터치로 홀 추가', n1 === n0 + 1, n0 + '→' + n1);
+  await mp.click('#btnMore'); await sleep(150);
+  ok('[V0.6] 모바일: 머리글 한 줄 · ⋯ 더보기로 아이콘 표시', await mp.locator('#top.more .hgroup').first().isVisible());
   ok('모바일: 오류 없음', mErr.length === 0, mErr.join('|'));
   await mob.close();
 

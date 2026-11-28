@@ -42,6 +42,9 @@
     <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
     <symbol id="i-panelL" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M9 4v16" stroke="currentColor" stroke-width="1.7"/></symbol>
     <symbol id="i-panelR" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M15 4v16" stroke="currentColor" stroke-width="1.7"/></symbol>
+    <symbol id="i-ream" viewBox="0 0 24 24"><path d="M12 2v4M9 6h6v12l-3 4-3-4z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 9l6 2M9 12l6 2M9 15l6 2" stroke="currentColor" stroke-width="1.2"/></symbol>
+    <symbol id="i-bore" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 2v11h5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 1-1 1.7v.5M12 17v.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
     <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h15M15 4l4 4-4 4M20 16H5M9 12l-4 4 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3l10 18H2z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 10v5M12 17.5v.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
@@ -68,8 +71,10 @@
     <div class="hgroup">
       <button id="btnShare" class="ibtn" title="공유·QR코드" aria-label="공유"><svg><use href="#i-share"/></svg></button>
       <button id="btnTheme" class="ibtn" title="밝게/어둡게 전환" aria-label="밝게/어둡게 전환"><svg><use href="#i-moon"/></svg></button>
+      <button id="btnHelp" class="ibtn" title="도움말·용어집 (F1)" aria-label="도움말"><svg><use href="#i-help"/></svg></button>
       <button id="btnSettings" class="ibtn" title="설정" aria-label="설정"><svg><use href="#i-gear"/></svg></button>
     </div>
+    <button id="btnMore" class="ibtn mmore" title="더보기 (되돌리기·프로젝트·장비·지시서·공유·도움말·설정)" aria-label="더보기" aria-expanded="false">⋯</button>
     <button id="btnDownload" class="savebtn" title="NC 파일 저장"><svg><use href="#i-save"/></svg><span>NC 저장</span></button>
   </header>
 

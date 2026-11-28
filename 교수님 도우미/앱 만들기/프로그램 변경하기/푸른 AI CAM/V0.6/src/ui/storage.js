@@ -39,6 +39,8 @@
           d.projects = pr;
           d.settings = Object.assign({ theme: 'system', fs: 'm', sound: true }, d.settings || {});
           d.settings.grid = Object.assign({ show: true, step: 5, snap: true }, d.settings.grid || {});
+          // [V0.6] 가공 기록 (NC 저장·작업 결과): 지우지 않고 쌓음 (최근 3000건)
+          d.records = Array.isArray(d.records) ? d.records.slice(-3000).map(r => { const o = {}; ['at', 'kind', 'project', 'machine', 'file', 'hash', 'by', 'result', 'note', 'kinds'].forEach(k => { o[k] = String(r && r[k] !== undefined ? r[k] : '').slice(0, k === 'note' ? 300 : 120); }); o.test = !!(r && r.test); o.lines = Math.max(0, Math.round(Number(r && r.lines) || 0)); return o; }) : [];
           return d;
         }
       } catch (e) { toast('저장 데이터를 읽지 못해 새로 시작합니다. (기존 데이터는 보존: ' + DB_KEY + '.broken)', 'err'); lsSet(DB_KEY + '.broken', raw); }
