@@ -13,6 +13,8 @@ const SHOT = process.argv[2] || null;
 const results = [];
 function ok(name, cond, detail) { results.push({ name, ok: !!cond, detail: cond ? '' : (detail || '') }); console.log((cond ? 'PASS ' : 'FAIL ') + name + (cond ? '' : ' :: ' + (detail || ''))); }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// [V0.7] 모두 펼쳐 보기 (접힌 줄·⋯ 안의 버튼을 처음부터 표시) — 기존 기능 검사용
+const dense = async pg => { await pg.waitForFunction(() => !!window.__PCAM_UI__); await pg.evaluate(() => window.__PCAM_UI__.setDense(true)); };
 
 function serve() {
   return new Promise(res => {
@@ -49,6 +51,7 @@ function serve() {
 
   // 1. 로드
   await page.goto('file://' + HTML);
+  await dense(page); // [V0.7] 기존 기능 검사는 '모두 펼쳐 보기'로 (접힌 기본 화면은 맨 아래 V0.7 검사에서 따로 확인)
   await page.waitForSelector('#cv');
   await sleep(500);
   ok('로컬 파일(file://) 실행, 콘솔 오류 없음', consoleErr.length === 0, consoleErr.join(' | '));
@@ -269,6 +272,7 @@ function serve() {
     const p2 = await c2.newPage(); const e2 = [];
     p2.on('pageerror', e => e2.push(e.message)); p2.on('dialog', d => d.accept());
     await p2.goto('file://' + HTML); await sleep(400);
+    await dense(p2); // [V0.7] 기존 기능 검사는 '모두 펼쳐 보기'로 (접힌 기본 화면은 맨 아래 V0.7 검사에서 따로 확인)
     const st2 = () => p2.evaluate(() => window.__PCAM_UI__.downloadState());
     // 개발 예정 가공: 공정 추가 목록에 표시되지만 선택 불가
     const planned = await p2.$$eval('#rightBody select option', os => os.filter(o => /개발 예정/.test(o.textContent)).map(o => o.disabled));
@@ -311,6 +315,7 @@ function serve() {
     const p3 = await c3.newPage(); const e3 = [];
     p3.on('pageerror', e => e3.push(e.message)); p3.on('console', m => { if (m.type() === 'error') e3.push(m.text()); }); p3.on('dialog', d => d.accept());
     await p3.goto('file://' + HTML); await sleep(400);
+    await dense(p3); // [V0.7] 기존 기능 검사는 '모두 펼쳐 보기'로 (접힌 기본 화면은 맨 아래 V0.7 검사에서 따로 확인)
     await p3.click('#btnProjects'); await p3.click('#dlg button:has-text("새 프로젝트")'); await sleep(200);
     ok('[V0.4] 새 프로젝트: 소재가 먼저 선택되고 가공 추가 안내', (await p3.textContent('#propHead')).includes('소재') && (await p3.textContent('#tree')).includes('가공을 추가'));
     await p3.click('#tree .addbtn.k-pocket'); await sleep(200);
@@ -361,6 +366,7 @@ function serve() {
     const p5 = await c5.newPage(); const e5 = []; let dlg5 = '';
     p5.on('pageerror', e => e5.push(e.message)); p5.on('console', m => { if (m.type() === 'error') e5.push(m.text()); }); p5.on('dialog', d => { dlg5 = d.message(); d.accept(); });
     await p5.goto('file://' + HTML); await sleep(400);
+    await dense(p5); // [V0.7] 기존 기능 검사는 '모두 펼쳐 보기'로 (접힌 기본 화면은 맨 아래 V0.7 검사에서 따로 확인)
     await p5.click('#btnProjects'); await p5.click('#dlg button:has-text("새 프로젝트")'); await sleep(200);
     const fc5 = p5.waitForEvent('filechooser'); await p5.click('#tree .dxfbtn'); const ch5 = await fc5; await ch5.setFiles(tmpDxf); await sleep(500);
     const dtxt = await p5.textContent('#dlg');
@@ -421,11 +427,12 @@ function serve() {
     const p7 = await c7.newPage(); const e7 = [];
     p7.on('pageerror', e => e7.push(e.message)); p7.on('console', m => { if (m.type() === 'error') e7.push(m.text()); }); p7.on('dialog', d => d.accept());
     await p7.goto('file://' + HTML); await sleep(400);
+    await dense(p7); // [V0.7] 기존 기능 검사는 '모두 펼쳐 보기'로 (접힌 기본 화면은 맨 아래 V0.7 검사에서 따로 확인)
     await p7.click('#btnProjects'); await p7.click('#dlg button:has-text("새 프로젝트")'); await sleep(200);
     ok('[V0.5] 작업 순서: 다음 할 일 안내 (가공 추가)', /다음 할 일/.test(await p7.textContent('#tree .nextstep')) && /가공을 추가/.test(await p7.textContent('#tree .nextstep')));
     await p7.click('#tree .addbtn.k-pocket'); await sleep(250);
     ok('[V0.5] 포켓 가공 단계 표시 (황삭 → 중삭 → 정삭)', (await p7.locator('#rightBody .stages .stg').count()) === 3);
-    await p7.click('#rightBody .stages + .row label:has-text("중삭")'); await sleep(250);
+    await p7.click('#rightBody .stages .stg[data-stg="semi"]'); // [V0.7] 단계 칩을 눌러 켜고 끔 await sleep(250);
     const q1 = await p7.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[0]; return { ops: g.ops.map(o => o.type).join(','), ok: U.downloadState().ok, ne: U.S.nc.verify.errors.length }; });
     ok('[V0.5] 중삭 체크 → 황삭·중삭·바닥 정삭·측벽 정삭, 검증 통과', q1.ops === 'pocketRough,pocketSemi,pocketFloor,pocketWall' && q1.ok && q1.ne === 0, JSON.stringify(q1));
     await p7.click('#rightBody .seg button:has-text("다각")'); await sleep(250);
@@ -465,6 +472,7 @@ function serve() {
     const p8 = await c8.newPage(); const e8 = [];
     p8.on('pageerror', e => e8.push(e.message)); p8.on('console', m => { if (m.type() === 'error') e8.push(m.text()); }); p8.on('dialog', d => d.accept());
     await p8.goto('file://' + HTML); await sleep(400);
+    await dense(p8); // [V0.7] 기존 기능 검사는 '모두 펼쳐 보기'로 (접힌 기본 화면은 맨 아래 V0.7 검사에서 따로 확인)
     await p8.click('#btnProjects'); await p8.click('#dlg button:has-text("새 프로젝트")'); await sleep(200);
     await p8.click('#tree .addbtn.k-pocket'); await sleep(300);
     const fl = async () => p8.evaluate(() => [...document.querySelectorAll('#tree .flow .fl')].map(x => x.className.replace('fl ', '')));
@@ -525,6 +533,7 @@ function serve() {
   const mp = await mob.newPage(); const mErr = [];
   mp.on('pageerror', e => mErr.push(e.message));
   await mp.goto('file://' + HTML); await sleep(500);
+  await dense(mp); // [V0.7] 기존 기능 검사는 '모두 펼쳐 보기'로 (접힌 기본 화면은 맨 아래 V0.7 검사에서 따로 확인)
   ok('모바일: 하단 탭 4개 표시', await mp.locator('#mnav button').count() === 4 && await mp.locator('#mnav').isVisible());
   ok('모바일: 기본 화면=그래픽, 다른 패널 숨김', await mp.locator('#view').isVisible() && !(await mp.locator('#right').isVisible()));
   if (SHOT) await mp.screenshot({ path: path.join(SHOT, 'e2e-4-mobile-view.png') });
@@ -555,6 +564,7 @@ function serve() {
   const wErr = []; wp.on('pageerror', e => wErr.push(e.message)); wp.on('console', m => { if (m.type() === 'error') wErr.push(m.text()); });
   const url = 'http://127.0.0.1:' + port + '/pureun-ai-cam.html';
   await wp.goto(url); await sleep(400);
+  await dense(wp); // [V0.7] 기존 기능 검사는 '모두 펼쳐 보기'로 (접힌 기본 화면은 맨 아래 V0.7 검사에서 따로 확인)
   await wp.click('#btnShare'); await sleep(200);
   const linkVal = await wp.locator('#dlg input[type=text]').inputValue();
   ok('http 배포 시 공유 링크 = 실제 주소', linkVal === url, linkVal);
@@ -571,6 +581,131 @@ function serve() {
   ok('업그레이드: version.json 으로 최신 버전 확인', (await wp.textContent('#latestVer')).includes(VER + ' (최신)'), await wp.textContent('#latestVer'));
   ok('웹 배포판 오류 없음', wErr.length === 0, wErr.join('|'));
   srv.close();
+
+  // 16. [V0.7] 간단히 보기 (기본 화면): 처음에는 적게, 누르면 펼침 — 기능은 그대로
+  {
+    const c9 = await browser.newContext({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
+    const p9 = await c9.newPage(); const e9 = [];
+    p9.on('pageerror', e => e9.push(e.message)); p9.on('console', m => { if (m.type() === 'error') e9.push(m.text()); });
+    p9.on('dialog', d => d.accept());
+    await p9.goto('file://' + HTML); await sleep(500);
+    const vis = sel => p9.locator(sel).first().isVisible().catch(() => false);
+    ok('[V0.7] 처음 화면: 추가 버튼은 [+ 가공 추가] 하나, 선택판은 접힘', await vis('#tree .addmain') && !(await p9.locator('#tree .addpal').count()));
+    ok('[V0.7] 머리글: 설정·도움말·NC 저장은 바로 보이고, 작업지시서·공유·밝기는 ⋯ 안', await vis('#btnSettings') && await vis('#btnHelp') && await vis('#btnDownload') && !(await vis('#btnSheet')) && !(await vis('#btnShare')) && !(await vis('#btnTheme')) && await vis('#btnMore'));
+    await p9.click('#btnMore'); await sleep(100);
+    ok('[V0.7] 머리글 ⋯ → 작업지시서·공유·밝기 표시', await vis('#btnSheet') && await vis('#btnShare') && await vis('#btnTheme'));
+    await p9.click('#btnMore'); await sleep(100);
+    ok('[V0.7] 다음 할 일 버튼: 큰 글씨 한 줄 (예제 = 3D로 확인하기)', /다음 할 일/.test(await p9.textContent('#tree .nextstep')) && /3D로 확인하기/.test(await p9.textContent('#tree .nextstep b')), await p9.textContent('#tree .nextstep'));
+    // 추가 선택판
+    await p9.click('#tree .addmain'); await sleep(150);
+    const pal = await p9.evaluate(() => [...document.querySelectorAll('#tree .addpal button')].map(b => { const t = b.querySelector('.tile').getBoundingClientRect(); return Math.round(Math.min(t.width, t.height)); }));
+    ok('[V0.7] [+ 가공 추가] → 큰 아이콘 선택판 9칸 (가공 8 + 도면), 아이콘 44px 이상', pal.length === 9 && pal.every(x => x >= 44) && (await p9.locator('#tree .addpal .addbtn').count()) === 8 && (await p9.locator('#tree .addpal .dxfbtn').count()) === 1, JSON.stringify(pal));
+    await p9.click('#tree .addpal .addbtn.k-pocket'); await sleep(300);
+    const s1 = await p9.evaluate(() => { const U = window.__PCAM_UI__, rb = document.querySelector('#rightBody'); return { n: U.P.groups.length, kind: U.P.groups[U.P.groups.length - 1].spec.kind, pal: !!document.querySelector('#tree .addpal'), grid: !!document.querySelector('#rightBody .kindgrid'), chip: !!document.querySelector('#rightBody .kindchip'), acc: [...document.querySelectorAll('#rightBody details.acc')].map(d => d.dataset.sec + (d.open ? '+' : '-') + ':' + d.querySelector('summary .v').textContent), inputs: [...document.querySelectorAll('#rightBody .basic input[type=number]')].filter(i => i.getBoundingClientRect().height > 0).length, ratio: rb.scrollHeight / rb.clientHeight }; });
+    ok('[V0.7] 포켓 추가 → 선택판 닫힘, 가공 방법은 칩 하나', s1.n === 3 && s1.kind === 'pocket' && !s1.pal && !s1.grid && s1.chip, JSON.stringify(s1));
+    ok('[V0.7] 포켓 속성: 기본 치수(가로·세로·코너R·깊이·X·Y)만 보이고 나머지는 접힌 줄 + 현재 값 요약', s1.inputs === 6 && ['pos-m-', 'opt-', 'dd-', 'gen-', 'adv-'].every(k => s1.acc.some(a => a.startsWith(k + ':') && a.length > k.length + 1)), JSON.stringify(s1.acc));
+    ok('[V0.7] 포켓 속성이 한 화면 안 (스크롤 없이)', s1.ratio <= 1.01, String(s1.ratio));
+    // 옵션 펼치기 → 단계 칩으로 중삭 켜기
+    await p9.click('#rightBody details[data-sec="opt"] > summary'); await sleep(150);
+    ok('[V0.7] [옵션] 누르면 공구·진입·가공 단계가 펼쳐짐', await vis('#rightBody .stages .stg[data-stg="semi"]') && (await p9.locator('#rightBody .stages .stg').count()) === 3);
+    await p9.click('#rightBody .stages .stg[data-stg="semi"]'); await sleep(250);
+    const s2 = await p9.evaluate(() => { const g = window.__PCAM_UI__.P.groups[2]; return { semi: g.spec.semi, ops: g.ops.map(o => o.type), open: document.querySelector('#rightBody details[data-sec="opt"]').open, sum: document.querySelector('#rightBody details[data-sec="opt"] summary .v').textContent }; });
+    ok('[V0.7] 단계 칩 [중삭]을 누르면 켜지고 공정에 반영, 펼친 줄은 그대로 유지', s2.semi === true && s2.ops.includes('pocketSemi') && s2.open && /중삭/.test(s2.sum), JSON.stringify(s2));
+    // 오류가 든 접힌 줄은 저절로 펼쳐짐 + 목록·NC 저장에 표시
+    await p9.click('#rightBody details[data-sec="opt"] > summary'); await sleep(100);
+    await p9.evaluate(() => { const U = window.__PCAM_UI__; U.mutate(() => { U.P.groups[2].spec.draft = 80; }); }); await sleep(300);
+    const s3 = await p9.evaluate(() => ({ adv: document.querySelector('#rightBody details[data-sec="adv"]').open, mark: !!document.querySelector('#rightBody details[data-sec="adv"] summary .am.err'), ferr: !!document.querySelector('#rightBody details[data-sec="adv"] .fld.ferr'), row: document.querySelector('#tree .titem.sel').classList.contains('s-err'), blocked: document.querySelector('#btnDownload').classList.contains('blocked'), next: document.querySelector('#tree .nextstep').className + '|' + document.querySelector('#tree .nextstep b').textContent }));
+    ok('[V0.7] 오류가 있는 접힌 줄(고급 설정)은 저절로 펼쳐지고 ! 표시', s3.adv && s3.mark && s3.ferr, JSON.stringify(s3));
+    ok('[V0.7] 오류는 숨기지 않음: 목록 줄 빨간 표시 · NC 저장 차단 · 다음 할 일 = 오류 고치기', s3.row && s3.blocked && /err/.test(s3.next) && /오류/.test(s3.next), JSON.stringify(s3));
+    await p9.click('#rightBody details[data-sec="adv"] > summary'); await sleep(200);
+    ok('[V0.7] 오류가 있는 줄은 닫아도 다시 펼쳐짐 (다시 그릴 때)', await p9.evaluate(() => { window.__PCAM_UI__.renderAll(); return document.querySelector('#rightBody details[data-sec="adv"]').open; }));
+    await p9.evaluate(() => { const U = window.__PCAM_UI__; U.mutate(() => { U.P.groups[2].spec.draft = 0; }); }); await sleep(300);
+    ok('[V0.7] 오류를 고치면 다시 접힘 · NC 저장 가능', await p9.evaluate(() => !document.querySelector('#rightBody details[data-sec="adv"]').open && !document.querySelector('#btnDownload').classList.contains('blocked')));
+    // 입력칸에 붙지 않는 오류도 기본 치수 아래에 보임
+    await p9.evaluate(() => { const U = window.__PCAM_UI__; U.mutate(() => { U.P.groups[2].spec.toolNo = 99; }); }); await sleep(250);
+    ok('[V0.7] 접힌 옵션 안의 잘못된 공구 → 기본 치수 바로 아래에 오류 안내', /T99/.test(await p9.textContent('#rightBody .alerts').catch(() => '')));
+    await p9.evaluate(() => { const U = window.__PCAM_UI__; U.mutate(() => { U.P.groups[2].spec.toolNo = 0; }); }); await sleep(250);
+    // 가공 방법 칩
+    await p9.click('#rightBody .kindchip'); await sleep(150);
+    ok('[V0.7] 가공 방법 칩을 누르면 9가지 선택판', (await p9.locator('#rightBody .kindgrid button').count()) === 9);
+    await p9.click('#rightBody .kindgrid button:has-text("윤곽")'); await sleep(250);
+    ok('[V0.7] 선택판에서 [윤곽] → 종류가 바뀌고 선택판 닫힘 (형상 이어받음)', await p9.evaluate(() => { const g = window.__PCAM_UI__.P.groups[2]; return g.spec.kind === 'contour' && g.spec.w === 40 && !document.querySelector('#rightBody .kindgrid'); }));
+    // 구멍: 위치 줄은 처음부터 펼침
+    await p9.click('#tree .addmain'); await sleep(100); await p9.click('#tree .addpal .addbtn.k-drill'); await sleep(250);
+    const s4 = await p9.evaluate(() => { const d = document.querySelector('#rightBody details[data-sec="pos-h"]'); return { open: d && d.open, warn: d && !!d.querySelector('summary .am.warn'), basic: document.querySelectorAll('#rightBody .basic input[type=number]').length, tabs: document.querySelectorAll('#rightBody .subtabs button').length, verb: document.querySelector('#tree .nextstep b').textContent }; });
+    ok('[V0.7] 구멍 추가: 지름·깊이 + 위치 입력이 바로 보이고, 위치가 없으면 ! 표시 · 다음 할 일 = 위치 넣기', s4.open && s4.warn && s4.basic === 2 && s4.tabs === 4 && /위치 넣기/.test(s4.verb), JSON.stringify(s4));
+    // 2D 도구 막대
+    const vt = await p9.evaluate(() => { const v = document.querySelector('#vtools'), r = v.getBoundingClientRect(); return { n: [...v.querySelectorAll(':scope > button, :scope > details > summary')].filter(b => b.getBoundingClientRect().width > 0).length, h: Math.round(r.height), clamp: [...v.querySelectorAll('button')].some(b => /클램프/.test(b.textContent) && !b.closest('details:not([open])')), hint: document.querySelector('#viewHint').hidden }; });
+    ok('[V0.7] 2D 도구 막대: 한 줄 · 6개 이하 (선택·위치 추가·맞춤·단면도·⋯), 안내 글 숨김', vt.n <= 6 && vt.h <= 46 && !vt.clamp && vt.hint, JSON.stringify(vt));
+    await p9.click('#vtools details.pop > summary'); await sleep(150);
+    ok('[V0.7] 도구 막대 ⋯ → 클램프·확대/축소·공정 순서·격자', await vis('#vtools .popbody button:has-text("클램프")') && await vis('#vtools .popbody select'));
+    await p9.click('#vtools .popbody button:has-text("클램프")'); await sleep(150);
+    ok('[V0.7] ⋯ 의 [클램프] → 클램프 도구가 켜지고 막대에 표시, 안내 글 표시', await p9.evaluate(() => window.__PCAM_UI__.S.mode === 'clamp' && !document.querySelector('#viewHint').hidden && !document.querySelector('#vtools details.pop').open && [...document.querySelectorAll('#vtools > button.on')].some(b => /클램프/.test(b.textContent))));
+    await p9.click('#vtools button:has-text("선택")'); await sleep(100);
+    await p9.click('#vtools details.pop > summary'); await sleep(100); await p9.mouse.click(700, 500); await sleep(150);
+    ok('[V0.7] ⋯ 펼침은 바깥을 누르면 닫힘', await p9.evaluate(() => !document.querySelector('#vtools details.pop').open));
+    // 소재·원점 NC
+    await p9.click('#tree .titem[data-node="nc"]'); await sleep(200);
+    const s5 = await p9.evaluate(() => [...document.querySelectorAll('#rightBody details.acc')].map(d => d.dataset.sec + (d.open ? '+' : '-')).join(' '));
+    ok('[V0.7] 원점·NC: 번호·좌표계·높이만 보이고 순서·출력 옵션·첫 가공은 접힌 줄', s5 === 'nc-order- nc-out- nc-first-' && await vis('#rightBody input[type=number]'), s5);
+    await p9.click('#rightBody details[data-sec="nc-first"] > summary'); await sleep(100);
+    await p9.click('#rightBody details[data-sec="nc-first"] label:has-text("첫 가공 모드")'); await sleep(300);
+    ok('[V0.7] 접힌 줄 안의 [첫 가공 모드]도 그대로 동작 (M00 정지 NC)', await p9.evaluate(() => { const U = window.__PCAM_UI__; return U.P.settings.firstRun === true && /M00/.test(U.S.nc.text) && document.querySelector('#rightBody details[data-sec="nc-first"]').open; }));
+    await p9.evaluate(() => { const U = window.__PCAM_UI__; U.mutate(() => { U.P.settings.firstRun = false; }); });
+    // 3D 도구 막대 · 다음 할 일 버튼 동작
+    await p9.evaluate(() => { const U = window.__PCAM_UI__; U.mutate(() => { U.P.groups.pop(); }); }); await sleep(300); // 위치 없는 구멍 그룹 제거
+    await p9.click('#tree .nextstep'); await sleep(1500);
+    const s6 = await p9.evaluate(() => { const v = document.querySelector('#vtools'); return { mode: window.__PCAM_UI__.S.vmode, h: Math.round(v.getBoundingClientRect().height), n: [...v.querySelectorAll('button, details > summary')].filter(b => b.getBoundingClientRect().width > 0 && !b.closest('.popbody')).length }; });
+    ok('[V0.7] 다음 할 일 [3D로 확인하기] → 3D 화면, 도구 막대 한 줄 (보기 4 + 단면 + ⋯)', s6.mode === '3d' && s6.h <= 46 && s6.n === 6, JSON.stringify(s6));
+    // 글씨·누르는 곳 크기
+    const sz = await p9.evaluate(() => {
+      let minF = 99, t = ''; const tw = document.createTreeWalker(document.querySelector('#app'), NodeFilter.SHOW_TEXT);
+      while (tw.nextNode()) { const n = tw.currentNode, el = n.parentElement; if (!n.textContent.trim() || !el || el.closest('svg,canvas,.bands') || !el.getBoundingClientRect().width) continue; const f = parseFloat(getComputedStyle(el).fontSize); if (f < minF) { minF = f; t = n.textContent.trim().slice(0, 12); } }
+      const small = [...document.querySelectorAll('#left button, #left [role=button], #right button, #right summary, #top button, #vtools button, #vtools summary')].filter(b => { const r = b.getBoundingClientRect(); return r.width > 0 && !b.closest('details:not([open])') && Math.min(r.width, r.height) < 28 && !b.classList.contains('gi'); }).map(b => (b.title || b.textContent).slice(0, 12));
+      return { minF, t, small };
+    });
+    ok('[V0.7] 화면 글씨 13px 이상 (시뮬레이션 눈금 제외)', sz.minF >= 12.9, JSON.stringify(sz));
+    ok('[V0.7] 버튼·접힌 줄 크기 28px 이상', sz.small.length === 0, JSON.stringify(sz.small));
+    // 설정: 모두 펼쳐 보기
+    await p9.click('#tab2d'); await sleep(200);
+    await p9.click('#tree .titem[data-gid] >> nth=0'); await sleep(150);
+    await p9.click('#btnSettings'); await sleep(150);
+    ok('[V0.7] 설정은 한 번에 열림 · [모두 펼쳐 보기] 스위치', await vis('#dlg label:has-text("모두 펼쳐 보기")'));
+    await p9.click('#dlg label:has-text("모두 펼쳐 보기")'); await sleep(250);
+    await p9.click('#dlg .dhead button[aria-label="닫기"]'); await sleep(150);
+    const s7 = await p9.evaluate(() => ({ attr: document.documentElement.dataset.dense, grid: !!document.querySelector('#rightBody .kindgrid'), allOpen: [...document.querySelectorAll('#rightBody details.acc')].every(d => d.open), pal: !!document.querySelector('#tree .addpal'), sheet: document.querySelector('#btnSheet').getBoundingClientRect().width > 0, saved: JSON.parse(localStorage.getItem(Object.keys(localStorage).find(k => /pcam|pureun/i.test(k)))).settings.dense }));
+    ok('[V0.7] 모두 펼쳐 보기 → 접힌 줄·선택판·머리글 버튼이 모두 보이고 저장됨', s7.attr === '1' && s7.grid && s7.allOpen && s7.pal && s7.sheet && s7.saved === true, JSON.stringify(s7));
+    await p9.reload(); await sleep(500);
+    ok('[V0.7] 새로 고침 후에도 펼쳐 보기 유지', await p9.evaluate(() => document.documentElement.dataset.dense === '1' && !!document.querySelector('#tree .addpal')));
+    await p9.evaluate(() => window.__PCAM_UI__.setDense(false)); await sleep(150);
+    // 새 프로젝트: 선택판이 처음부터
+    await p9.click('#btnProjects'); await p9.click('#dlg button:has-text("새 프로젝트")'); await sleep(300);
+    ok('[V0.7] 가공이 없으면 선택판이 처음부터 펼쳐짐 · 다음 할 일 = 가공 추가하기', await vis('#tree .addpal') && /가공 추가하기/.test(await p9.textContent('#tree .nextstep b')));
+    // 어두운 화면에서 아이콘 대비
+    const con = async () => p9.evaluate(() => {
+      const lum = c => { const m = c.match(/[\d.]+/g).map(Number), f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(m[0]) + 0.7152 * f(m[1]) + 0.0722 * f(m[2]); };
+      return [...document.querySelectorAll('#tree .tile')].filter(t => getComputedStyle(t).backgroundColor !== 'rgba(0, 0, 0, 0)').map(t => { const cs = getComputedStyle(t), a = lum(cs.color), b = lum(cs.backgroundColor); return +((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05)).toFixed(2); });
+    });
+    const cL = await con();
+    await p9.evaluate(() => { const U = window.__PCAM_UI__; U.DB.settings.theme = 'dark'; U.setDense(false); }); await sleep(200);
+    const cD = await con();
+    ok('[V0.7] 색 타일 아이콘 대비 4.5:1 이상 (밝게·어둡게)', cL.length >= 9 && cL.every(x => x >= 4.5) && cD.every(x => x >= 4.5), JSON.stringify([cL, cD]));
+    ok('[V0.7] 간단히 보기 화면 오류 없음', e9.length === 0, e9.join('|'));
+    if (SHOT) await p9.screenshot({ path: path.join(SHOT, 'e2e-8-v07-simple.png') });
+    await c9.close();
+    // 휴대폰
+    const m9 = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    const q9 = await m9.newPage(); const me9 = []; q9.on('pageerror', e => me9.push(e.message));
+    await q9.goto('file://' + HTML); await sleep(500);
+    await q9.click('#mnav button[data-m=left]'); await sleep(150);
+    await q9.click('#tree .addmain'); await sleep(150);
+    await q9.click('#tree .addpal .addbtn.k-pocket'); await sleep(300);
+    const ms = await q9.evaluate(() => ({ kind: window.__PCAM_UI__.P.groups[2].spec.kind, right: document.querySelector('#right').getBoundingClientRect().width > 0, hs: document.documentElement.scrollWidth > innerWidth + 1, small: [...document.querySelectorAll('#right button, #right summary, #top button')].filter(b => { const r = b.getBoundingClientRect(); return r.width > 0 && !b.closest('details:not([open])') && Math.min(r.width, r.height) < 40 && !b.classList.contains('gi'); }).map(b => (b.title || b.textContent).slice(0, 10)), save: document.querySelector('#btnDownload').getBoundingClientRect().height }));
+    ok('[V0.7] 휴대폰: [+ 가공 추가] → 포켓 → 속성 화면, 가로 스크롤 없음, NC 저장 한 줄', ms.kind === 'pocket' && ms.right && !ms.hs && ms.save <= 50, JSON.stringify(ms));
+    ok('[V0.7] 휴대폰: 누르는 곳 40px 이상', ms.small.length === 0, JSON.stringify(ms.small));
+    ok('[V0.7] 휴대폰: 오류 없음', me9.length === 0, me9.join('|'));
+    await m9.close();
+  }
 
   await browser.close();
   const fail = results.filter(r => !r.ok);

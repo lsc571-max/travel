@@ -13,7 +13,8 @@
   'use strict';
   const C = window.PCAM;
   const CHANGELOG = [
-    { v: 'V0.6', d: C.BUILD_DATE, items: ['실가공 승인 범위: 가공 종류 × 앱 버전별 승인·이력, 승인 안 된 가공이 있으면 TEST', '첫 가공 모드(공정마다 M00·이송 낮춤), NC 해시·가공 기록(CSV), 작업지시서 배치도·좌표표·첫 가공 서명란', '공구 돌출 길이·홀더 간섭, 머신 Z 행정(G54 Z + H) 검사', '리머(H7, G85)·정밀 보링(G76/G86) 간편 입력, 공구별 재시작 블록, 장비 메모리 초과 시 공구별 분할 저장', '작업 순서 ✓ 오표시 수정, 입력칸 오류·바로 고치기, ⓘ 용어집·도움말(F1), 3D 처음부터·공정 자막, 모바일 머리글'] },
+    { v: 'V0.7', d: C.BUILD_DATE, items: ['간단히 보기: 처음에는 크기·깊이·위치만 — 옵션·깊이 단면도·자동 구성된 공정·고급 설정은 접힌 줄(현재 값 요약), 누르면 펼침', '[+ 가공 추가] 하나로 큰 아이콘 선택판, 왼쪽 위 [다음 할 일] 큰 버튼, 도구 막대·머리글은 자주 쓰는 것만(나머지는 ⋯)', '가공 아이콘 새로 그림(색 타일), 글씨 13px 이상·버튼 크기·색 대비 정리', '오류가 든 접힌 줄은 저절로 펼침, 설정의 [모두 펼쳐 보기]로 예전처럼', '가공 기능·NC 생성·검증은 V0.6 과 같음 (화면만 변경)'] },
+    { v: 'V0.6', d: '2026-11-28', items: ['실가공 승인 범위: 가공 종류 × 앱 버전별 승인·이력, 승인 안 된 가공이 있으면 TEST', '첫 가공 모드(공정마다 M00·이송 낮춤), NC 해시·가공 기록(CSV), 작업지시서 배치도·좌표표·첫 가공 서명란', '공구 돌출 길이·홀더 간섭, 머신 Z 행정(G54 Z + H) 검사', '리머(H7, G85)·정밀 보링(G76/G86) 간편 입력, 공구별 재시작 블록, 장비 메모리 초과 시 공구별 분할 저장', '작업 순서 ✓ 오표시 수정, 입력칸 오류·바로 고치기, ⓘ 용어집·도움말(F1), 3D 처음부터·공정 자막, 모바일 머리글'] },
     { v: 'V0.5', d: '2026-11-27', items: ['이미 가공된 형상 인식(깊이 기준 자동): 포켓 안 구멍·포켓 안 포켓·평면 뒤 가공은 그 바닥부터 깊이, 깎인 높이에서 시작', '포켓 중삭(한 번에/단 깊이씩)·바닥 정삭·측벽 정삭 분리, 진입 방식(헬리컬·램프·선가공 구멍), 모서리 릴리프 구멍', '다각(정다각형) 형상, 측벽 구배·입구 R·바닥 R(계단 근사, 검증기 판정)', '2D 크기 손잡이·단면도, 머리글 아이콘·탭 끌어 옮기기, 좌우 패널 자리 바꾸기, 다음 할 일 안내', '안전 검토 반영: 사실상 수직 하강·모따기 공구 오용 차단, 검증기 고속화, NC 줄 수 감소, DXF 보강', '새 가공: 바깥·안쪽 윤곽(측면 여러 바퀴·관통 절단), 평면(페이스밀), 모따기(바깥·안쪽·구멍 입구), 자유 형상 포켓(섬·관통)', '도면(DXF) 불러오기: 원은 지름별 구멍·탭(기초 드릴 지름이면 탭 추천), 닫힌 선은 외곽·포켓·섬으로 자동 분류', '화면: 패널 경계 끌어서 크기 조절·접기(기억), 작업 목록에서 Ctrl+C/V/D·Delete·F2·Alt+↑↓·오른쪽 버튼 메뉴·끌어서 순서, 삭제 후 [되돌리기]', '2D 위치 복사·붙여넣기(마우스 위치), 검증기: 다각형 영역·모따기 공구·진입 검사 확장'] },
     { v: 'V0.4', d: '2026-11-27', items: ['화면 전면 재설계: 작업 목록(소재 → 원점·NC → 가공) · 속성 패널 · 상태 표시줄 · 검증/G코드 서랍', '포켓 가공 추가: 사각(코너 R)·원형, 헬리컬 진입, 황삭(여유)·정삭, 공구·절입 자동', '3D 가공 시뮬레이션: 실제 NC 해석 결과로 소재를 깎아 표시, 회전·확대, 재생·구간 이동, 현재 X·Y·Z 표시', '깊이 단면도: 초기점·R점·소재 윗면·공구 끝 Z값을 한 그림에', '예상 가공 시간(추정)·작업지시서 인쇄, 평 엔드밀 공구 관리'] },
     { v: 'V0.3', d: '2026-11-27', items: ['구멍·탭 간편 입력: 지름·깊이 또는 나사 규격·탭 깊이만 넣으면 센터 → 드릴(사이클 자동) → 탭 공정 자동 구성', '없는 공구는 [공구 추가] 한 번으로 등록, 공정 이름 자동 표시(T번호·직경·가공)', '탭 공정 앞 오버라이드 100% 안내 주석 출력'] },
@@ -26,7 +27,7 @@
     pocket: { ico: 'i-pocket', cls: 'k-pocket', label: '포켓', color: '#ee8a10' },
     contour: { ico: 'i-contour', cls: 'k-contour', label: '윤곽', color: '#0e8fa3' },
     face: { ico: 'i-face', cls: 'k-face', label: '평면', color: '#5b7083' },
-    chamfer: { ico: 'i-chamfer', cls: 'k-chamfer', label: '모따기', color: '#d6336c' },
+    chamfer: { ico: 'i-chamfer', cls: 'k-chamfer', label: '모따기', color: '#b5279f' },
     ream: { ico: 'i-ream', cls: 'k-ream', label: '리머(H7)', color: '#1d7f8c' }, // [V0.6]
     bore: { ico: 'i-bore', cls: 'k-bore', label: '보링', color: '#6d5bd0' },
     custom: { ico: 'i-custom', cls: 'k-custom', label: '직접 구성', color: '#64748b' }
@@ -168,8 +169,10 @@
   }
   // change 처리는 포커스 이동(Tab) 이후 실행하여 다음 입력칸 포커스를 유지
   document.addEventListener('change', e => { const el = e.target, k = el && el.dataset && el.dataset.k; if (k && binds.has(k)) { const fn = binds.get(k); setTimeout(() => fn(el), 0); } });
-  document.addEventListener('toggle', e => { const d = e.target; if (d && d.dataset && d.dataset.sec) S.openSec[d.dataset.sec] = d.open; }, true);
+  document.addEventListener('toggle', e => { const d = e.target; if (d && d.dataset && d.dataset.sec && !d.dataset.forced) S.openSec[d.dataset.sec] = d.open; }, true); // 오류 때문에 저절로 펼친 줄은 기억하지 않음
   document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-a]'); if (b && acts.has(b.dataset.a) && !b.disabled) { e.preventDefault(); acts.get(b.dataset.a)(e, b); } });
+  // [V0.7] ⋯ 펼침 메뉴는 바깥을 누르면 닫힘
+  document.addEventListener('pointerdown', e => { document.querySelectorAll('details.pop[open]').forEach(d => { if (!d.contains(e.target)) { d.open = false; if (d.dataset.sec) S.openSec[d.dataset.sec] = false; } }); }, true);
   // 버튼이 아닌 선택 항목(작업 목록 등)도 키보드 Enter/Space 로 선택
   document.addEventListener('keydown', e => { const b = e.target; if ((e.key === 'Enter' || e.key === ' ') && b && b.getAttribute && b.getAttribute('role') === 'button' && b.tagName !== 'BUTTON' && b.dataset.a) { e.preventDefault(); b.click(); } });
 
@@ -320,57 +323,59 @@
   }
   const stIcon = s => '<span class="st ' + s + '" title="' + (s === 'ok' ? '문제 없음' : s === 'err' ? '오류 확인 필요' : '경고 확인') + '">' + ico(s === 'ok' ? 'i-check' : s === 'err' ? 'i-x' : 'i-warn') + '</span>';
   function flash(sel) { const el = $(sel); if (!el) return; el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
-  function select(kind, gid) { const changed = S.sel.kind !== kind || S.sel.gid !== (gid || null); S.sel = { kind, gid: gid || null, hid: null }; if (mobile()) S.mpanel = 'right'; renderAll(); if (changed) $('#rightBody').scrollTop = 0; }
+  function select(kind, gid) { const changed = S.sel.kind !== kind || S.sel.gid !== (gid || null); S.sel = { kind, gid: gid || null, hid: null }; S.kindOpen = false; S.addOpen = false; if (mobile()) S.mpanel = 'right'; renderAll(); if (changed) $('#rightBody').scrollTop = 0; }
   function renderTree() {
-    const u = U('tr'), m = machine(), st = P.stock, set = P.settings;
-    const item = (sel, icon, cls, title, sub, status, fn, extra, color, gid) => '<div class="titem' + (sel ? ' sel' : '') + '" role="button" tabindex="0" aria-pressed="' + sel + '" data-a="' + u.act(fn) + '"' + (gid ? ' data-gid="' + esc(gid) + '" draggable="true" aria-label="' + esc(title) + ' (오른쪽 버튼: 메뉴, Delete: 삭제, Ctrl+C/V: 복사·붙여넣기)"' : ' data-node="' + (icon === 'i-nc' ? 'nc' : 'stock') + '"') + '><span class="ico ' + cls + '"' + (color ? ' style="background:' + esc(color) + '"' : '') + '>' + ico(icon) + '</span><span class="tx"><b>' + esc(title) + '</b><small>' + esc(sub) + '</small></span>' + (extra || '') + stIcon(status) + '</div>';
+    const u = U('tr'), m = machine(), st = P.stock, set = P.settings, dense = DENSE();
+    const item = (sel, icon, cls, title, sub, status, fn, extra, color, gid) => '<div class="titem' + (sel ? ' sel' : '') + (gid ? '' : ' mini') + ' s-' + status + '" role="button" tabindex="0" aria-pressed="' + sel + '" data-a="' + u.act(fn) + '"' + (gid ? ' data-gid="' + esc(gid) + '" draggable="true" aria-label="' + esc(title) + ' (오른쪽 버튼: 메뉴, Delete: 삭제, Ctrl+C/V: 복사·붙여넣기)"' : ' data-node="' + (icon === 'i-nc' ? 'nc' : 'stock') + '"') + '>' + tile(icon, cls, color, gid ? '' : 'sm') + '<span class="tx"><b>' + esc(title) + '</b><small>' + esc(sub) + '</small></span>' + (extra || '') + stIcon(status) + '</div>';
     const okStock = st.sx > 0 && st.sy > 0 && st.sz > 0;
     // 작업 흐름 (① 소재 → ② 원점·NC → ③ 가공 → ④ 확인 → ⑤ NC 저장) — 단계별 상태 표시
     const ds = downloadState(), c = counts();
     const gst = P.groups.map(groupStatus);
     const zIss0 = S.V.issues.filter(i => i.cat === 10 && !i.ref);
-    // [V0.5] 단계마다 이름·설명·다음 할 일 (순서대로 따라 하기 쉽게)
+    const openAdd = () => { S.addOpen = true; renderTree(); const b = document.querySelector('#tree .addpal .addbtn'); if (b) { b.focus(); b.scrollIntoView({ block: 'nearest' }); } };
+    // [V0.5] 단계마다 이름·설명·다음 할 일  /  [V0.7] 6번째 칸 = "다음 할 일" 버튼에 크게 쓰는 짧은 말
     const flow = [
-      ['소재', '크기·재질', st.sx > 0 && st.sy > 0 && st.sz > 0 ? 'ok' : 'err', () => select('stock'), { err: '소재 크기(가로·세로·두께)와 재질을 입력하세요.' }],
-      ['원점·NC', '원점·번호', zIss0.some(i => i.level === 'error') ? 'err' : zIss0.some(i => i.level === 'warn') ? 'warn' : 'ok', () => select('nc'), { err: '원점·NC 출력 설정의 빨간 항목을 고치세요.', warn: '원점·NC 출력 설정의 경고를 확인하세요.' }],
-      ['가공' + (P.groups.length ? ' ' + P.groups.length : ''), '구멍·포켓…', !P.groups.length ? 'todo' : gst.includes('err') ? 'err' : gst.includes('warn') ? 'warn' : 'ok', () => { if (P.groups.length) select('group', (P.groups[gst.indexOf('err')] || P.groups[gst.indexOf('warn')] || P.groups[0]).id); }, { todo: '아래 [+ 구멍]·[+ 탭]·[+ 포켓]… 또는 [도면 불러오기]로 가공을 추가하세요.', err: '빨간 ! 표시 가공을 눌러 오류를 고치세요.', warn: '노란 표시 가공의 경고를 확인하세요.' }],
+      ['소재', '크기·재질', st.sx > 0 && st.sy > 0 && st.sz > 0 ? 'ok' : 'err', () => select('stock'), { err: '소재 크기(가로·세로·두께)와 재질을 입력하세요.' }, { err: '소재 크기 입력하기' }],
+      ['원점·NC', '원점·번호', zIss0.some(i => i.level === 'error') ? 'err' : zIss0.some(i => i.level === 'warn') ? 'warn' : 'ok', () => select('nc'), { err: '원점·NC 출력 설정의 빨간 항목을 고치세요.', warn: '원점·NC 출력 설정의 경고를 확인하세요.' }, { err: '원점·NC 설정 고치기', warn: '원점·NC 경고 확인하기' }],
+      ['가공' + (P.groups.length ? ' ' + P.groups.length : ''), '구멍·포켓…', !P.groups.length ? 'todo' : gst.includes('err') ? 'err' : gst.includes('warn') ? 'warn' : 'ok', () => { if (P.groups.length) select('group', (P.groups[gst.indexOf('err')] || P.groups[gst.indexOf('warn')] || P.groups[0]).id); else openAdd(); }, { todo: '아래 [+ 가공 추가]에서 구멍·탭·포켓… 을 고르거나 [도면 불러오기]로 가공을 추가하세요.', err: '빨간 ! 표시 가공을 눌러 오류를 고치세요.', warn: '노란 표시 가공의 경고를 확인하세요.' }, { todo: '가공 추가하기', err: '가공 오류 고치기', warn: P.groups.some(g => !g.holes.length) ? '위치 넣기' : '가공 경고 확인하기' }],
       // [V0.6] 확인 = 지금 NC 를 3D 로 본 뒤에만 ✓, 저장 = 지금 NC 를 저장한 뒤에만 ✓ (추가만 해도 ✓ 되던 문제 수정)
-      ['확인', '3D·검사', !P.groups.length ? 'todo' : !ds.ok ? 'err' : S.flow.viewed !== S.nc.hash ? 'todo' : (c.w + c.nw) ? 'warn' : 'ok', () => { S.vmode = '3d'; openDrawer('check'); }, { todo: P.groups.length ? '[확인]을 눌러 3D 시뮬레이션으로 가공 모습을 보고 검사 결과를 확인하세요.' : '가공을 추가하면 3D 시뮬레이션과 검사 결과를 볼 수 있습니다.', err: '[확인]을 눌러 NC 를 막는 오류를 확인하세요.', warn: '[확인]을 눌러 3D 시뮬레이션과 경고를 확인하세요.' }],
-      ['NC 저장', '파일 받기', !ds.ok ? 'todo' : S.flow.saved === S.nc.hash ? 'ok' : 'todo', () => doDownload(), { todo: ds.ok ? '[NC 저장]을 눌러 파일을 받으세요 (첫 가공이면 [원점·NC 출력]에서 첫 가공 모드를 켜세요).' : '오류를 모두 고치면 NC 를 저장할 수 있습니다.' }]
+      ['확인', '3D·검사', !P.groups.length ? 'todo' : !ds.ok ? 'err' : S.flow.viewed !== S.nc.hash ? 'todo' : (c.w + c.nw) ? 'warn' : 'ok', () => { S.vmode = '3d'; openDrawer('check'); }, { todo: P.groups.length ? '[확인]을 눌러 3D 시뮬레이션으로 가공 모습을 보고 검사 결과를 확인하세요.' : '가공을 추가하면 3D 시뮬레이션과 검사 결과를 볼 수 있습니다.', err: '[확인]을 눌러 NC 를 막는 오류를 확인하세요.', warn: '[확인]을 눌러 3D 시뮬레이션과 경고를 확인하세요.' }, { todo: '3D로 확인하기', err: '오류 확인하기', warn: '경고 확인하기' }],
+      ['NC 저장', '파일 받기', !ds.ok ? 'todo' : S.flow.saved === S.nc.hash ? 'ok' : 'todo', () => doDownload(), { todo: ds.ok ? '[NC 저장]을 눌러 파일을 받으세요 (첫 가공이면 [원점·NC 출력]에서 첫 가공 모드를 켜세요).' : '오류를 모두 고치면 NC 를 저장할 수 있습니다.' }, { todo: ds.ok ? 'NC 저장하기' : '오류 고치기' }]
     ];
-    let h = '<ol class="flow" aria-label="작업 순서">' + flow.map((f, i) => '<li><button type="button" class="fl ' + f[2] + '" data-a="' + u.act(f[3]) + '" title="' + (i + 1) + '단계: ' + f[0] + ' (' + f[1] + ') — ' + ({ ok: '완료', warn: '경고 확인', err: '오류 — 눌러서 고치기', todo: '아직 안 함' })[f[2]] + '"><span class="n">' + (f[2] === 'ok' ? '✓' : f[2] === 'err' ? '!' : i + 1) + '</span><b>' + f[0] + '</b><small>' + f[1] + '</small></button></li>').join('') + '</ol>';
+    let h = '<ol class="flow" aria-label="작업 순서">' + flow.map((f, i) => '<li><button type="button" class="fl ' + f[2] + '" data-a="' + u.act(f[3]) + '" title="' + (i + 1) + '단계: ' + f[0] + ' (' + f[1] + ') — ' + ({ ok: '완료', warn: '경고 확인', err: '오류 — 눌러서 고치기', todo: '아직 안 함' })[f[2]] + '"><span class="n">' + (f[2] === 'ok' ? '✓' : f[2] === 'err' ? '!' : i + 1) + '</span><b>' + f[0] + '</b>' + (dense ? '<small>' + f[1] + '</small>' : '') + '</button></li>').join('') + '</ol>';
     const nx = flow.findIndex(f => f[2] !== 'ok'), nf = flow[nx];
-    h += nf ? '<button type="button" class="nextstep ' + nf[2] + '" data-a="' + u.act(nf[3]) + '"><span class="n">' + (nx + 1) + '</span><span><b>다음 할 일</b> ' + esc(nf[4][nf[2]] || nf[4].todo || nf[4].err || '') + '</span></button>'
-      : '<div class="nextstep ok"><span class="n">✓</span><span><b>모든 단계 완료</b> 저장한 NC 는 첫 가공 때 드라이런·싱글 블록으로 확인하세요.</span></div>';
-    h += '<div class="sect-t">공통 정보</div>';
+    const hint = nf ? (nf[4][nf[2]] || nf[4].todo || nf[4].err || '') : '', verb = nf ? (nf[5][nf[2]] || nf[5].todo || nf[5].err || nf[0]) : '';
+    h += nf ? '<button type="button" class="nextstep ' + nf[2] + '" data-a="' + u.act(nf[3]) + '" title="' + esc(hint) + '"><span class="n">' + (nx + 1) + '</span><span class="nt"><small>다음 할 일</small><b>' + esc(verb) + '</b>' + (dense ? '<em>' + esc(hint) + '</em>' : '') + '</span><i class="go" aria-hidden="true">›</i></button>'
+      : '<div class="nextstep ok" title="저장한 NC 는 첫 가공 때 드라이런·싱글 블록으로 확인하세요."><span class="n">✓</span><span class="nt"><small>모든 단계 완료</small><b>첫 가공은 드라이런부터</b></span></div>';
+    if (dense) h += '<div class="sect-t">공통 정보</div>';
     h += item(S.sel.kind === 'stock', 'i-stock', 'k-stock', '소재·고정', (C.MATERIALS[st.material] ? C.MATERIALS[st.material].label.split(' ')[0] : st.material) + ' ' + st.sx + '×' + st.sy + '×' + st.sz + (P.clamps.length ? ' · 클램프 ' + P.clamps.length : ''), okStock ? 'ok' : 'err', () => select('stock'));
     const zIss = S.V.issues.filter(i => i.cat === 10 && !i.ref);
     h += item(S.sel.kind === 'nc', 'i-nc', 'k-nc', '원점·NC 출력', set.wcs + ' · O' + String(P.programNo).padStart(4, '0') + ' · 초기점 Z' + set.initialZ, zIss.some(i => i.level === 'error') ? 'err' : zIss.some(i => i.level === 'warn') ? 'warn' : 'ok', () => select('nc'));
-    h += '<div class="sect-t">가공 <small>(위에서부터)</small></div>' + (P.groups.length ? '<div class="treehint">끌어서 순서 · 오른쪽 버튼 메뉴 · Ctrl+C/V/D · Delete · F2 이름</div>' : '');
-    if (!P.groups.length) h += '<div class="note info">아래에서 가공을 추가하거나 도면(DXF)을 불러오세요. 공구와 조건은 자동으로 정해집니다.</div>';
+    h += '<div class="sect-t" title="위에서부터 순서대로 가공합니다. 끌어서 순서 바꾸기 · 오른쪽 버튼 메뉴 · Ctrl+C/V/D · Delete · F2 이름">가공' + (P.groups.length ? ' <small>' + P.groups.length + '개 · 위에서부터</small>' : '') + '</div>' + (dense && P.groups.length ? '<div class="treehint">끌어서 순서 · 오른쪽 버튼 메뉴 · Ctrl+C/V/D · Delete · F2 이름</div>' : '');
+    if (dense && !P.groups.length) h += '<div class="note info">아래에서 가공을 추가하거나 도면(DXF)을 불러오세요. 공구와 조건은 자동으로 정해집니다.</div>';
     P.groups.forEach(g => {
       const k = KIND[kindOf(g)];
-      const qa = '<span class="qa">' + u.btn(ico('i-copy'), () => dupGroup(g), '', 'title="복제 (Ctrl+D)" aria-label="복제"') + u.btn(ico('i-trash'), () => delGroup(g), '', 'title="삭제 (Delete)" aria-label="삭제"') + u.btn('⋯', (e, b) => { const r = b.getBoundingClientRect(); groupMenu(g, r.left, r.bottom + 4); }, 'more', 'title="메뉴 (오른쪽 버튼·Shift+F10)" aria-label="메뉴" aria-haspopup="menu"') + '</span>';
+      const qa = '<span class="qa">' + (dense ? u.btn(ico('i-copy'), () => dupGroup(g), '', 'title="복제 (Ctrl+D)" aria-label="복제"') + u.btn(ico('i-trash'), () => delGroup(g), '', 'title="삭제 (Delete)" aria-label="삭제"') : '') + u.btn('⋯', (e, b) => { const r = b.getBoundingClientRect(); groupMenu(g, r.left, r.bottom + 4); }, 'more', 'title="메뉴: 복사·복제·이름·순서·삭제 (오른쪽 버튼·Shift+F10)" aria-label="메뉴" aria-haspopup="menu"') + '</span>';
       h += item(S.sel.kind === 'group' && S.sel.gid === g.id, k.ico, k.cls, g.name, groupSummary(g), groupStatus(g), () => select('group', g.id), qa, g.color, g.id);
     });
-    h += '<div class="addrow">' +
-      u.btn(ico('i-drill') + '+ 구멍', () => addGroup('drill'), 'addbtn k-drill', 'title="드릴 구멍 추가 (센터 → 드릴, 사이클 자동)"') +
-      u.btn(ico('i-tap') + '+ 탭', () => addGroup('tap'), 'addbtn k-tap', 'title="나사(탭) 구멍 추가 (센터 → 기초 드릴 → 탭)"') +
-      u.btn(ico('i-pocket') + '+ 포켓', () => addGroup('pocket'), 'addbtn k-pocket', 'title="사각·원형·도면 형상 포켓 (헬리컬 진입 → 황삭 → 정삭)"') + '</div>' +
-      '<div class="addrow two">' +
-      u.btn(ico('i-contour') + '+ 윤곽', () => addGroup('contour'), 'addbtn k-contour', 'title="부품 바깥(또는 안쪽) 윤곽 따라 깎기, 관통 절단 가능"') +
-      u.btn(ico('i-face') + '+ 평면', () => addGroup('face'), 'addbtn k-face', 'title="소재 윗면 고르기 (페이스밀)"') +
-      u.btn(ico('i-chamfer') + '+ 모따기', () => addGroup('chamfer'), 'addbtn k-chamfer', 'title="모서리 C 모따기 (바깥·안쪽·구멍 입구)"') + '</div>' +
-      '<div class="addrow two">' +
-      u.btn(ico('i-ream') + '+ 리머(H7)', () => addGroup('ream'), 'addbtn k-ream', 'title="정밀 구멍 H7: 센터 → 밑구멍 드릴 → 리머 G85"') +
-      u.btn(ico('i-bore') + '+ 보링', () => addGroup('bore'), 'addbtn k-bore', 'title="정밀 보링: 센터 → 밑구멍 → G76 보링 바"') + '</div>' +
-      u.btn(ico('i-dxf') + '도면(DXF) 불러오기', () => importDXF(), 'dxfbtn', 'title="CAD 에서 저장한 DXF 파일의 원·닫힌 선을 읽어 구멍·탭·윤곽·포켓을 자동으로 만듭니다"');
-    // 요약
+    // [V0.7] 추가 버튼 하나 → 누르면 큰 아이콘 선택판 (가공이 하나도 없을 때는 처음부터 펼침)
+    const palOpen = dense || S.addOpen || !P.groups.length;
+    const add = (kind, label, title) => u.btn('<span class="tile lg">' + ico(KIND[kind].ico) + '</span><span>' + label + '</span>', () => { S.addOpen = false; addGroup(kind); }, 'addbtn ' + KIND[kind].cls, 'title="' + title + '"');
+    if (!dense && !P.groups.length) h += '<div class="addhead">추가할 가공을 고르세요</div>';
+    else if (!dense) h += u.btn(ico('i-plus') + '<span>가공 추가</span><i class="car">' + (palOpen ? '▴' : '▾') + '</i>', () => { if (S.addOpen) { S.addOpen = false; renderTree(); } else openAdd(); }, 'addmain' + (palOpen ? ' on' : ''), 'aria-expanded="' + palOpen + '" title="구멍·탭·포켓·윤곽·평면·모따기·리머·보링 추가, 도면(DXF) 불러오기"');
+    if (palOpen) h += '<div class="addpal" role="group" aria-label="추가할 가공 고르기">' +
+      add('drill', '구멍', '드릴 구멍 추가 (센터 → 드릴, 사이클 자동)') + add('tap', '탭', '나사(탭) 구멍 추가 (센터 → 기초 드릴 → 탭)') + add('pocket', '포켓', '사각·원형·도면 형상 포켓 (헬리컬 진입 → 황삭 → 정삭)') +
+      add('contour', '윤곽', '부품 바깥(또는 안쪽) 윤곽 따라 깎기, 관통 절단 가능') + add('face', '평면', '소재 윗면 고르기 (페이스밀)') + add('chamfer', '모따기', '모서리 C 모따기 (바깥·안쪽·구멍 입구)') +
+      add('ream', '리머(H7)', '정밀 구멍 H7: 센터 → 밑구멍 드릴 → 리머 G85') + add('bore', '보링', '정밀 보링: 센터 → 밑구멍 → G76 보링 바') +
+      u.btn('<span class="tile lg">' + ico('i-dxf') + '</span><span>도면(DXF)</span>', () => { S.addOpen = false; renderTree(); importDXF(); }, 'dxfbtn', 'title="도면(DXF) 불러오기: CAD 에서 저장한 DXF 파일의 원·닫힌 선을 읽어 구멍·탭·윤곽·포켓을 자동으로 만듭니다"') + '</div>';
+    // 요약 (간단히 보기: 한 줄 / 모두 펼쳐 보기: 예전처럼)
     const holes = P.groups.reduce((s, g) => s + g.holes.length, 0);
     const tools = new Set(S.V.plan.steps.map(s => s.toolNo));
-    h += '<div class="tsum">위치 <b>' + holes + '</b>개 · 공정 <b>' + S.V.plan.steps.length + '</b>단계 · 공구 <b>' + tools.size + '</b>개' +
+    const appr = C.approvalOf(m, S.V.plan).ok;
+    if (dense) h += '<div class="tsum">위치 <b>' + holes + '</b>개 · 공정 <b>' + S.V.plan.steps.length + '</b>단계 · 공구 <b>' + tools.size + '</b>개' +
       (S.est ? '<br>예상 가공 시간 <b>약 ' + fmtSec(S.est.total) + '</b> <small>(추정)</small>' : '') +
-      '<br><small>장비: ' + esc(m.name) + (C.approvalOf(m, S.V.plan).ok ? ' · 이 프로젝트 가공 모두 실가공 승인' : ' · 실가공 검증 전' + (m.approvals.length ? ' (일부 승인)' : '')) + '</small></div>';
+      '<br><small>장비: ' + esc(m.name) + (appr ? ' · 이 프로젝트 가공 모두 실가공 승인' : ' · 실가공 검증 전' + (m.approvals.length ? ' (일부 승인)' : '')) + '</small></div>';
+    else if (P.groups.length) h += '<div class="tfoot" title="위치 ' + holes + '개 · 공정 ' + S.V.plan.steps.length + '단계 · 공구 ' + tools.size + '개 · 장비: ' + esc(m.name) + (appr ? ' (실가공 승인)' : ' (실가공 검증 전 — NC 는 검증용 TEST)') + '">공구 <b>' + tools.size + '</b>개' + (S.est ? ' · 약 <b>' + fmtSec(S.est.total) + '</b>' : '') + ' · ' + (appr ? '실가공 승인' : '<span class="testtag">TEST</span>') + '</div>';
     $('#tree').innerHTML = h;
   }
   /* ---------- [V0.5] 작업 목록 편집: 복사·붙여넣기·복제·삭제·순서 ---------- */
@@ -612,30 +617,52 @@
 
   /* ---------------- 오른쪽: 속성 ---------------- */
   function curGroup() { return P.groups.find(g => g.id === S.sel.gid) || null; }
+  // [V0.7] 색 타일 위 아이콘 색: 바탕이 밝으면 검정, 어두우면 흰색 (대비 확보)
+  function onColor(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '')); if (!m) return '#fff';
+    const n = parseInt(m[1], 16), f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    const L = 0.2126 * f(n >> 16) + 0.7152 * f((n >> 8) & 255) + 0.0722 * f(n & 255);
+    return (1.05 / (L + 0.05)) >= ((L + 0.05) / 0.05) ? '#fff' : '#10151b';
+  }
+  const tile = (icon, cls, color, size) => '<span class="tile ' + (size ? size + ' ' : '') + cls + '"' + (color ? ' style="--k:' + esc(color) + ';--on:' + onColor(color) + '"' : '') + '>' + ico(icon) + '</span>';
   function renderProps() {
     if (S.sel.kind === 'group' && !curGroup()) S.sel = { kind: 'stock', gid: null, hid: null };
     const u = U('rt');
     let head = '', body = '';
     if (S.sel.kind === 'group') {
       const g = curGroup(), k = KIND[kindOf(g)], i = P.groups.indexOf(g);
-      head = '<span class="ico ' + k.cls + '" style="background:' + esc(g.color) + '">' + ico(k.ico) + '</span>' +
+      head = tile(k.ico, k.cls, g.color) +
         u.text(g.name, v => mutate(() => { g.name = v.slice(0, 40) || '가공'; }), 'aria-label="가공 이름" maxlength="40"') +
-        u.color(g.color, v => mutate(() => { g.color = v; })) +
-        u.btn('↑', () => mutate(() => { if (i > 0) P.groups.splice(i - 1, 0, P.groups.splice(i, 1)[0]); }), 'ibtn sm', 'title="순서 위로" aria-label="순서 위로" ' + (i ? '' : 'disabled')) +
-        u.btn('↓', () => mutate(() => { if (i < P.groups.length - 1) P.groups.splice(i + 1, 0, P.groups.splice(i, 1)[0]); }), 'ibtn sm', 'title="순서 아래로" aria-label="순서 아래로" ' + (i < P.groups.length - 1 ? '' : 'disabled')) +
+        (DENSE() ? u.color(g.color, v => mutate(() => { g.color = v; })) +
+          u.btn('↑', () => mutate(() => { if (i > 0) P.groups.splice(i - 1, 0, P.groups.splice(i, 1)[0]); }), 'ibtn sm', 'title="순서 위로" aria-label="순서 위로" ' + (i ? '' : 'disabled')) +
+          u.btn('↓', () => mutate(() => { if (i < P.groups.length - 1) P.groups.splice(i + 1, 0, P.groups.splice(i, 1)[0]); }), 'ibtn sm', 'title="순서 아래로" aria-label="순서 아래로" ' + (i < P.groups.length - 1 ? '' : 'disabled'))
+          : u.btn('⋯', (e, b) => { const r = b.getBoundingClientRect(); groupMenu(g, Math.max(8, r.right - 210), r.bottom + 4); }, 'ibtn sm more', 'title="메뉴: 복사·복제·순서 위/아래·삭제" aria-label="가공 메뉴" aria-haspopup="menu"')) +
         u.btn(ico('i-x'), () => delGroup(g), 'ibtn sm danger', 'title="삭제 (Delete)" aria-label="이 가공 삭제"');
       body = groupBody(u, g);
     } else if (S.sel.kind === 'nc') {
-      head = '<span class="ico k-nc">' + ico('i-nc') + '</span><b style="flex:1">원점·NC 출력 설정</b>';
+      head = tile('i-nc', 'k-nc') + '<b style="flex:1">원점·NC 출력 설정</b>';
       body = ncBody(u);
     } else {
-      head = '<span class="ico k-stock">' + ico('i-stock') + '</span><b style="flex:1">소재·고정</b>';
+      head = tile('i-stock', 'k-stock') + '<b style="flex:1">소재·고정</b>';
       body = stockBody(u);
     }
     $('#propHead').innerHTML = head;
     $('#rightBody').innerHTML = body;
   }
-  const sec = (key, title, defOpen) => '<details class="sect2" data-sec="' + key + '"' + ((S.openSec[key] !== undefined ? S.openSec[key] : defOpen) ? ' open' : '') + '><summary>' + title + '</summary>';
+  /* [V0.7] 간단히 보기 — 접힌 줄(제목 + 현재 값 요약), 누르면 펼쳐짐
+   *  - 오류가 든 구역은 저절로 펼쳐지고(닫아도 다시 펼침), 경고가 든 구역은 줄에 ! 표시
+   *  - 설정의 [모두 펼쳐 보기]를 켜면 처음부터 모두 펼침 (예전 화면)
+   *  - 같은 종류의 줄은 가공을 바꿔도 펼침 상태를 이어 감 (key 를 가공끼리 같이 씀)
+   */
+  const DENSE = () => !!DB.settings.dense;
+  function acc(key, title, sum, body, defOpen) {
+    if (!body) return '';
+    const err = /class="fld ferr|class="note error/.test(body), warn = !err && /class="fld fwarn|class="note warn/.test(body);
+    const open = err || (S.openSec[key] !== undefined ? S.openSec[key] : (DENSE() || !!defOpen));
+    return '<details class="sect2 acc' + (err ? ' haserr' : warn ? ' haswarn' : '') + '" data-sec="' + key + '"' + (err ? ' data-forced="1"' : '') + (open ? ' open' : '') + '><summary><span class="t">' + title + '</span>' +
+      (err ? '<span class="am err" title="오류가 있어 펼쳤습니다">!</span>' : warn ? '<span class="am warn" title="경고가 있습니다 — 눌러서 확인">!</span>' : '') +
+      '<span class="v">' + (sum || '') + '</span></summary><div class="accb">' + body + '</div></details>';
+  }
   function stockBody(u) {
     const st = P.stock;
     const matOpts = Object.keys(C.MATERIALS).map(k => [k, C.MATERIALS[k].label]);
@@ -648,17 +675,18 @@
     h += '<h3>공작물 원점</h3><div class="grid2">' +
       u.fld('원점 위치 (X0 Y0)', u.select(st.origin, Object.keys(C.ORIGIN_LABEL).map(k => [k, C.ORIGIN_LABEL[k]]), v => changeOrigin(v))) +
       u.fld('하부 여유 (패럴렐 틈, mm)', u.num(st.under, v => mutate(() => { st.under = v; })), '관통 가공 시 소재 아래로 들어갈 수 있는 깊이') + '</div>';
-    h += '<div class="note info">Z0 = 소재 윗면입니다. 공구 길이 보정 후 소재 윗면에 Z0 을 맞추세요. 관통 가공이 하부 여유보다 깊으면 차단됩니다.</div>';
-    h += '<h3>클램프·금지 영역 <small>(' + P.clamps.length + '개)</small></h3>';
-    if (!P.clamps.length) h += '<small>클램프가 없습니다. 2D 화면 위쪽 [클램프] 도구로 드래그하거나 아래 버튼으로 추가하세요. 공구 경로가 클램프에 닿으면 차단됩니다.</small>';
+    h += '<div class="opinfo">Z0 = 소재 윗면입니다. 공구 길이 보정 후 소재 윗면에 Z0 을 맞추세요. 관통 가공이 하부 여유보다 깊으면 차단됩니다.</div>';
+    let c = '';
+    if (!P.clamps.length) c += '<small>클램프가 없습니다. 2D 화면의 [클램프] 도구(⋯ 안)로 드래그하거나 아래 버튼으로 추가하세요. 공구 경로가 클램프에 닿으면 차단됩니다.</small>';
     else {
-      h += '<div class="tblwrap"><table class="tbl"><tr><th>#</th><th>X</th><th>Y</th><th>폭</th><th>길이</th><th>높이</th><th></th></tr>';
-      P.clamps.forEach((c, i) => {
-        h += '<tr><td>' + (i + 1) + '</td><td>' + u.num(c.x, v => mutate(() => { c.x = v; })) + '</td><td>' + u.num(c.y, v => mutate(() => { c.y = v; })) + '</td><td>' + u.num(c.w, v => mutate(() => { c.w = v; })) + '</td><td>' + u.num(c.h, v => mutate(() => { c.h = v; })) + '</td><td>' + u.num(c.height, v => mutate(() => { c.height = v; })) + '</td><td>' + u.btn('✕', () => mutate(() => { P.clamps.splice(i, 1); }), 'sm danger', 'title="클램프 삭제" aria-label="클램프 삭제"') + '</td></tr>';
+      c += '<div class="tblwrap"><table class="tbl"><tr><th>#</th><th>X</th><th>Y</th><th>폭</th><th>길이</th><th>높이</th><th></th></tr>';
+      P.clamps.forEach((cl, i) => {
+        c += '<tr><td>' + (i + 1) + '</td><td>' + u.num(cl.x, v => mutate(() => { cl.x = v; })) + '</td><td>' + u.num(cl.y, v => mutate(() => { cl.y = v; })) + '</td><td>' + u.num(cl.w, v => mutate(() => { cl.w = v; })) + '</td><td>' + u.num(cl.h, v => mutate(() => { cl.h = v; })) + '</td><td>' + u.num(cl.height, v => mutate(() => { cl.height = v; })) + '</td><td>' + u.btn('✕', () => mutate(() => { P.clamps.splice(i, 1); }), 'sm danger', 'title="클램프 삭제" aria-label="클램프 삭제"') + '</td></tr>';
       });
-      h += '</table></div><small>높이 = 소재 윗면(Z0) 기준 클램프 최고 높이. 초기점은 클램프보다 ' + C.CLAMP_MARGIN + 'mm 이상 높아야 합니다.</small>';
+      c += '</table></div><small>높이 = 소재 윗면(Z0) 기준 클램프 최고 높이. 초기점은 클램프보다 ' + C.CLAMP_MARGIN + 'mm 이상 높아야 합니다.</small>';
     }
-    h += '<div class="row" style="margin-top:8px">' + u.btn(ico('i-plus') + '클램프 추가', () => mutate(() => { const r = C.stockRect(P.stock); P.clamps.push({ id: C.uid('c'), x: r.x0 - 10, y: (r.y0 + r.y1) / 2 - 10, w: 20, h: 20, height: 30 }); }), 'sm') + '</div>';
+    c += '<div class="row" style="margin-top:8px">' + u.btn(ico('i-plus') + '클램프 추가', () => mutate(() => { const r = C.stockRect(P.stock); P.clamps.push({ id: C.uid('c'), x: r.x0 - 10, y: (r.y0 + r.y1) / 2 - 10, w: 20, h: 20, height: 30 }); S.openSec.clamps = true; }), 'sm') + '</div>';
+    h += '<div style="height:14px"></div>' + acc('clamps', '클램프·금지 영역', P.clamps.length ? P.clamps.length + '개' : '없음', c, P.clamps.length > 0);
     return h;
   }
   function ncBody(u) {
@@ -669,19 +697,22 @@
     h += '<h3>높이 (Z)</h3><div class="grid2">' +
       u.fld('초기점 Z (안전 높이, mm)', u.num(set.initialZ, v => mutate(() => { set.initialZ = v; })), '공구 교환 후 접근·구멍 사이 이동 높이 (클램프보다 높게)') +
       u.fld('구멍 사이 이동 높이', u.select(set.retract, [['G98', '초기점까지 올림 (G98, 안전)'], ['G99', 'R점까지만 올림 (G99, 빠름)']], v => mutate(() => { set.retract = v; }))) + '</div>';
-    h += '<div class="note info">초기점 Z 와 R점은 다릅니다. <b>초기점</b>은 이동용 안전 높이, <b>R점</b>은 각 공정에서 절삭 이송을 시작하는 높이(소재 윗면 위 몇 mm)입니다. R점은 각 가공의 공정에서 정해집니다.</div>';
-    h += '<h3>순서</h3><div class="grid2">' +
+    h += '<div class="opinfo">초기점 Z 와 R점은 다릅니다. <b>초기점</b>은 이동용 안전 높이, <b>R점</b>은 각 공정에서 절삭 이송을 시작하는 높이(소재 윗면 위 몇 mm)입니다. R점은 각 가공의 공정에서 정해집니다.</div><div style="height:14px"></div>';
+    const ord = '<div class="grid2">' +
       u.fld('공정 순서', u.select(set.toolOrder, [['tool', '공구 교환 최소화'], ['group', '가공 목록 순서대로']], v => mutate(() => { set.toolOrder = v; }))) +
       u.fld('깊이 기준', u.select(set.depthRef === 'auto' ? 'auto' : 'top', [['auto', '먼저 가공된 바닥 기준 (자동, 권장)'], ['top', '항상 소재 윗면 Z0 기준']], v => mutate(() => { set.depthRef = v; })), set.depthRef === 'auto' ? '포켓 안 구멍·포켓 안 포켓·평면 뒤 가공은 그 바닥에서부터 깊이를 재고, 이미 깎인 높이에서 시작합니다 (빈 공간 공회전 없음)' : '모든 깊이를 원래 윗면(Z0)에서 잽니다 (V0.4 이전 방식)') +
       u.fld('구멍 순서', u.select(set.pathOrder, [['nearest', '최단 거리(근사)'], ['zigzag', '지그재그(행)'], ['input', '입력 순서']], v => mutate(() => { set.pathOrder = v; }))) + '</div>';
-    h += '<h3>출력 옵션</h3>' + u.check(set.coolant, v => mutate(() => { set.coolant = v; }), '절삭유 M08/M09') + u.check(set.m01, v => mutate(() => { set.m01 = v; }), '공구 교환 전 선택 정지 M01') +
+    h += acc('nc-order', '순서·깊이 기준', (set.toolOrder === 'tool' ? '공구 교환 최소화' : '목록 순서') + ' · ' + (set.depthRef === 'auto' ? '바닥 기준 자동' : 'Z0 기준'), ord, false);
+    const out = u.check(set.coolant, v => mutate(() => { set.coolant = v; }), '절삭유 M08/M09') + u.check(set.m01, v => mutate(() => { set.m01 = v; }), '공구 교환 전 선택 정지 M01') +
       u.check(set.seqNo, v => mutate(() => { set.seqNo = v; }), '시퀀스 번호(N) 출력' + (set.restart ? ' (재시작 블록을 쓰면 꺼짐)' : '')) +
       u.check(set.restart, v => mutate(() => { set.restart = v; }), '공구별 재시작 블록 (N100·N200… — 공구가 부러지면 그 공구부터 다시)');
+    h += acc('nc-out', '출력 옵션', [set.coolant ? '절삭유' : '', set.m01 ? 'M01' : '', set.seqNo ? 'N번호' : '', set.restart ? '재시작 블록' : ''].filter(Boolean).join(' · ') || '없음', out, false);
     // [V0.6] 첫 가공 모드 · 머신 좌표
-    h += '<h3>첫 가공 (실장비 확인)</h3>' + u.check(set.firstRun, v => mutate(() => { set.firstRun = v; }), '<b>첫 가공 모드</b> — 공정마다 진입 전 M00 정지, 절삭 이송 낮춤') +
+    const first = u.check(set.firstRun, v => mutate(() => { set.firstRun = v; }), '<b>첫 가공 모드</b> — 공정마다 진입 전 M00 정지, 절삭 이송 낮춤') +
       (set.firstRun ? u.fld('첫 가공 절삭 이송 (%)', u.num(set.firstFeed, v => mutate(() => { set.firstFeed = Math.max(10, Math.min(100, Math.round(v))); }), 'min="10" max="100"'), '탭은 동기 이송이라 그대로 (오버라이드 100%)') : '') +
       '<div class="grid2">' + u.fld('G54 Z (머신 좌표, 선택)', u.optnum(set.g54Z, v => mutate(() => { set.g54Z = v === null ? null : Math.min(0, v); })), '장비의 공작물 좌표계 Z 값. 공구 H 측정값과 함께 Z 행정(오버트래블)을 검사') + '<span></span></div>' +
       '<small>첫 가공 순서: ① 첫 가공 모드 NC 로 Z를 띄운 드라이런 → ② 싱글 블록 → ③ 시편 가공·측정 → ④ 관리자가 그 가공 종류를 승인.</small>';
+    h += acc('nc-first', '첫 가공 <small>(실장비 확인)</small>', set.firstRun ? '첫 가공 모드 켜짐 · 이송 ' + set.firstFeed + '%' : '꺼짐', first, !!set.firstRun);
     return h;
   }
   function changeOrigin(v) {
@@ -706,35 +737,52 @@
     FLD = { g, u, used: new Set(), list: S.V.issues.filter(i => i.ref && i.ref.gid === g.id && (i.level === 'error' || i.level === 'warn')) };
     try { return groupBody0(u, g); } finally { FLD = null; }
   }
+  /* [V0.7] 순서: 가공 방법(칩) → 기본 치수 → (오류·없는 공구) → 위치 → 옵션 → 깊이 단면도 → 자동 구성된 공정 → 고급
+   * 처음에는 기본 치수만 보이고, 나머지는 접힌 줄(현재 값 요약)로 둔다.
+   */
   function groupBody0(u, g) {
-    const mode = kindOf(g);
-    let h = '<h3>가공 방법</h3><div class="kindgrid" role="radiogroup" aria-label="가공 방법">' +
-      ['drill', 'tap', 'ream', 'bore', 'pocket', 'contour', 'face', 'chamfer', 'custom'].map(k => u.btn(ico(KIND[k].ico) + (k === 'custom' ? '직접 구성' : KIND[k].label), () => setGroupMode(g, k), (mode === k ? 'on ' : '') + KIND[k].cls, 'role="radio" aria-checked="' + (mode === k) + '"')).join('') + '</div>';
-    // [V0.6] 입력(모양·크기·깊이) → 위치 → Z값 단면도 순서 (단면도는 접을 수 있음, 휴대폰은 처음에 접힘)
-    // 위치가 하나뿐이면(포켓·윤곽 등 대부분) 맨 위에서 바로 X·Y 입력
-    if (g.holes.length === 1 && mode !== 'face') { const h1 = g.holes[0]; h += '<div class="grid2 toppos">' + u.fld((MILL_KINDS.includes(mode) ? '기준점(중심) ' : '위치 ') + 'X', u.num(h1.x, v => mutate(() => { h1.x = C.r3(v); }))) + u.fld((MILL_KINDS.includes(mode) ? '기준점(중심) ' : '위치 ') + 'Y', u.num(h1.y, v => mutate(() => { h1.y = C.r3(v); }))) + '</div>'; }
-    const diag = depthDiagram(g) + refNote(g);
-    if (diag) h += sec('dd-' + g.id, '깊이 단면도 (Z값)', !mobile()) + diag + '</details>';
-    if (mode === 'pocket') h += pocketForm(u, g);
-    else if (mode === 'contour') h += contourForm(u, g);
-    else if (mode === 'face') h += faceForm(u, g);
-    else if (mode === 'chamfer') h += chamferForm(u, g);
-    else if (g.spec) h += specForm(u, g);
-    else h += customForm(u, g);
-    if (mode === 'face') return h + '<div class="note info">평면 가공은 소재 전체를 깎으므로 위치 입력이 없습니다.</div>';
-    const isPk = MILL_KINDS.includes(mode);
-    h += '<h3>' + (isPk ? '형상 기준점(중심) 위치' : '구멍 위치') + ' <small>(' + g.holes.length + '개)</small></h3><div class="subtabs">' + [['single', '개별'], ['line', '직선'], ['grid', '사각 배열'], ['pcd', '원형(PCD)']].map(k => u.btn(k[1], () => { S.arrKind = k[0]; renderProps(); }, 'sm' + (S.arrKind === k[0] ? ' on' : ''))).join('') + '</div>';
-    h += arrayForm(u, g);
-    if (g.holes.length) {
-      const lim = 300, z = S.gz.get(g.id);
-      h += '<div class="tblwrap" style="margin-top:8px"><table class="tbl"><tr><th>#</th><th>X</th><th>Y</th><th title="가장 깊은 공구 끝">바닥 Z</th><th></th></tr>';
-      g.holes.slice(0, lim).forEach((hh, i) => {
-        h += '<tr class="' + (S.sel.hid === hh.id ? 'sel' : '') + '"><td>' + u.btn(String(i + 1), () => { S.sel.hid = hh.id; renderAll(); }, 'sm', 'title="화면에서 선택"') + '</td><td>' + u.num(hh.x, v => mutate(() => { hh.x = C.r3(v); })) + '</td><td>' + u.num(hh.y, v => mutate(() => { hh.y = C.r3(v); })) + '</td><td class="num">' + (z === null || z === undefined ? '-' : uf(z)) + '</td><td>' + u.btn('✕', () => mutate(() => { g.holes.splice(i, 1); }), 'sm danger', 'title="삭제" aria-label="위치 삭제"') + '</td></tr>';
-      });
-      h += '</table></div>' + (g.holes.length > lim ? '<small>처음 ' + lim + '개만 표시 (화면에서 선택·편집 가능)</small>' : '');
-      h += '<div class="row" style="margin-top:6px">' + u.btn('위치 전체 삭제', () => { if (confirm('위치 ' + g.holes.length + '개를 모두 삭제할까요?')) mutate(() => { g.holes = []; }); }, 'sm danger') + '</div>';
-    } else h += '<div class="note warn">위치가 없습니다. 위 입력란을 쓰거나 2D 화면의 [위치 추가] 도구로 클릭하세요.</div>';
-    return h;
+    const mode = kindOf(g), dense = DENSE(), isMill = MILL_KINDS.includes(mode), k = KIND[mode];
+    const grid = '<div class="kindgrid" role="radiogroup" aria-label="가공 방법">' +
+      ['drill', 'tap', 'pocket', 'contour', 'face', 'chamfer', 'ream', 'bore', 'custom'].map(x => u.btn('<span class="tile">' + ico(KIND[x].ico) + '</span><span>' + (x === 'custom' ? '직접 구성' : KIND[x].label) + '</span>', () => { S.kindOpen = false; setGroupMode(g, x); renderProps(); }, (mode === x ? 'on ' : '') + KIND[x].cls, 'role="radio" aria-checked="' + (mode === x) + '"')).join('') + '</div>';
+    let h = dense ? '<h3>가공 방법</h3>' + grid
+      : '<div class="kindbar"><span class="kl">가공 방법</span>' + u.btn('<span class="tile sm ' + k.cls + '">' + ico(k.ico) + '</span><b>' + (mode === 'custom' ? '직접 구성' : k.label) + '</b><i class="car">' + (S.kindOpen ? '▴' : '▾') + '</i>', () => { S.kindOpen = !S.kindOpen; renderProps(); }, 'kindchip' + (S.kindOpen ? ' on' : ''), 'aria-expanded="' + !!S.kindOpen + '" title="가공 방법 바꾸기 (구멍·탭·포켓…)"') + '</div>' + (S.kindOpen ? grid : '');
+    const F = mode === 'pocket' ? pocketForm(u, g) : mode === 'contour' ? contourForm(u, g) : mode === 'face' ? faceForm(u, g) : mode === 'chamfer' ? chamferForm(u, g) : g.spec ? specForm(u, g) : null;
+    // 위치가 하나뿐이면 기본 치수 바로 아래에서 X·Y 입력 (형상 가공은 대부분 한 곳)
+    const single = g.holes.length === 1 && mode !== 'face', h1 = g.holes[0];
+    const top = single && (dense || isMill) ? '<div class="grid2 toppos">' + u.fld((isMill ? '기준점(중심) ' : '위치 ') + 'X', u.num(h1.x, v => mutate(() => { h1.x = C.r3(v); }))) + u.fld((isMill ? '기준점(중심) ' : '위치 ') + 'Y', u.num(h1.y, v => mutate(() => { h1.y = C.r3(v); }))) + '</div>' : '';
+    const gp = F ? genParts(u, g, F.res) : null;
+    const MARK = '\u0001alerts\u0001'; // 오류·경고 자리 (아래 입력칸을 다 그린 뒤, 어느 칸에도 붙지 않은 것을 여기에 모아 보여 줌)
+    if (F) h += '<div class="basic wiz">' + F.basic + top + '</div>' + MARK;
+    else h += customForm(u, g) + top + MARK;
+    // 위치 (구멍 가공: 처음부터 펼침 / 형상 가공: 한 곳이면 접힘)
+    if (mode !== 'face') {
+      let p = '<div class="subtabs">' + [['single', '개별'], ['line', '직선'], ['grid', '사각 배열'], ['pcd', '원형(PCD)']].map(x => u.btn(x[1], () => { S.arrKind = x[0]; renderProps(); }, 'sm' + (S.arrKind === x[0] ? ' on' : ''))).join('') + '</div>' + arrayForm(u, g);
+      if (g.holes.length) {
+        const lim = 300, z = S.gz.get(g.id);
+        p += '<div class="tblwrap" style="margin-top:8px"><table class="tbl"><tr><th>#</th><th>X</th><th>Y</th><th title="가장 깊은 공구 끝">바닥 Z</th><th></th></tr>';
+        g.holes.slice(0, lim).forEach((hh, i) => {
+          p += '<tr class="' + (S.sel.hid === hh.id ? 'sel' : '') + '"><td>' + u.btn(String(i + 1), () => { S.sel.hid = hh.id; renderAll(); }, 'sm', 'title="화면에서 선택"') + '</td><td>' + u.num(hh.x, v => mutate(() => { hh.x = C.r3(v); })) + '</td><td>' + u.num(hh.y, v => mutate(() => { hh.y = C.r3(v); })) + '</td><td class="num">' + (z === null || z === undefined ? '-' : uf(z)) + '</td><td>' + u.btn('✕', () => mutate(() => { g.holes.splice(i, 1); }), 'sm danger', 'title="삭제" aria-label="위치 삭제"') + '</td></tr>';
+        });
+        p += '</table></div>' + (g.holes.length > lim ? '<small>처음 ' + lim + '개만 표시 (화면에서 선택·편집 가능)</small>' : '');
+        p += '<div class="row" style="margin-top:6px">' + u.btn('위치 전체 삭제', () => { if (confirm('위치 ' + g.holes.length + '개를 모두 삭제할까요?')) mutate(() => { g.holes = []; }); }, 'sm danger') + '</div>';
+      } else p += '<div class="note warn">위치가 없습니다. 위 입력란을 쓰거나 2D 화면의 [위치 추가] 도구로 클릭하세요.</div>';
+      h += acc(isMill ? 'pos-m' : 'pos-h', isMill ? '위치 <small>(같은 모양을 여러 곳에)</small>' : '구멍 위치', g.holes.length + '개' + (single ? ' · X' + uf(h1.x) + ' Y' + uf(h1.y) : ''), p, isMill ? g.holes.length !== 1 : true);
+    }
+    if (F) h += acc('opt', '옵션', esc(F.optSum), F.opt, false);
+    const diag = depthDiagram(g) + refNote(g), z = S.gz.get(g.id);
+    h += acc('dd', '깊이 단면도 <small>(Z값)</small>', z === null || z === undefined ? '' : '바닥 Z' + uf(z), diag, false);
+    const colorFld = dense ? '' : '<div class="grid2">' + u.fld('표시 색 (화면·목록)', u.color(g.color, v => mutate(() => { g.color = v; }))) + '<span></span></div>';
+    if (F) {
+      h += acc('gen', '자동 구성된 공정', esc(gp.sum), gp.rows, false);
+      h += acc('adv', '고급 설정', esc(F.advSum), F.adv + gp.edit + colorFld, false);
+    } else if (colorFld) h += acc('adv', '고급 설정', '', colorFld, false);
+    // [V0.7] 접힌 줄 때문에 오류가 가려지지 않도록: 입력칸에 붙지 않은 이 가공의 오류·경고를 기본 치수 바로 아래에 모음
+    const seen = new Set(), left = [];
+    FLD.list.filter(i => !FLD.used.has(i)).sort((a, b) => (a.level === 'error' ? 0 : 1) - (b.level === 'error' ? 0 : 1)).forEach(i => { const t = i.msg.replace(/^\[[^\]]*\]\s*(공정 \d+ \([^)]*\):\s*)?/, ''); if (!seen.has(t)) { seen.add(t); left.push({ level: i.level, t }); } });
+    let al = gp ? gp.alerts : '';
+    if (left.length) al += '<div class="alerts">' + left.slice(0, 4).map(i => '<div class="note ' + i.level + '">' + (i.level === 'error' ? '✖ ' : '⚠ ') + esc(i.t) + '</div>').join('') +
+      (left.length > 4 ? '<div class="row" style="margin-top:6px">' + u.btn('외 ' + (left.length - 4) + '건 — 검증 결과 열기', () => openDrawer('check'), 'sm') + '</div>' : '') + '</div>';
+    return h.replace(MARK, () => al);
   }
   function setGroupMode(g, mode) {
     const cur = kindOf(g);
@@ -751,11 +799,11 @@
       if (mode === 'face' && g.holes.length > 1) g.holes = g.holes.slice(0, 1);
     });
   }
-  // 자동 구성 결과 (공정 목록·안내·없는 공구 추가)
-  function genBlock(u, g, res) {
+  // 자동 구성 결과를 나눠서 돌려줌: rows(공정 목록 + 참고 안내) / alerts(오류·경고·없는 공구 — 항상 보임) / sum(요약) / edit(공정 상세 편집)
+  function genParts(u, g, res) {
     const m = machine(), tm = C.toolMap(m);
-    let h = '<div class="gen"><b>자동 구성된 공정</b>';
-    if (!g.ops.length) h += '<div class="opinfo">공정이 없습니다.</div>';
+    let rows = DENSE() ? '<b>자동 구성된 공정</b>' : '', alerts = '', info = '';
+    if (!g.ops.length) rows += '<div class="opinfo">공정이 없습니다.</div>';
     g.ops.forEach((op, i) => {
       const t = tm.get(op.toolNo), d = t ? C.opDepth(op, t, P.stock) : null, c = C.opConditions(op, t, P.stock.material, m);
       const col = t ? (TOOL_BAND[t.type] || '#64748b') : '#64748b';
@@ -767,82 +815,83 @@
           : op.type === 'pocketProfile' ? ' · 구배 ' + op.draft + '° · 입구 R' + op.topR + ' · 바닥 R' + op.floorR + ' · 계단 ' + op.profStep
           : op.type === 'pocketFinish' || op.type === 'contourFinish' ? ' · 여유 0' : op.type === 'faceMill' ? ' · 절입 ' + op.stepdown + ' · 간격 ' + op.stepover + '%'
             : op.type === 'chamferMill' ? ' · C' + op.cw : (op.q && C.OPS.get(op.type).ui.q ? ' · Q' + op.q : '');
-      h += '<div class="genrow"><span class="num" style="background:' + col + '">' + (i + 1) + '</span><span class="nm">' + esc(C.opLabel(op, m)) + '</span><small>' + (d ? '끝 Z' + uf(d.z) + ' · ' : '') + 'S' + c.rpm + ' F' + c.feed + extra + '</small></div>';
+      rows += '<div class="genrow"><span class="num" style="background:' + col + '">' + (i + 1) + '</span><span class="nm">' + esc(C.opLabel(op, m)) + '</span><small>' + (d ? '끝 Z' + uf(d.z) + ' · ' : '') + 'S' + c.rpm + ' F' + c.feed + extra + '</small></div>';
     });
-    res.notes.forEach(n => { h += '<div class="note ' + n.level + '">' + (n.level === 'error' ? '✖ ' : n.level === 'warn' ? '⚠ ' : 'ℹ ') + esc(n.msg) + '</div>'; });
+    res.notes.forEach(n => { const s = '<div class="note ' + n.level + '">' + (n.level === 'error' ? '✖ ' : n.level === 'warn' ? '⚠ ' : 'ℹ ') + esc(n.msg) + '</div>'; if (n.level === 'info') info += s; else alerts += s; });
     res.missing.forEach(mm => {
       const lbl = mm.type === 'tap' ? '탭 M' + mm.dia + '×' + mm.pitch : mm.type === 'center' ? '센터 드릴' : mm.type === 'endmill' ? '평 엔드밀 Ø' + mm.dia : mm.type === 'facemill' ? '페이스밀 Ø' + mm.dia : mm.type === 'chamfer' ? '모따기 공구 Ø' + mm.dia + ' 90°' : '드릴 Ø' + mm.dia;
-      h += '<div class="row" style="margin-top:6px">' + u.btn(ico('i-plus') + '공구 추가: ' + lbl, () => {
+      alerts += '<div class="row" style="margin-top:6px">' + u.btn(ico('i-plus') + '공구 추가: ' + lbl, () => {
         let added = null;
         dbChange(() => { added = C.addMissingTool(m, mm); if (m.verified || m.approvals.length) { C.revoke(m, '공구 추가'); toast('장비 공구가 바뀌어 실가공 검증 승인이 해제되었습니다.', 'warn'); } });
         if (added) toast('T' + added.no + ' 공구를 추가했습니다. 날 길이·재질을 [장비·공구]에서 확인하세요.', 'ok');
       }, 'sm primary') + '</div>';
     });
-    h += '</div>';
-    h += '<details class="adv" data-sec="adv-' + g.id + '"' + (S.openSec['adv-' + g.id] ? ' open' : '') + '><summary>공정 상세 편집 (고급)</summary><small>여기서 바꾸면 이 가공은 "직접 구성"으로 전환됩니다.</small>' +
+    const tools = [...new Set(g.ops.map(o => o.toolNo))];
+    const edit = '<details class="adv" data-sec="adv-' + g.id + '"' + (S.openSec['adv-' + g.id] ? ' open' : '') + '><summary>공정 상세 편집</summary><small>여기서 바꾸면 이 가공은 "직접 구성"으로 전환됩니다.</small>' +
       opCards(u, g.ops, fn => { mutate(() => { fn(); g.spec = null; }); toast('직접 구성으로 전환했습니다.', 'warn'); }) + '</details>';
-    return h;
+    return { rows: '<div class="gen">' + rows + info + '</div>', alerts: alerts ? '<div class="alerts">' + alerts + '</div>' : '', sum: g.ops.length ? g.ops.length + '단계 · ' + tools.map(t => 'T' + t).join(' ') : '공정 없음', edit };
   }
-  // 간편 입력 양식 (구멍 / 탭)
+  /* ---------- [V0.7] 간편 입력 양식: 기본(항상 보임) / 옵션(한 번 눌러 펼침) / 고급 으로 나눠 돌려줌 ----------
+   * { basic, opt, optSum, adv, advSum, res }  res = 자동 구성 결과 (공정·안내·없는 공구)
+   */
+  const thruFld = (u, sp, set, label) => '<div class="fld"><span>' + (label || '관통') + '</span><div class="row">' + u.check(sp.thru, set(v => { sp.thru = v; }), '끝까지 뚫기') + (sp.thru ? u.num(sp.brk, set(v => { sp.brk = v; }), 'style="width:76px" title="관통 여유 (mm, 소재 아래로 더 내려가는 거리 — 하부 여유 이하)"') : '') + '</div></div>';
+  // 구멍 / 탭 / 리머 / 보링
   function specForm(u, g) {
     const sp = g.spec, m = machine();
     const set = fn => v => mutate(() => { fn(v); });
-    let h = '<div class="card wiz">';
+    let basic = '', opt = '', note = '';
+    const cycSel = u.fld((sp.kind === 'drill' ? '' : '밑구멍 ') + '드릴 사이클', u.select(sp.cycle, [['auto', '자동 (깊이/지름 비율)'], ['drill', 'G81 일반'], ['peck', 'G73 고속 펙 (칩 끊기)'], ['deep', 'G83 심공 (완전 후퇴)']], set(v => { sp.cycle = v; })));
+    const center = u.check(sp.center, set(v => { sp.center = v; }), '센터 드릴 먼저 (자리 표시)');
     if (sp.kind === 'tap') {
       const opts = C.threadList().map(t => [t.d + '|' + t.p, t.label]);
       const cur = sp.tapD + '|' + sp.tapP;
       if (!opts.some(o => o[0] === cur)) opts.unshift([cur, 'M' + sp.tapD + '×' + sp.tapP + ' (사용자)']);
       const rec = C.tapDrill(sp.tapD, sp.tapP);
-      h += '<div class="grid2">' + u.fld('나사 규격', u.select(cur, opts, v => mutate(() => { const a = v.split('|'); sp.tapD = parseFloat(a[0]); sp.tapP = parseFloat(a[1]); }))) +
-        u.fld(sp.thru ? '탭 깊이 (관통)' : '탭 끝 깊이 (mm)', u.num(sp.tapDepth, set(v => { sp.tapDepth = v; }), sp.thru ? 'disabled' : '')) + '</div>';
-      h += '<div class="opinfo">피치 <b>' + sp.tapP + '</b> · 기초 드릴 추천 <b>Ø' + (rec ? rec.dia : '-') + '</b> · 탭 이송 F = S × ' + sp.tapP + ' (자동)' + (sp.thru ? '' : '<br>탭 끝 기준 깊이입니다. 도면의 완전 나사 깊이가 기준이면 2~3피치(' + C.r3(2 * sp.tapP) + '~' + C.r3(3 * sp.tapP) + 'mm)를 더해 입력하세요.') + '</div>';
-      h += '<div class="row">' + u.check(sp.thru, set(v => { sp.thru = v; }), '관통') + u.check(sp.center, set(v => { sp.center = v; }), '센터 드릴') +
-        u.select(sp.tapMode, [['auto', '탭 방식: 자동' + (m.rigidTap ? '(리지드)' : '(일반)')], ['rigid', '리지드 탭 (M29)'], ['tap', '일반 탭 (홀더)']], set(v => { sp.tapMode = v; })) + '</div>';
+      basic = '<div class="grid2">' + u.fld('나사 규격', u.select(cur, opts, v => mutate(() => { const a = v.split('|'); sp.tapD = parseFloat(a[0]); sp.tapP = parseFloat(a[1]); }))) +
+        u.fld(sp.thru ? '탭 깊이 (관통)' : '탭 끝 깊이 (mm)', u.num(sp.tapDepth, set(v => { sp.tapDepth = v; }), sp.thru ? 'disabled' : ''), '탭 끝 기준 깊이입니다. 도면의 완전 나사 깊이가 기준이면 2~3피치(' + C.r3(2 * sp.tapP) + '~' + C.r3(3 * sp.tapP) + 'mm)를 더해 입력하세요.') + thruFld(u, sp, set) + '</div>';
+      opt = center + '<div class="grid2">' + u.fld('탭 방식', u.select(sp.tapMode, [['auto', '자동' + (m.rigidTap ? ' (리지드)' : ' (일반)')], ['rigid', '리지드 탭 (M29)'], ['tap', '일반 탭 (홀더)']], set(v => { sp.tapMode = v; }))) + cycSel + '</div>';
+      note = '피치 <b>' + sp.tapP + '</b> · 기초 드릴 추천 <b>Ø' + (rec ? rec.dia : '-') + '</b> · 탭 이송 F = S × ' + sp.tapP + ' (자동)';
     } else if (sp.kind === 'ream' || sp.kind === 'bore') {
-      // [V0.6] 리머(H7)·정밀 보링
       const ft = [...new Set(m.tools.filter(t => t.type === (sp.kind === 'ream' ? 'reamer' : 'boring')).map(t => t.dia))].sort((a, b) => a - b);
-      h += '<div class="grid2">' + u.fld(sp.kind === 'ream' ? '완성 지름 Ø (H7 등)' : '보링 지름 Ø (mm)', u.num(sp.dia, set(v => { sp.dia = v; }))) +
-        u.fld(sp.thru ? '깊이 (관통)' : '깊이 (완성 지름 부분, mm)', u.num(sp.depth, set(v => { sp.depth = v; }), sp.thru ? 'disabled' : '')) + '</div>';
-      if (ft.length) h += '<div class="chips"><small>보유 ' + (sp.kind === 'ream' ? '리머' : '보링 바') + ':</small>' + ft.map(d => u.btn('Ø' + d, () => mutate(() => { sp.dia = d; }), 'sm chip' + (d === sp.dia ? ' on' : ''))).join('') + '</div>';
-      h += '<div class="row">' + u.check(sp.thru, set(v => { sp.thru = v; }), '관통') + u.check(sp.center, set(v => { sp.center = v; }), '센터 드릴') + (sp.kind === 'bore' && m.g76 !== false ? u.fld('G76 날 빼기 Q (mm)', u.num(sp.q, set(v => { sp.q = v; }), 'style="width:80px"')) : '') + '</div>';
-      h += '<div class="opinfo">' + (sp.kind === 'ream'
-        ? '순서: 센터 → 밑구멍 드릴(지름 −0.2~0.4) → <b>리머 G85</b> (이송으로 들어가고 이송으로 나옴 — 벽 긁힘 없음). 첫 구멍은 핀 게이지로 확인하세요.'
-        : '순서: 센터 → 밑구멍(드릴, 없으면 원형 포켓) → <b>' + (m.g76 !== false ? 'G76 정밀 보링</b> (바닥에서 주축 정위치 후 Q 만큼 날을 떼고 나옴). 떼는 방향은 장비 파라미터와 보링 바 날 방향을 맞추세요.' : 'G86 보링</b> (장비 G76 미지원 — 복귀 자국 주의)')) + '</div>';
+      basic = '<div class="grid2">' + u.fld(sp.kind === 'ream' ? '완성 지름 Ø (H7 등)' : '보링 지름 Ø (mm)', u.num(sp.dia, set(v => { sp.dia = v; }))) +
+        u.fld(sp.thru ? '깊이 (관통)' : '깊이 (완성 지름 부분, mm)', u.num(sp.depth, set(v => { sp.depth = v; }), sp.thru ? 'disabled' : '')) + thruFld(u, sp, set) + '</div>';
+      if (ft.length) basic += '<div class="chips"><small>보유 ' + (sp.kind === 'ream' ? '리머' : '보링 바') + '</small>' + ft.map(d => u.btn('Ø' + d, () => mutate(() => { sp.dia = d; }), 'sm chip' + (d === sp.dia ? ' on' : ''))).join('') + '</div>';
+      opt = center + '<div class="grid2">' + (sp.kind === 'bore' && m.g76 !== false ? u.fld('G76 날 빼기 Q (mm)', u.num(sp.q, set(v => { sp.q = v; }))) : '') + cycSel + '</div>';
+      note = sp.kind === 'ream'
+        ? '순서: 센터 → 밑구멍 드릴(지름 −0.2~0.4) → <b>리머 G85</b> (이송으로 들어가고 이송으로 나옴). 첫 구멍은 핀 게이지로 확인하세요.'
+        : '순서: 센터 → 밑구멍(드릴, 없으면 원형 포켓) → <b>' + (m.g76 !== false ? 'G76 정밀 보링</b>. 날을 떼는 방향은 장비 파라미터와 보링 바 날 방향을 맞추세요.' : 'G86 보링</b> (장비 G76 미지원 — 복귀 자국 주의)');
     } else {
       const drills = [...new Set(m.tools.filter(t => t.type === 'drill').map(t => t.dia))].sort((a, b) => a - b);
-      h += '<div class="grid2">' + u.fld('구멍 지름 Ø (mm)', u.num(sp.dia, set(v => { sp.dia = v; }))) +
-        u.fld(sp.thru ? '깊이 (관통)' : '깊이 (mm)', u.num(sp.depth, set(v => { sp.depth = v; }), sp.thru ? 'disabled' : '')) + '</div>';
-      if (drills.length) h += '<div class="chips"><small>보유 드릴:</small>' + drills.map(d => u.btn('Ø' + d, () => mutate(() => { sp.dia = d; }), 'sm chip' + (d === sp.dia ? ' on' : ''))).join('') + '</div>';
-      h += '<div class="row">' + u.check(sp.thru, set(v => { sp.thru = v; }), '관통') + u.check(sp.center, set(v => { sp.center = v; }), '센터 드릴') +
-        (sp.thru ? '' : u.select(sp.depthMode, [['full', '깊이 = 유효 깊이(직경부)'], ['tip', '깊이 = 드릴 끝']], set(v => { sp.depthMode = v; }))) + '</div>';
+      basic = '<div class="grid2">' + u.fld('구멍 지름 Ø (mm)', u.num(sp.dia, set(v => { sp.dia = v; }))) +
+        u.fld(sp.thru ? '깊이 (관통)' : '깊이 (mm)', u.num(sp.depth, set(v => { sp.depth = v; }), sp.thru ? 'disabled' : '')) + thruFld(u, sp, set) + '</div>';
+      if (drills.length) basic += '<div class="chips"><small>보유 드릴</small>' + drills.map(d => u.btn('Ø' + d, () => mutate(() => { sp.dia = d; }), 'sm chip' + (d === sp.dia ? ' on' : ''))).join('') + '</div>';
+      opt = center + '<div class="grid2">' + (sp.thru ? '' : u.fld('깊이 기준', u.select(sp.depthMode, [['full', '유효 깊이 (직경부)'], ['tip', '드릴 끝']], set(v => { sp.depthMode = v; })))) + cycSel + '</div>';
     }
-    h += '<div class="row">' + u.select(sp.cycle, [['auto', (sp.kind === 'ream' || sp.kind === 'bore' ? '밑구멍 ' : '') + '드릴 사이클: 자동 (깊이/지름 비율)'], ['drill', 'G81 일반'], ['peck', 'G73 고속 펙 (칩 끊기)'], ['deep', 'G83 심공 (완전 후퇴)']], set(v => { sp.cycle = v; })) +
-      (sp.thru ? u.fld('관통 여유(mm)', u.num(sp.brk, set(v => { sp.brk = v; }), 'style="width:80px"')) : '') + '</div>';
-    h += genBlock(u, g, C.planHoleSpec(sp, m, P.stock)) + '</div>';
-    return h;
+    if (note) opt += '<div class="opinfo">' + note + '</div>';
+    const optSum = (sp.center ? '센터 드릴' : '센터 없음') + (sp.kind === 'tap' ? ' · ' + (sp.tapMode === 'auto' ? (m.rigidTap ? '리지드' : '일반 탭') : sp.tapMode === 'rigid' ? '리지드' : '일반 탭') : '') + ' · 사이클 ' + (sp.cycle === 'auto' ? '자동' : C.OP_TYPES[sp.cycle].code);
+    return { basic, opt, optSum, adv: '', advSum: '', res: C.planHoleSpec(sp, m, P.stock) };
   }
-  // 포켓 간편 입력
+  // 포켓
   function pocketForm(u, g) {
     const sp = g.spec, m = machine();
     const set = fn => v => mutate(() => { fn(v); });
-    let h = '<div class="card wiz">' + shapeFields(u, sp, '포켓');
-    h += '<div class="grid2" style="margin-top:8px">' + u.fld(sp.thru ? '깊이 (관통: 두께 + 여유)' : '깊이 (mm)', u.num(sp.depth, set(v => { sp.depth = v; }), sp.thru ? 'disabled' : '')) +
-      '<div class="fld"><span>관통</span><div class="row">' + u.check(sp.thru, set(v => { sp.thru = v; }), '끝까지 뚫기') + (sp.thru ? u.num(sp.brk, set(v => { sp.brk = v; }), 'style="width:70px" title="관통 여유 (mm, 하부 여유 이하)"') : '') + '</div></div></div>';
-    const ems = m.tools.filter(t => t.type === 'endmill').sort((a, b) => a.no - b.no);
-    h += '<div class="grid2" style="margin-top:8px">' + u.fld('공구', u.select(sp.toolNo, [[0, '자동 선택 (권장)']].concat(ems.map(t => [t.no, C.toolLabel(t)])), set(v => { sp.toolNo = parseInt(v, 10) || 0; }))) +
-      u.fld('진입 방식', u.select(sp.entry || 'helix', [['helix', '헬리컬 (돌면서 천천히, 권장)'], ['ramp', '램프 (경로 따라 3° 경사)'], ['drill', '선가공 구멍 (드릴 후 수직 진입)']], set(v => { sp.entry = v; })), sp.entry === 'drill' ? '진입점에 엔드밀 지름 이상 드릴 구멍을 먼저 뚫습니다 (센터 → 드릴 자동 추가)' : sp.entry === 'ramp' ? '좁은 포켓에서 헬리컬 공간이 없을 때' : '깎이지 않은 소재로 곧장 내려가지 않습니다') + '</div>';
-    // [V0.5] 가공 단계: 황삭 → 중삭 → 정삭(바닥·측벽 따로 또는 한 번에)
-    const step = (on, label, sub) => '<span class="stg' + (on ? ' on' : '') + '">' + label + (sub ? '<small>' + sub + '</small>' : '') + '</span>';
     const prof = sp.draft > 0 || sp.topR > 0 || sp.floorR > 0;
-    h += '<div class="fld" style="margin-top:8px"><span>가공 단계</span><div class="stages">' +
-      step(sp.rough, '① 황삭', '벽 ' + sp.allowWall + ' · 바닥 ' + sp.allowFloor + ' 남김') + '<i class="arr">→</i>' +
-      step(sp.semi, '② 중삭', sp.semi ? (sp.semiStep > 0 ? sp.semiStep + 'mm씩' : '한 번에') + ' · 벽 ' + sp.semiWall + ' · 바닥 ' + sp.semiFloor : '안 함') + '<i class="arr">→</i>' +
-      step(sp.finish, '③ 정삭', !sp.finish ? '안 함' : prof ? '바닥 + 측벽 형상(구배·R)' : sp.finishMode === 'split' ? [sp.finishFloor ? '바닥' : '', sp.finishWall ? '측벽' + (sp.wallStep > 0 ? '(' + sp.wallStep + 'mm씩)' : '') : ''].filter(Boolean).join(' → ') : '바닥+측벽 한 번에') + '</div>' +
-      '<div class="row wrap">' + u.check(sp.rough, set(v => { sp.rough = v; }), '황삭') + u.check(sp.semi, set(v => { sp.semi = v; }), '중삭') + u.check(sp.finish, set(v => { sp.finish = v; }), '정삭') +
-      (sp.finish && !prof ? u.select(sp.finishMode || 'both', [['split', '바닥·측벽 따로'], ['both', '바닥+측벽 한 번에']], set(v => { sp.finishMode = v; })) : '') +
-      (sp.finish && !prof && sp.finishMode === 'split' ? u.check(sp.finishFloor !== false, set(v => { sp.finishFloor = v; }), '바닥 정삭') + u.check(sp.finishWall !== false, set(v => { sp.finishWall = v; }), '측벽 정삭') : '') + '</div></div>';
-    h += '<div class="opinfo">절삭 방향: 하향(안쪽 벽 반시계·섬 시계) · 안쪽 → 바깥' + (sp.shape === 'poly' ? ' · 섬(남길 부분) 자동 회피' : '') + ' · 진입: ' + (sp.entry === 'drill' ? '<b>선가공 구멍</b>' : sp.entry === 'ramp' ? '<b>램프 3°</b>' : m.helical === false ? '<b>중심 수직</b> (장비 헬리컬 미지원)' : '<b>헬리컬</b> (반경 ≥ 공구 반경 25%)') + '</div>';
-    h += sec('pk-' + g.id, '절삭 설정 <small>(경로 간격 · 1회 절입 · 남김 여유)</small>', false) + '<div class="grid2">' +
+    const basic = shapeFields(u, sp, '포켓') + '<div class="grid2" style="margin-top:8px">' + u.fld(sp.thru ? '깊이 (관통: 두께 + 여유)' : '깊이 (mm)', u.num(sp.depth, set(v => { sp.depth = v; }), sp.thru ? 'disabled' : '')) + thruFld(u, sp, set) + '</div>';
+    const ems = m.tools.filter(t => t.type === 'endmill').sort((a, b) => a.no - b.no);
+    const entryTxt = sp.entry === 'drill' ? '선가공 구멍' : sp.entry === 'ramp' ? '램프' : m.helical === false ? '중심 수직' : '헬리컬';
+    // 가공 단계: 칩을 누르면 켜고 끔 (황삭 → 중삭 → 정삭)
+    const stg = (on, label, sub, fn, key) => u.btn(label + '<small>' + sub + '</small>', fn, 'stg' + (on ? ' on' : ''), 'role="switch" aria-checked="' + !!on + '" data-stg="' + key + '" title="눌러서 켜기/끄기"');
+    const finTxt = !sp.finish ? '안 함' : prof ? '바닥 + 측벽 형상' : sp.finishMode === 'split' ? [sp.finishFloor !== false ? '바닥' : '', sp.finishWall !== false ? '측벽' : ''].filter(Boolean).join(' → ') || '선택 없음' : '한 번에';
+    let opt = '<div class="grid2">' + u.fld('공구', u.select(sp.toolNo, [[0, '자동 선택 (권장)']].concat(ems.map(t => [t.no, C.toolLabel(t)])), set(v => { sp.toolNo = parseInt(v, 10) || 0; }))) +
+      u.fld('진입 방식', u.select(sp.entry || 'helix', [['helix', '헬리컬 (돌면서 천천히, 권장)'], ['ramp', '램프 (경로 따라 3° 경사)'], ['drill', '선가공 구멍 (드릴 후 수직 진입)']], set(v => { sp.entry = v; })), sp.entry === 'drill' ? '진입점에 드릴 구멍을 먼저 뚫습니다 (센터 → 드릴 자동 추가)' : sp.entry === 'ramp' ? '좁은 포켓에서 헬리컬 공간이 없을 때' : '깎이지 않은 소재로 곧장 내려가지 않습니다') + '</div>' +
+      '<div class="fld" style="margin-top:10px"><span>가공 단계 <small>(눌러서 켜고 끔)</small></span><div class="stages">' +
+      stg(sp.rough, '① 황삭', '벽 ' + sp.allowWall + ' · 바닥 ' + sp.allowFloor + ' 남김', () => mutate(() => { sp.rough = !sp.rough; }), 'rough') + '<i class="arr">→</i>' +
+      stg(sp.semi, '② 중삭', sp.semi ? (sp.semiStep > 0 ? sp.semiStep + 'mm씩' : '한 번에') : '안 함', () => mutate(() => { sp.semi = !sp.semi; }), 'semi') + '<i class="arr">→</i>' +
+      stg(sp.finish, '③ 정삭', finTxt, () => mutate(() => { sp.finish = !sp.finish; }), 'finish') + '</div>' +
+      (sp.finish && !prof ? '<div class="row wrap">' + u.select(sp.finishMode || 'both', [['split', '정삭: 바닥·측벽 따로'], ['both', '정삭: 바닥+측벽 한 번에']], set(v => { sp.finishMode = v; })) +
+        (sp.finishMode === 'split' ? u.check(sp.finishFloor !== false, set(v => { sp.finishFloor = v; }), '바닥 정삭') + u.check(sp.finishWall !== false, set(v => { sp.finishWall = v; }), '측벽 정삭') : '') + '</div>' : '') + '</div>';
+    const optSum = (sp.toolNo ? 'T' + sp.toolNo : '공구 자동') + ' · ' + entryTxt + ' · ' + [sp.rough ? '황삭' : '', sp.semi ? '중삭' : '', sp.finish ? '정삭' : ''].filter(Boolean).join('→');
+    let adv = '<h4>절삭 설정</h4><div class="grid2">' +
       u.fld('경로 간격 (공구 지름 %)', u.num(sp.stepover, set(v => { sp.stepover = v; }), 'min="10" max="' + C.STEPOVER_MAX + '"'), '10~' + C.STEPOVER_MAX + '%. 클수록 빠르지만 공구 부하가 큽니다 (권장 40~50%)') +
       u.fld('1회 절입 (mm, 0=자동)', u.num(sp.stepdown, set(v => { sp.stepdown = v; })), '0 이면 재질·공구 지름으로 자동 계산') +
       u.fld('황삭 측벽 남김 (mm)', u.num(sp.allowWall, set(v => { sp.allowWall = v; })), '황삭 뒤 남길 벽 두께 (예 0.2)') +
@@ -850,21 +899,20 @@
       (sp.semi ? '<div class="grid3">' + u.fld('중삭 단 깊이 (mm)', u.num(sp.semiStep, set(v => { sp.semiStep = Math.max(0, v); })), '0 = 한 번에 (전체 높이), 0.5·1 = 그만큼씩 내려가며') + u.fld('중삭 측벽 남김', u.num(sp.semiWall, set(v => { sp.semiWall = v; }))) + u.fld('중삭 바닥 남김', u.num(sp.semiFloor, set(v => { sp.semiFloor = v; }))) + '</div>' : '') +
       (sp.finish && !prof && sp.finishMode === 'split' && sp.finishWall !== false ? '<div class="grid2">' + u.fld('측벽 정삭 단 깊이 (mm)', u.num(sp.wallStep, set(v => { sp.wallStep = Math.max(0, v); })), '0 = 한 번에, 깊은 포켓은 2~5mm 씩') + '<span></span></div>' : '') +
       (sp.shape === 'rect' ? u.check(!!sp.relief, set(v => { sp.relief = v; }), '모서리 릴리프 구멍 (코너 R 이 공구보다 작을 때 네 모서리를 드릴로 뚫어 직각 확보)') : '') +
-      (sp.stepover > 50 ? '<div class="note warn">⚠ 경로 간격 ' + sp.stepover + '% — 공구 부하가 커집니다. 일반적으로 40~50% 를 권장합니다.</div>' : '') + '</details>';
-    // [V0.5] 측벽 형상: 구배 · 입구 R · 바닥 R
-    h += sec('pkp-' + g.id, '측벽 형상 <small>(구배 · 입구 R · 바닥 R)</small>', prof) + '<div class="grid2">' +
+      (sp.stepover > 50 ? '<div class="note warn">⚠ 경로 간격 ' + sp.stepover + '% — 공구 부하가 커집니다. 일반적으로 40~50% 를 권장합니다.</div>' : '');
+    adv += '<h4>측벽 형상 <small>(구배 · 입구 R · 바닥 R)</small></h4><div class="grid2">' +
       u.fld('구배 (°)', u.num(sp.draft, set(v => { sp.draft = Math.max(0, Math.min(88.9, v)); }), 'min="0" max="89" step="0.5"'), '0 = 수직 벽. 입구가 도면 치수, 아래로 갈수록 좁아짐') +
       u.fld('계단 높이 (mm)', u.num(sp.profStep, set(v => { sp.profStep = v; }), 'step="0.05"'), '평 엔드밀로 이 높이씩 계단 근사 (작을수록 매끈, 느림)') +
-      '<div class="fld"><span>입구 R (윗 모서리)</span><div class="row">' + u.check(sp.topR > 0, set(v => { sp.topR = v ? (sp._topR || 1) : 0; if (!v) sp._topR = sp.topR || 1; }), '사용') + (sp.topR > 0 ? u.num(sp.topR, set(v => { sp.topR = Math.max(0, v); }), 'style="width:80px"') : '') + '</div></div>' +
-      '<div class="fld"><span>바닥 R (아래 모서리)</span><div class="row">' + u.check(sp.floorR > 0, set(v => { sp.floorR = v ? (sp._floorR || 1) : 0; }), '사용') + (sp.floorR > 0 ? u.num(sp.floorR, set(v => { sp.floorR = Math.max(0, v); }), 'style="width:80px"') : '') + '</div></div></div>' +
-      (prof ? '<div class="opinfo">구배·R 은 황삭·바닥 정삭이 벽에서 가장 안쪽(' + uf(C.pocketProfInset(sp, sp.thru ? P.stock.sz + sp.brk : sp.depth)) + 'mm)만큼 떨어져 가공하고, 마지막 <b>측벽 형상</b> 공정이 위에서부터 계단식으로 깎습니다. 단면은 2D 화면의 [단면] 으로 확인하세요.</div>' : '') + '</details>';
-    h += genBlock(u, g, C.planPocketSpec(sp, m, P.stock)) + '</div>';
-    return h;
+      '<div class="fld"><span>입구 R (윗 모서리)</span><div class="row">' + u.check(sp.topR > 0, set(v => { sp.topR = v ? 1 : 0; }), '사용') + (sp.topR > 0 ? u.num(sp.topR, set(v => { sp.topR = Math.max(0, v); }), 'style="width:80px"') : '') + '</div></div>' +
+      '<div class="fld"><span>바닥 R (아래 모서리)</span><div class="row">' + u.check(sp.floorR > 0, set(v => { sp.floorR = v ? 1 : 0; }), '사용') + (sp.floorR > 0 ? u.num(sp.floorR, set(v => { sp.floorR = Math.max(0, v); }), 'style="width:80px"') : '') + '</div></div></div>' +
+      (prof ? '<div class="opinfo">구배·R 은 마지막 <b>측벽 형상</b> 공정이 위에서부터 계단식으로 깎습니다 (가장 안쪽 ' + uf(C.pocketProfInset(sp, sp.thru ? P.stock.sz + sp.brk : sp.depth)) + 'mm). 2D 화면의 [단면도]로 확인하세요.</div>' : '');
+    const advSum = [sp.stepover + '%', prof ? '구배 ' + sp.draft + '° R' + sp.topR + '/' + sp.floorR : '', sp.relief ? '릴리프' : ''].filter(Boolean).join(' · ');
+    return { basic, opt, optSum, adv, advSum, res: C.planPocketSpec(sp, m, P.stock) };
   }
   // 형상 입력 (사각·원형·도면 형상) — 포켓·윤곽·모따기 공용
   function shapeFields(u, sp, what) {
     const set = fn => v => mutate(() => { fn(v); });
-    const shapes = [['rect', '사각 (코너 R)'], ['circle', '원형'], ['ngon', '다각 (육각·오각…)']].concat(sp.poly ? [['poly', '도면 형상']] : []);
+    const shapes = [['rect', '사각'], ['circle', '원형'], ['ngon', '다각형']].concat(sp.poly ? [['poly', '도면 형상']] : []);
     let h = '<div class="seg" role="radiogroup" aria-label="' + what + ' 모양">' + shapes.map(x => u.btn(x[1], () => mutate(() => { sp.shape = x[0]; }), sp.shape === x[0] ? 'on' : '', 'role="radio" aria-checked="' + (sp.shape === x[0]) + '"')).join('') + '</div>';
     if (sp.shape === 'circle') h += '<div class="grid2" style="margin-top:8px">' + u.fld('지름 Ø (mm)', u.num(sp.dia, set(v => { sp.dia = v; }))) + '<span></span></div>';
     else if (sp.shape === 'ngon') {
@@ -881,39 +929,40 @@
     return h;
   }
   const toolSel = (u, sp, types, set) => { const m = machine(), ts = m.tools.filter(t => types.includes(t.type)).sort((a, b) => a.no - b.no); return u.fld('공구', u.select(sp.toolNo, [[0, '자동 선택 (권장)']].concat(ts.map(t => [t.no, C.toolLabel(t)])), set(v => { sp.toolNo = parseInt(v, 10) || 0; }))); };
-  // 윤곽 간편 입력
+  // 윤곽
   function contourForm(u, g) {
     const sp = g.spec, m = machine(), set = fn => v => mutate(() => { fn(v); });
-    let h = '<div class="card wiz"><div class="seg" role="radiogroup" aria-label="윤곽 방향">' + [['out', '바깥 윤곽 (부품 외곽)'], ['in', '안쪽 윤곽 (구멍·창)']].map(x => u.btn(x[1], () => mutate(() => { sp.side = x[0]; }), sp.side === x[0] ? 'on' : '', 'role="radio" aria-checked="' + (sp.side === x[0]) + '"')).join('') + '</div><div style="height:8px"></div>' + shapeFields(u, sp, '윤곽');
-    h += '<div class="grid2" style="margin-top:8px">' + u.fld(sp.thru ? '깊이 (관통: 두께 + 여유)' : '깊이 (mm)', u.num(sp.depth, set(v => { sp.depth = v; }), sp.thru ? 'disabled' : '')) +
-      '<div class="fld"><span>관통 (잘라내기)</span><div class="row">' + u.check(sp.thru, set(v => { sp.thru = v; }), '끝까지') + (sp.thru ? u.num(sp.brk, set(v => { sp.brk = v; }), 'style="width:70px" title="관통 여유 (mm, 하부 여유 이하)"') : '') + '</div></div>' +
-      toolSel(u, sp, ['endmill'], set) + '<div class="fld"><span>가공</span><div class="row">' + u.check(sp.rough, set(v => { sp.rough = v; }), '황삭') + u.check(sp.finish, set(v => { sp.finish = v; }), '정삭') + '</div></div></div>';
-    h += '<div class="opinfo">방향: <b>' + (sp.side === 'in' ? '반시계' : '시계') + '</b> (하향 절삭) · 진입: 윤곽 ' + (sp.side === 'in' ? '안쪽' : '바깥') + ' 헬리컬 → 직선 접근 · 공구 반경 보정은 CAM 이 계산(G41/G42 미사용)</div>';
-    h += sec('ct-' + g.id, '절삭 설정 <small>(측면 제거 폭 · 1회 절입 · 남김 여유)</small>', sp.sideWidth > 0) + '<div class="grid2">' +
+    const basic = '<div class="seg" role="radiogroup" aria-label="윤곽 방향">' + [['out', '바깥 윤곽 (부품 외곽)'], ['in', '안쪽 윤곽 (구멍·창)']].map(x => u.btn(x[1], () => mutate(() => { sp.side = x[0]; }), sp.side === x[0] ? 'on' : '', 'role="radio" aria-checked="' + (sp.side === x[0]) + '"')).join('') + '</div><div style="height:8px"></div>' + shapeFields(u, sp, '윤곽') +
+      '<div class="grid2" style="margin-top:8px">' + u.fld(sp.thru ? '깊이 (관통: 두께 + 여유)' : '깊이 (mm)', u.num(sp.depth, set(v => { sp.depth = v; }), sp.thru ? 'disabled' : '')) + thruFld(u, sp, set, '관통 (잘라내기)') + '</div>';
+    const opt = '<div class="grid2">' + toolSel(u, sp, ['endmill'], set) + '<div class="fld"><span>가공</span><div class="row">' + u.check(sp.rough, set(v => { sp.rough = v; }), '황삭') + u.check(sp.finish, set(v => { sp.finish = v; }), '정삭') + '</div></div></div>' +
+      '<div class="opinfo">방향: <b>' + (sp.side === 'in' ? '반시계' : '시계') + '</b> (하향 절삭) · 진입: 윤곽 ' + (sp.side === 'in' ? '안쪽' : '바깥') + ' 헬리컬 → 직선 접근 · 공구 반경 보정은 CAM 이 계산(G41/G42 미사용)</div>';
+    const adv = '<h4>절삭 설정</h4><div class="grid2">' +
       u.fld('측면 제거 폭 (mm)', u.num(sp.sideWidth, set(v => { sp.sideWidth = v; })), '부품 바깥(안쪽)으로 남은 소재 폭. 0 이면 한 바퀴만') +
       u.fld('경로 간격 (공구 지름 %)', u.num(sp.stepover, set(v => { sp.stepover = v; }))) +
       u.fld('1회 절입 (mm, 0=자동)', u.num(sp.stepdown, set(v => { sp.stepdown = v; }))) +
-      u.fld('측벽 남김 여유 (mm)', u.num(sp.allowWall, set(v => { sp.allowWall = v; }))) + '</div></details>';
-    return h + genBlock(u, g, C.planMillSpec(sp, m, P.stock)) + '</div>';
+      u.fld('측벽 남김 여유 (mm)', u.num(sp.allowWall, set(v => { sp.allowWall = v; }))) + '</div>';
+    return { basic, opt, optSum: (sp.toolNo ? 'T' + sp.toolNo : '공구 자동') + ' · ' + [sp.rough ? '황삭' : '', sp.finish ? '정삭' : ''].filter(Boolean).join('→'), adv, advSum: sp.sideWidth > 0 ? '측면 ' + sp.sideWidth + 'mm 제거' : '한 바퀴', res: C.planMillSpec(sp, m, P.stock) };
   }
-  // 평면 간편 입력
+  // 평면
   function faceForm(u, g) {
     const sp = g.spec, m = machine(), set = fn => v => mutate(() => { fn(v); });
-    let h = '<div class="card wiz"><div class="grid2">' + u.fld('깊이 (깎을 두께, mm)', u.num(sp.depth, set(v => { sp.depth = v; }))) + toolSel(u, sp, ['facemill', 'endmill'], set) +
-      u.fld('줄 간격 (공구 지름 %)', u.num(sp.stepover, set(v => { sp.stepover = v; })), '페이스밀 60~75% 권장') + u.fld('1회 절입 (mm, 0=자동)', u.num(sp.stepdown, set(v => { sp.stepdown = v; }))) +
+    const basic = '<div class="grid2">' + u.fld('깊이 (깎을 두께, mm)', u.num(sp.depth, set(v => { sp.depth = v; }))) + '<span></span></div>' +
+      (P.settings.depthRef === 'auto' ? '<div class="opinfo">평면 후 윗면은 Z' + uf(-sp.depth) + '. 다른 가공은 <b>이 면에서부터</b> 깊이를 잽니다 (자동).</div>'
+        : '<div class="note warn">평면 가공 후 윗면은 Z' + uf(-sp.depth) + ' 입니다. 다른 가공의 깊이는 <b>원래 윗면(Z0)</b> 기준이므로 평면 깊이를 더해서 입력하세요.</div>');
+    const opt = '<div class="grid2">' + toolSel(u, sp, ['facemill', 'endmill'], set) + '<span></span></div>';
+    const adv = '<h4>절삭 설정</h4><div class="grid2">' + u.fld('줄 간격 (공구 지름 %)', u.num(sp.stepover, set(v => { sp.stepover = v; })), '페이스밀 60~75% 권장') + u.fld('1회 절입 (mm, 0=자동)', u.num(sp.stepdown, set(v => { sp.stepdown = v; }))) +
       u.fld('가장자리 밖 여유 (mm)', u.num(sp.margin, set(v => { sp.margin = v; })), '줄 끝에서 공구가 소재 밖으로 완전히 빠지는 거리') + '</div>';
-    h += P.settings.depthRef === 'auto' ? '<div class="note info">평면 가공 후 윗면은 Z' + uf(-sp.depth) + ' 입니다. 평면 안의 다른 가공은 <b>평면 바닥에서부터</b> 깊이를 잽니다 (자동, [원점·NC 출력]의 깊이 기준).</div>'
-      : '<div class="note warn">평면 가공 후 윗면은 Z' + uf(-sp.depth) + ' 입니다. 다른 가공의 깊이는 <b>원래 윗면(Z0)</b> 기준이므로 평면 깊이를 더해서 입력하세요.</div>';
-    return h + genBlock(u, g, C.planMillSpec(sp, m, P.stock)) + '</div>';
+    return { basic, opt, optSum: sp.toolNo ? 'T' + sp.toolNo : '공구 자동', adv, advSum: '줄 간격 ' + sp.stepover + '%', res: C.planMillSpec(sp, m, P.stock) };
   }
-  // 모따기 간편 입력
+  // 모따기
   function chamferForm(u, g) {
     const sp = g.spec, m = machine(), set = fn => v => mutate(() => { fn(v); });
-    let h = '<div class="card wiz"><div class="seg" role="radiogroup" aria-label="모따기 위치">' + [['out', '바깥 모서리'], ['in', '안쪽 모서리 (포켓·구멍 입구)']].map(x => u.btn(x[1], () => mutate(() => { sp.side = x[0]; }), sp.side === x[0] ? 'on' : '', 'role="radio" aria-checked="' + (sp.side === x[0]) + '"')).join('') + '</div><div style="height:8px"></div>' + shapeFields(u, sp, '모따기');
-    h += '<div class="grid2" style="margin-top:8px">' + u.fld('모따기 폭 C (mm)', u.num(sp.cw, set(v => { sp.cw = v; }))) + toolSel(u, sp, ['chamfer'], set) +
-      u.fld('끝 여유 (mm)', u.num(sp.extra, set(v => { sp.extra = v; })), '공구 끝이 모따기 면보다 더 내려가는 거리 (끝 마모 방지)') + '</div>';
-    h += '<div class="note info">구멍 입구 모따기: 모양 [원형], 지름 = 구멍 지름, [안쪽 모서리]. 위치는 구멍과 같게 (구멍 가공 뒤에 오도록 목록 아래에 두세요).</div>';
-    return h + genBlock(u, g, C.planMillSpec(sp, m, P.stock)) + '</div>';
+    const basic = '<div class="seg" role="radiogroup" aria-label="모따기 위치">' + [['out', '바깥 모서리'], ['in', '안쪽 모서리 (포켓·구멍 입구)']].map(x => u.btn(x[1], () => mutate(() => { sp.side = x[0]; }), sp.side === x[0] ? 'on' : '', 'role="radio" aria-checked="' + (sp.side === x[0]) + '"')).join('') + '</div><div style="height:8px"></div>' + shapeFields(u, sp, '모따기') +
+      '<div class="grid2" style="margin-top:8px">' + u.fld('모따기 폭 C (mm)', u.num(sp.cw, set(v => { sp.cw = v; }))) + '<span></span></div>';
+    const opt = '<div class="grid2">' + toolSel(u, sp, ['chamfer'], set) + '<span></span></div>' +
+      '<div class="opinfo">구멍 입구 모따기: 모양 [원형], 지름 = 구멍 지름, [안쪽 모서리]. 위치는 구멍과 같게 두고, 구멍 가공 뒤에 오도록 목록 아래에 두세요.</div>';
+    const adv = '<h4>절삭 설정</h4><div class="grid2">' + u.fld('끝 여유 (mm)', u.num(sp.extra, set(v => { sp.extra = v; })), '공구 끝이 모따기 면보다 더 내려가는 거리 (끝 마모 방지)') + '<span></span></div>';
+    return { basic, opt, optSum: sp.toolNo ? 'T' + sp.toolNo : '공구 자동', adv, advSum: '끝 여유 ' + sp.extra, res: C.planMillSpec(sp, m, P.stock) };
   }
   // 직접 구성 (공정 묶음·공정 카드)
   function customForm(u, g) {
@@ -1370,41 +1419,43 @@
 
   /* ---------------- 가운데: 2D/3D 도구 ---------------- */
   function setVMode(v) { if (S.vmode === v) return; if (v === '2d' && V3 && V3.ok) V3.pause(); S.vmode = v; if (mobile()) S.mpanel = 'view'; renderAll(); }
+  // [V0.7] 자주 쓰는 도구만 한 줄에, 나머지는 ⋯ 안에 (설정의 [모두 펼쳐 보기]를 켜면 예전처럼 모두 밖에)
+  const popMenu = (key, label, title, body) => '<details class="pop" data-sec="' + key + '"' + (S.openSec[key] ? ' open' : '') + '><summary class="sm" title="' + title + '" aria-label="' + title + '">' + label + '</summary><div class="popbody">' + body + '</div></details>';
   function renderVTools() {
-    const u = U('vt');
+    const u = U('vt'), dense = DENSE();
     if (S.vmode === '3d') {
-      $('#vtools').innerHTML =
-        [['iso', '등각'], ['top', '위'], ['front', '앞'], ['side', '옆']].map(v => u.btn(v[1], () => { if (V3 && V3.ok) V3.view(v[0]); }, 'sm', 'title="' + v[1] + ' 보기"')).join('') +
-        '<span class="sep"></span>' +
-        u.check(S.sim.showPaths, v => { S.sim.showPaths = v; if (V3 && V3.ok) V3.setShowPaths(v); }, '공구 경로') +
-        u.select(S.sim.res, [['l', '해상도: 낮음(빠름)'], ['m', '해상도: 보통'], ['h', '해상도: 높음(느림)']], v => { S.sim.res = v; update3D(true); }, 'title="시뮬레이션 격자 해상도"') +
-        '<span class="sep"></span>' + u.btn('단면 보기', () => { S.sim.section = !S.sim.section; applySection(); renderVTools(); }, 'sm' + (S.sim.section ? ' on' : ''), 'title="선택한 가공의 첫 위치(없으면 소재 중앙)에서 앞쪽을 잘라 구멍·포켓 깊이를 옆에서 봅니다" aria-pressed="' + !!S.sim.section + '"');
+      const views = [['iso', '등각'], ['top', '위'], ['front', '앞'], ['side', '옆']].map(v => u.btn(v[1], () => { if (V3 && V3.ok) V3.view(v[0]); }, 'sm', 'title="' + v[1] + ' 보기"')).join('');
+      const paths = u.check(S.sim.showPaths, v => { S.sim.showPaths = v; if (V3 && V3.ok) V3.setShowPaths(v); }, '공구 경로');
+      const res = u.select(S.sim.res, [['l', '해상도: 낮음(빠름)'], ['m', '해상도: 보통'], ['h', '해상도: 높음(느림)']], v => { S.sim.res = v; update3D(true); }, 'title="시뮬레이션 격자 해상도"');
+      const sect = u.btn('단면 보기', () => { S.sim.section = !S.sim.section; applySection(); renderVTools(); }, 'sm' + (S.sim.section ? ' on' : ''), 'title="선택한 가공의 첫 위치(없으면 소재 중앙)에서 앞쪽을 잘라 구멍·포켓 깊이를 옆에서 봅니다" aria-pressed="' + !!S.sim.section + '"');
+      $('#vtools').innerHTML = dense ? views + '<span class="sep"></span>' + paths + res + '<span class="sep"></span>' + sect
+        : '<span class="bgrp">' + views + '</span><span class="sep"></span>' + sect + popMenu('vpop3', '⋯', '더 보기: 공구 경로 표시 · 해상도', paths + u.fld('시뮬레이션 해상도', res));
       $('#viewHint').textContent = '';
       return;
     }
     const gs = DB.settings.grid;
     const stepOpts = [[0, '전체 경로']].concat((S.V.plan.steps || []).map(s => [s.idx, s.idx + '. ' + C.OP_TYPES[s.type].label + ' T' + s.toolNo + ' (' + s.holes.length + ')']));
     if (S.pathStep > S.V.plan.steps.length) S.pathStep = 0;
-    $('#vtools').innerHTML =
-      u.btn('선택', () => setMode('select'), 'sm' + (S.mode === 'select' ? ' on' : ''), 'title="선택·이동 (빈 곳 드래그 = 화면 이동)"') +
-      u.btn(ico('i-plus') + '위치 추가', () => setMode('add'), 'sm' + (S.mode === 'add' ? ' on' : ''), 'title="클릭/터치한 위치에 구멍·포켓 추가"') +
-      u.btn('클램프', () => setMode('clamp'), 'sm' + (S.mode === 'clamp' ? ' on' : ''), 'title="드래그하여 클램프 영역 추가"') +
-      u.btn(ico('i-x'), () => deleteSelectedHole(), 'sm', 'title="선택한 위치 삭제 (Delete)" aria-label="선택한 위치 삭제" ' + (S.sel.hid ? '' : 'disabled')) +
-      '<span class="sep"></span>' +
-      '<span class="bgrp">' + u.btn('－', () => zoom(0.8), 'sm', 'title="축소" aria-label="축소"') + u.btn('＋', () => zoom(1.25), 'sm', 'title="확대" aria-label="확대"') + u.btn('맞춤', () => { fitView(); drawView(); }, 'sm', 'title="전체 보기"') + '</span>' +
-      '<span class="sep"></span>' +
-      u.btn('단면도', () => toggleSection(), 'sm' + (S.sec.on ? ' on' : ''), 'title="가공 결과를 가로선(A–A)에서 잘라 아래에 보여 줍니다. 선을 끌어 위치를 바꿉니다." aria-pressed="' + !!S.sec.on + '"') +
-      '<span class="sep"></span>' +
-      u.select(S.pathStep, stepOpts, v => { S.pathStep = parseInt(v, 10); drawView(); }, 'title="순서를 표시할 공정" aria-label="순서를 표시할 공정"') +
-      '<details class="pop" data-sec="vpop"' + (S.openSec.vpop ? ' open' : '') + '><summary class="sm">표시 ▾</summary><div class="popbody">' +
-      u.check(gs.show, v => dbChange(() => { gs.show = v; }), '격자') +
+    const bSel = u.btn('선택', () => setMode('select'), 'sm' + (S.mode === 'select' ? ' on' : ''), 'title="선택·이동 (빈 곳 드래그 = 화면 이동)"');
+    const bAdd = u.btn(ico('i-plus') + '위치 추가', () => setMode('add'), 'sm' + (S.mode === 'add' ? ' on' : ''), 'title="클릭/터치한 위치에 구멍·포켓 추가"');
+    const bClamp = u.btn('클램프', () => { S.openSec.vpop = false; setMode(!dense && S.mode === 'clamp' ? 'select' : 'clamp'); }, 'sm' + (S.mode === 'clamp' ? ' on' : ''), 'title="드래그하여 클램프 영역 추가"');
+    const bDel = u.btn(ico('i-x'), () => deleteSelectedHole(), 'sm', 'title="선택한 위치 삭제 (Delete)" aria-label="선택한 위치 삭제" ' + (S.sel.hid ? '' : 'disabled'));
+    const bZoom = u.btn('－', () => zoom(0.8), 'sm', 'title="축소" aria-label="축소"') + u.btn('＋', () => zoom(1.25), 'sm', 'title="확대" aria-label="확대"');
+    const bFit = u.btn('맞춤', () => { fitView(); drawView(); }, 'sm', 'title="전체 보기"');
+    const bSec = u.btn('단면도', () => toggleSection(), 'sm' + (S.sec.on ? ' on' : ''), 'title="가공 결과를 가로선(A–A)에서 잘라 아래에 보여 줍니다. 선을 끌어 위치를 바꿉니다." aria-pressed="' + !!S.sec.on + '"');
+    const selStep = u.select(S.pathStep, stepOpts, v => { S.pathStep = parseInt(v, 10); drawView(); }, 'title="순서를 표시할 공정" aria-label="순서를 표시할 공정"');
+    const disp = u.check(gs.show, v => dbChange(() => { gs.show = v; }), '격자') +
       u.check(gs.snap, v => dbChange(() => { gs.snap = v; }), '스냅 (격자에 맞춤)') +
       u.fld('격자·스냅 간격', u.select(gs.step, [[0.5, '0.5'], [1, '1'], [2, '2'], [2.5, '2.5'], [5, '5'], [10, '10']].map(x => [x[0], x[1] + 'mm']), v => dbChange(() => { gs.step = parseFloat(v); }))) +
       u.check(S.showPath, v => { S.showPath = v; drawView(); }, '가공 순서 경로') +
-      u.check(S.showNC, v => { S.showNC = v; drawView(); }, 'NC 해석 결과 겹쳐 보기') + '</div></details>';
+      u.check(S.showNC, v => { S.showNC = v; drawView(); }, 'NC 해석 결과 겹쳐 보기');
+    $('#vtools').innerHTML = dense
+      ? bSel + bAdd + bClamp + bDel + '<span class="sep"></span><span class="bgrp">' + bZoom + bFit + '</span><span class="sep"></span>' + bSec + '<span class="sep"></span>' + selStep + popMenu('vpop', '표시 ▾', '표시 옵션', disp)
+      : bSel + bAdd + (S.mode === 'clamp' ? bClamp : '') + (S.sel.hid ? bDel : '') + '<span class="sep"></span>' + bFit + bSec +
+        popMenu('vpop', '⋯', '더 보기: 클램프 · 확대/축소 · 공정 순서 · 격자·스냅', '<div class="row">' + (S.mode === 'clamp' ? '' : bClamp) + '<span class="bgrp">' + bZoom + '</span></div>' + u.fld('순서를 표시할 공정', selStep) + disp);
     const g = curGroup();
-    const hint = { select: '클릭=선택 · 드래그=이동 · □ 손잡이 끌기=크기 조절 · 빈 곳 드래그=화면 이동 · 휠/두 손가락=확대', add: g ? '클릭/터치 위치에 [' + g.name + '] 추가' : '먼저 왼쪽 목록에서 가공을 선택하세요', clamp: '드래그하여 클램프 영역 지정 (높이 기본 30mm)' };
-    $('#viewHint').textContent = hint[S.mode];
+    const hint = { select: dense ? '클릭=선택 · 드래그=이동 · □ 손잡이 끌기=크기 조절 · 빈 곳 드래그=화면 이동 · 휠/두 손가락=확대' : '', add: g ? '클릭/터치 위치에 [' + g.name + '] 추가' : '먼저 왼쪽 목록에서 가공을 선택하세요', clamp: '드래그하여 클램프 영역 지정 (높이 기본 30mm) — 끝나면 [선택]' };
+    const vh = $('#viewHint'); vh.textContent = hint[S.mode]; vh.hidden = !hint[S.mode];
   }
   function setMode(m) { S.mode = m; renderVTools(); drawView(); }
   // [V0.5] 2D 단면도 켜기/끄기: 단면선은 선택한 위치(없으면 소재 가운데) 높이에서 시작
@@ -1978,6 +2029,7 @@
     const dark = t === 'dark' || (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
     document.documentElement.dataset.fs = DB.settings.fs || 'm';
+    if (DB.settings.dense) document.documentElement.dataset.dense = '1'; else delete document.documentElement.dataset.dense; // [V0.7] 모두 펼쳐 보기
     if (V3 && V3.ok) V3.setTheme(dark ? 'dark' : 'light');
   }
   // [V0.6] 도움말: 처음 사용 순서 · 용어집(검색) · 안전 수칙 · 단축키
@@ -2017,6 +2069,7 @@
       let h = '<div class="sect"><b>화면</b><div class="grid2">' +
         u.fld('테마', u.select(s.theme, [['system', '시스템 설정 따름'], ['light', '밝게'], ['dark', '어둡게']], v => { s.theme = v; applyTheme(); saveDB(); drawView(); })) +
         u.fld('글자 크기', u.select(s.fs, [['s', '작게'], ['m', '보통'], ['l', '크게']], v => { s.fs = v; applyTheme(); saveDB(); drawView(); })) + '</div>' +
+        u.check(!!s.dense, v => { s.dense = v; S.openSec = {}; S.addOpen = false; S.kindOpen = false; applyTheme(); saveDB(); renderAll(); }, '<b>모두 펼쳐 보기</b> (전문가용) — 접힌 항목과 ⋯ 안의 버튼을 처음부터 모두 표시') +
         '<div class="row" style="margin-top:8px">' + u.btn(ico('i-swap') + (layout().sw ? '패널 기본 자리로' : '왼쪽·오른쪽 패널 바꾸기'), () => { $('#togSwap').click(); closeDlg(); }, 'sm') + u.btn('화면 배치 초기화', () => { DB.settings.layout = null; DB.settings.order = null; saveDB(); location.reload(); }, 'sm', 'title="패널 크기·자리, 머리글 아이콘·탭 순서를 처음대로"') + '</div>' +
         '<small>머리글 아이콘과 화면·서랍 탭은 <b>끌어서</b> 원하는 순서·묶음으로 옮길 수 있습니다. 패널 경계를 끌면 크기가 바뀝니다.</small></div>';
       h += '<div class="sect"><b>소리·언어</b>' + u.check(s.sound, v => { s.sound = v; saveDB(); if (v) beep(); }, 'NC 생성 차단·검증 오류 시 경고음') +
@@ -2262,5 +2315,5 @@
     requestAnimationFrame(() => { S.view.fitted = false; drawView(); });
   }
   window.addEventListener('DOMContentLoaded', init);
-  window.__PCAM_UI__ = { get P() { return P; }, get S() { return S; }, get DB() { return DB; }, get V3() { return V3; }, renderAll, downloadState, setVMode, openDXF, mutate, G };
+  window.__PCAM_UI__ = { setDense(v) { DB.settings.dense = !!v; S.openSec = {}; S.addOpen = false; S.kindOpen = false; applyTheme(); renderAll(); }, get P() { return P; }, get S() { return S; }, get DB() { return DB; }, get V3() { return V3; }, renderAll, downloadState, setVMode, openDXF, mutate, G };
 })();
