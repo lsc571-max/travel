@@ -489,7 +489,7 @@ small{font-size:.87rem}
 .ver{font-size:.8rem}
 .fld>span{font-size:.92rem;color:var(--text2)}
 .fld .fmsg,.opinfo,.genrow small,.chips .chip,.stages .stg small{font-size:.87rem}
-.pbody input:not([type=checkbox]):not([type=color]):not([type=range]),.pbody select{min-height:38px}
+@media (min-width:901px){.pbody input:not([type=checkbox]):not([type=color]):not([type=range]),.pbody select{min-height:38px}}
 .badge.ok,.badge.err,.toast.ok,.toast.err{color:var(--on)}
 
 /* 색 타일 아이콘 (가공 종류 색은 타일 바탕에만) */
@@ -590,7 +590,7 @@ details.acc>summary:hover{background:var(--surface2)}
 details.acc>summary .t{white-space:nowrap}
 details.acc>summary .t small{font-weight:500;color:var(--muted)}
 details.acc>summary .v{flex:1;min-width:0;text-align:right;font-size:.9rem;font-weight:500;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
-details.acc[open]>summary .v{opacity:.5}
+details.acc[open]>summary .v{visibility:hidden}
 details.acc .am{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:.8rem;font-weight:800;color:var(--on)}
 details.acc .am.err{background:var(--err)}details.acc .am.warn{background:var(--warn)}
 details.acc .accb{padding:2px 2px 14px}
@@ -646,3 +646,64 @@ table.tbl th,.pill,.badge,.hud3 .assume,.hud3 .xyz,.testtag,.nextstep .nt small,
 .addpal button{min-height:92px}
 #top .ibtn svg,#top .tbtn svg{width:21px;height:21px}
 .prophead .tile{--s:40px}
+
+/* ---------- 독립 화면 검토 반영 ---------- */
+/* ⋯ 와 꺾쇠는 글자 대신 그림 (또렷하게, 크기 통일) */
+.car{width:14px;height:14px;opacity:.8;transition:transform .12s}
+.car.up{transform:rotate(180deg)}
+.kindchip .car{margin-left:auto}
+.more svg,#btnMore svg,.vtools details.pop>summary svg{width:20px;height:20px}
+.titem .qa button{opacity:1;color:var(--text2)}
+.titem .qa svg{width:20px;height:20px}
+.vtools details.pop>summary{padding:4px 9px}
+/* 목록 타일: 바탕은 가공 종류 색, 2D 화면 표시 색은 작은 점 */
+.tile{position:relative}
+.cdot{position:absolute;right:-3px;bottom:-3px;width:13px;height:13px;border-radius:50%;border:2px solid var(--surface)}
+/* 가공 종류 색을 서로 더 다르게 (리머 초록 · 보링 벽돌색 · 평면 올리브) */
+:root{--ink-ream:#1c7a3e;--ink-bore:#9a3d1f;--ink-face:#5f6b12;--c-ream:#2a9d4f;--c-bore:#c2553a;--c-face:#7f8a1f}
+:root[data-theme="dark"]{--ink-ream:#74d99a;--ink-bore:#ff9f80;--ink-face:#c3cf6a;--c-ream:#5fd38a;--c-bore:#ff8f6b;--c-face:#b9c654}
+/* 도구 막대: 간단히 보기는 한 줄, 모두 펼쳐 보기는 예전처럼 줄바꿈 */
+.vtools{min-width:0}
+:root[data-dense] .vtools{flex-wrap:wrap}
+details.pop>summary{white-space:nowrap}
+details.pop[open]>summary{margin-bottom:0}
+@media (max-width:1280px){.vtabs .lbl{display:none}}
+@media (min-width:1101px) and (max-width:1280px){.tbtn .lbl{display:inline}}
+/* 가공이 많아 목록이 길어져도 다음 할 일·추가 버튼은 보이게 */
+.nextstep{position:sticky;top:0;z-index:2}
+.addmain{position:sticky;bottom:0;z-index:2}
+.titem:not(.mini) .tx small{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3}
+/* 입력칸: 오류 글은 줄 전체 폭, 이름표는 자르지 않고 줄바꿈 */
+.fld.ferr,.fld.fwarn{grid-column:1/-1}
+.pbody .fld>span{white-space:normal;overflow:visible}
+.pbody .fld{justify-content:flex-end}
+.chk input{flex:none}
+.ver{opacity:1;color:var(--text2)}
+details.acc .am{font-size:.87rem}
+.flow .fl b{letter-spacing:-.02em}
+:root[data-dense] .flow .fl small,.treehint{font-size:.87rem}
+summary:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+@media (min-width:901px){.projname{flex:1 1 260px;max-width:520px;text-overflow:ellipsis}}
+/* 접힌 줄 안쪽 */
+.accb .tblwrap{max-height:none}
+.accb details.adv{border:0;border-top:1px solid var(--line);border-radius:0;padding:0;margin:12px 0 0;background:none}
+.accb details.adv>summary{padding:10px 0}
+details.sublist{margin-top:8px}
+details.sublist>summary{display:flex;align-items:center;gap:6px;min-height:40px;margin:0;padding:0 12px;border-radius:8px;background:var(--surface2);cursor:pointer;list-style:none;font-size:.95rem;color:var(--text)}
+details.sublist>summary::-webkit-details-marker{display:none}
+details.sublist>summary::after{content:"";margin-left:auto;width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg) translate(-2px,-2px);transition:transform .12s}
+details.sublist[open]>summary::after{transform:rotate(-135deg) translate(-2px,-2px)}
+@media (max-width:900px){
+  .flow .fl,#status{font-size:.87rem}
+  .chips .chip{min-height:40px;padding:1px 12px}
+  .gi{min-width:32px;min-height:32px}
+  .chk{min-height:44px}
+  .ctxmenu button{min-height:44px}
+  .ctxmenu kbd{display:none}
+  #status button{min-height:40px}
+  details.sublist>summary{min-height:44px}
+  .accb details.adv>summary{padding:13px 0}
+}
+.titem .tx small{word-break:keep-all}
+@media (min-width:901px){.pbody .fld>.row{min-height:38px;align-items:center}}
+@media (max-width:900px){.pbody .fld>.row{min-height:44px;align-items:center}}

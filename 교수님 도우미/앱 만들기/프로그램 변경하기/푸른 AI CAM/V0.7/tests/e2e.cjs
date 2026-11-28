@@ -592,9 +592,13 @@ function serve() {
     const vis = sel => p9.locator(sel).first().isVisible().catch(() => false);
     ok('[V0.7] 처음 화면: 추가 버튼은 [+ 가공 추가] 하나, 선택판은 접힘', await vis('#tree .addmain') && !(await p9.locator('#tree .addpal').count()));
     ok('[V0.7] 머리글: 설정·도움말·NC 저장은 바로 보이고, 작업지시서·공유·밝기는 ⋯ 안', await vis('#btnSettings') && await vis('#btnHelp') && await vis('#btnDownload') && !(await vis('#btnSheet')) && !(await vis('#btnShare')) && !(await vis('#btnTheme')) && await vis('#btnMore'));
-    await p9.click('#btnMore'); await sleep(100);
-    ok('[V0.7] 머리글 ⋯ → 작업지시서·공유·밝기 표시', await vis('#btnSheet') && await vis('#btnShare') && await vis('#btnTheme'));
-    await p9.click('#btnMore'); await sleep(100);
+    const x0 = (await p9.locator('#btnProjects').boundingBox()).x;
+    await p9.click('#btnMore'); await sleep(150);
+    const hm = await p9.textContent('#ctxmenu').catch(() => '');
+    ok('[V0.7] 머리글 ⋯ → 이름이 있는 메뉴(작업지시서·공유·밝기), 다른 버튼은 밀리지 않음', /작업지시서/.test(hm) && /공유/.test(hm) && /보기/.test(hm) && (await p9.locator('#btnProjects').boundingBox()).x === x0, hm);
+    await p9.click('#ctxmenu button:has-text("작업지시서")'); await sleep(300);
+    ok('[V0.7] ⋯ 메뉴의 [작업지시서 인쇄] → 작업지시서 창', await p9.locator('#dlg[open] .sheet').count() > 0 && !(await p9.locator('#ctxmenu').count()));
+    await p9.click('#dlg .dhead button[aria-label="닫기"]'); await sleep(150);
     ok('[V0.7] 다음 할 일 버튼: 큰 글씨 한 줄 (예제 = 3D로 확인하기)', /다음 할 일/.test(await p9.textContent('#tree .nextstep')) && /3D로 확인하기/.test(await p9.textContent('#tree .nextstep b')), await p9.textContent('#tree .nextstep'));
     // 추가 선택판
     await p9.click('#tree .addmain'); await sleep(150);

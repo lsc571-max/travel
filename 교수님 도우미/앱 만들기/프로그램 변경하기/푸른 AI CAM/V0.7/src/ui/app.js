@@ -26,10 +26,10 @@
     tap: { ico: 'i-tap', cls: 'k-tap', label: '탭', color: '#8b5cf6' },
     pocket: { ico: 'i-pocket', cls: 'k-pocket', label: '포켓', color: '#ee8a10' },
     contour: { ico: 'i-contour', cls: 'k-contour', label: '윤곽', color: '#0e8fa3' },
-    face: { ico: 'i-face', cls: 'k-face', label: '평면', color: '#5b7083' },
+    face: { ico: 'i-face', cls: 'k-face', label: '평면', color: '#7f8a1f' },
     chamfer: { ico: 'i-chamfer', cls: 'k-chamfer', label: '모따기', color: '#b5279f' },
-    ream: { ico: 'i-ream', cls: 'k-ream', label: '리머(H7)', color: '#1d7f8c' }, // [V0.6]
-    bore: { ico: 'i-bore', cls: 'k-bore', label: '보링', color: '#6d5bd0' },
+    ream: { ico: 'i-ream', cls: 'k-ream', label: '리머(H7)', color: '#2a9d4f' }, // [V0.6]
+    bore: { ico: 'i-bore', cls: 'k-bore', label: '보링', color: '#c2553a' },
     custom: { ico: 'i-custom', cls: 'k-custom', label: '직접 구성', color: '#64748b' }
   };
   const SIM_RES = { l: 60000, m: 160000, h: 400000 };
@@ -169,7 +169,7 @@
   }
   // change 처리는 포커스 이동(Tab) 이후 실행하여 다음 입력칸 포커스를 유지
   document.addEventListener('change', e => { const el = e.target, k = el && el.dataset && el.dataset.k; if (k && binds.has(k)) { const fn = binds.get(k); setTimeout(() => fn(el), 0); } });
-  document.addEventListener('toggle', e => { const d = e.target; if (d && d.dataset && d.dataset.sec && !d.dataset.forced) S.openSec[d.dataset.sec] = d.open; }, true); // 오류 때문에 저절로 펼친 줄은 기억하지 않음
+  document.addEventListener('click', e => { const sm = e.target.closest && e.target.closest('summary'), d = sm && sm.parentElement; if (d && d.dataset && d.dataset.sec && !d.dataset.forced) S.openSec[d.dataset.sec] = !d.open; }, true); // [V0.7] 사람이 누른 것만 기억 (처음부터 펼친 줄·오류로 펼친 줄은 기억하지 않음)
   document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-a]'); if (b && acts.has(b.dataset.a) && !b.disabled) { e.preventDefault(); acts.get(b.dataset.a)(e, b); } });
   // [V0.7] ⋯ 펼침 메뉴는 바깥을 누르면 닫힘
   document.addEventListener('pointerdown', e => { document.querySelectorAll('details.pop[open]').forEach(d => { if (!d.contains(e.target)) { d.open = false; if (d.dataset.sec) S.openSec[d.dataset.sec] = false; } }); }, true);
@@ -326,13 +326,13 @@
   function select(kind, gid) { const changed = S.sel.kind !== kind || S.sel.gid !== (gid || null); S.sel = { kind, gid: gid || null, hid: null }; S.kindOpen = false; S.addOpen = false; if (mobile()) S.mpanel = 'right'; renderAll(); if (changed) $('#rightBody').scrollTop = 0; }
   function renderTree() {
     const u = U('tr'), m = machine(), st = P.stock, set = P.settings, dense = DENSE();
-    const item = (sel, icon, cls, title, sub, status, fn, extra, color, gid) => '<div class="titem' + (sel ? ' sel' : '') + (gid ? '' : ' mini') + ' s-' + status + '" role="button" tabindex="0" aria-pressed="' + sel + '" data-a="' + u.act(fn) + '"' + (gid ? ' data-gid="' + esc(gid) + '" draggable="true" aria-label="' + esc(title) + ' (오른쪽 버튼: 메뉴, Delete: 삭제, Ctrl+C/V: 복사·붙여넣기)"' : ' data-node="' + (icon === 'i-nc' ? 'nc' : 'stock') + '"') + '>' + tile(icon, cls, color, gid ? '' : 'sm') + '<span class="tx"><b>' + esc(title) + '</b><small>' + esc(sub) + '</small></span>' + (extra || '') + stIcon(status) + '</div>';
+    const item = (sel, icon, cls, title, sub, status, fn, extra, color, gid) => '<div class="titem' + (sel ? ' sel' : '') + (gid ? '' : ' mini') + ' s-' + status + '" role="button" tabindex="0" aria-pressed="' + sel + '" data-a="' + u.act(fn) + '"' + (gid ? ' data-gid="' + esc(gid) + '" draggable="true" aria-label="' + esc(title) + ' (오른쪽 버튼: 메뉴, Delete: 삭제, Ctrl+C/V: 복사·붙여넣기)"' : ' data-node="' + (icon === 'i-nc' ? 'nc' : 'stock') + '"') + '>' + tile(icon, cls, null, gid ? '' : 'sm', color) + '<span class="tx"><b>' + esc(title) + '</b><small>' + esc(sub) + '</small></span>' + (extra || '') + stIcon(status) + '</div>';
     const okStock = st.sx > 0 && st.sy > 0 && st.sz > 0;
     // 작업 흐름 (① 소재 → ② 원점·NC → ③ 가공 → ④ 확인 → ⑤ NC 저장) — 단계별 상태 표시
     const ds = downloadState(), c = counts();
     const gst = P.groups.map(groupStatus);
     const zIss0 = S.V.issues.filter(i => i.cat === 10 && !i.ref);
-    const openAdd = () => { S.addOpen = true; renderTree(); const b = document.querySelector('#tree .addpal .addbtn'); if (b) { b.focus(); b.scrollIntoView({ block: 'nearest' }); } };
+    const openAdd = () => { S.addOpen = true; renderTree(); const b = document.querySelector('#tree .addpal .addbtn'); if (b) { b.focus({ preventScroll: true }); const pal = document.querySelector('#tree .addpal'); if (pal) pal.scrollIntoView({ block: 'end' }); } };
     // [V0.5] 단계마다 이름·설명·다음 할 일  /  [V0.7] 6번째 칸 = "다음 할 일" 버튼에 크게 쓰는 짧은 말
     const flow = [
       ['소재', '크기·재질', st.sx > 0 && st.sy > 0 && st.sz > 0 ? 'ok' : 'err', () => select('stock'), { err: '소재 크기(가로·세로·두께)와 재질을 입력하세요.' }, { err: '소재 크기 입력하기' }],
@@ -355,14 +355,14 @@
     if (dense && !P.groups.length) h += '<div class="note info">아래에서 가공을 추가하거나 도면(DXF)을 불러오세요. 공구와 조건은 자동으로 정해집니다.</div>';
     P.groups.forEach(g => {
       const k = KIND[kindOf(g)];
-      const qa = '<span class="qa">' + (dense ? u.btn(ico('i-copy'), () => dupGroup(g), '', 'title="복제 (Ctrl+D)" aria-label="복제"') + u.btn(ico('i-trash'), () => delGroup(g), '', 'title="삭제 (Delete)" aria-label="삭제"') : '') + u.btn('⋯', (e, b) => { const r = b.getBoundingClientRect(); groupMenu(g, r.left, r.bottom + 4); }, 'more', 'title="메뉴: 복사·복제·이름·순서·삭제 (오른쪽 버튼·Shift+F10)" aria-label="메뉴" aria-haspopup="menu"') + '</span>';
+      const qa = '<span class="qa">' + (dense ? u.btn(ico('i-copy'), () => dupGroup(g), '', 'title="복제 (Ctrl+D)" aria-label="복제"') + u.btn(ico('i-trash'), () => delGroup(g), '', 'title="삭제 (Delete)" aria-label="삭제"') : '') + u.btn(ico('i-more'), (e, b) => { const r = b.getBoundingClientRect(); groupMenu(g, r.left, r.bottom + 4); }, 'more', 'title="메뉴: 복사·복제·이름·순서·삭제 (오른쪽 버튼·Shift+F10)" aria-label="메뉴" aria-haspopup="menu"') + '</span>';
       h += item(S.sel.kind === 'group' && S.sel.gid === g.id, k.ico, k.cls, g.name, groupSummary(g), groupStatus(g), () => select('group', g.id), qa, g.color, g.id);
     });
     // [V0.7] 추가 버튼 하나 → 누르면 큰 아이콘 선택판 (가공이 하나도 없을 때는 처음부터 펼침)
     const palOpen = dense || S.addOpen || !P.groups.length;
     const add = (kind, label, title) => u.btn('<span class="tile lg">' + ico(KIND[kind].ico) + '</span><span>' + label + '</span>', () => { S.addOpen = false; addGroup(kind); }, 'addbtn ' + KIND[kind].cls, 'title="' + title + '"');
     if (!dense && !P.groups.length) h += '<div class="addhead">추가할 가공을 고르세요</div>';
-    else if (!dense) h += u.btn(ico('i-plus') + '<span>가공 추가</span><i class="car">' + (palOpen ? '▴' : '▾') + '</i>', () => { if (S.addOpen) { S.addOpen = false; renderTree(); } else openAdd(); }, 'addmain' + (palOpen ? ' on' : ''), 'aria-expanded="' + palOpen + '" title="구멍·탭·포켓·윤곽·평면·모따기·리머·보링 추가, 도면(DXF) 불러오기"');
+    else if (!dense) h += u.btn(ico('i-plus') + '<span>가공 추가</span>' + ico('i-chev', 'car' + (palOpen ? ' up' : '')), () => { if (S.addOpen) { S.addOpen = false; renderTree(); } else openAdd(); }, 'addmain' + (palOpen ? ' on' : ''), 'aria-expanded="' + palOpen + '" title="구멍·탭·포켓·윤곽·평면·모따기·리머·보링 추가, 도면(DXF) 불러오기"');
     if (palOpen) h += '<div class="addpal" role="group" aria-label="추가할 가공 고르기">' +
       add('drill', '구멍', '드릴 구멍 추가 (센터 → 드릴, 사이클 자동)') + add('tap', '탭', '나사(탭) 구멍 추가 (센터 → 기초 드릴 → 탭)') + add('pocket', '포켓', '사각·원형·도면 형상 포켓 (헬리컬 진입 → 황삭 → 정삭)') +
       add('contour', '윤곽', '부품 바깥(또는 안쪽) 윤곽 따라 깎기, 관통 절단 가능') + add('face', '평면', '소재 윗면 고르기 (페이스밀)') + add('chamfer', '모따기', '모서리 C 모따기 (바깥·안쪽·구멍 입구)') +
@@ -622,21 +622,21 @@
     const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '')); if (!m) return '#fff';
     const n = parseInt(m[1], 16), f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
     const L = 0.2126 * f(n >> 16) + 0.7152 * f((n >> 8) & 255) + 0.0722 * f(n & 255);
-    return (1.05 / (L + 0.05)) >= ((L + 0.05) / 0.05) ? '#fff' : '#10151b';
+    return (1.05 / (L + 0.05)) >= ((L + 0.05) / 0.0575) ? '#fff' : '#10151b'; // 검정 쪽은 실제 잉크(#10151b) 기준
   }
-  const tile = (icon, cls, color, size) => '<span class="tile ' + (size ? size + ' ' : '') + cls + '"' + (color ? ' style="--k:' + esc(color) + ';--on:' + onColor(color) + '"' : '') + '>' + ico(icon) + '</span>';
+  const tile = (icon, cls, color, size, dot) => '<span class="tile ' + (size ? size + ' ' : '') + cls + '"' + (color ? ' style="--k:' + esc(color) + ';--on:' + onColor(color) + '"' : '') + '>' + ico(icon) + (dot ? '<i class="cdot" style="background:' + esc(dot) + '" title="2D 화면 표시 색"></i>' : '') + '</span>';
   function renderProps() {
     if (S.sel.kind === 'group' && !curGroup()) S.sel = { kind: 'stock', gid: null, hid: null };
     const u = U('rt');
     let head = '', body = '';
     if (S.sel.kind === 'group') {
       const g = curGroup(), k = KIND[kindOf(g)], i = P.groups.indexOf(g);
-      head = tile(k.ico, k.cls, g.color) +
+      head = tile(k.ico, k.cls, null, '', g.color) +
         u.text(g.name, v => mutate(() => { g.name = v.slice(0, 40) || '가공'; }), 'aria-label="가공 이름" maxlength="40"') +
         (DENSE() ? u.color(g.color, v => mutate(() => { g.color = v; })) +
           u.btn('↑', () => mutate(() => { if (i > 0) P.groups.splice(i - 1, 0, P.groups.splice(i, 1)[0]); }), 'ibtn sm', 'title="순서 위로" aria-label="순서 위로" ' + (i ? '' : 'disabled')) +
           u.btn('↓', () => mutate(() => { if (i < P.groups.length - 1) P.groups.splice(i + 1, 0, P.groups.splice(i, 1)[0]); }), 'ibtn sm', 'title="순서 아래로" aria-label="순서 아래로" ' + (i < P.groups.length - 1 ? '' : 'disabled'))
-          : u.btn('⋯', (e, b) => { const r = b.getBoundingClientRect(); groupMenu(g, Math.max(8, r.right - 210), r.bottom + 4); }, 'ibtn sm more', 'title="메뉴: 복사·복제·순서 위/아래·삭제" aria-label="가공 메뉴" aria-haspopup="menu"')) +
+          : u.btn(ico('i-more'), (e, b) => { const r = b.getBoundingClientRect(); groupMenu(g, Math.max(8, r.right - 210), r.bottom + 4); }, 'ibtn sm more', 'title="메뉴: 복사·복제·순서 위/아래·삭제" aria-label="가공 메뉴" aria-haspopup="menu"')) +
         u.btn(ico('i-x'), () => delGroup(g), 'ibtn sm danger', 'title="삭제 (Delete)" aria-label="이 가공 삭제"');
       body = groupBody(u, g);
     } else if (S.sel.kind === 'nc') {
@@ -702,13 +702,13 @@
       u.fld('공정 순서', u.select(set.toolOrder, [['tool', '공구 교환 최소화'], ['group', '가공 목록 순서대로']], v => mutate(() => { set.toolOrder = v; }))) +
       u.fld('깊이 기준', u.select(set.depthRef === 'auto' ? 'auto' : 'top', [['auto', '먼저 가공된 바닥 기준 (자동, 권장)'], ['top', '항상 소재 윗면 Z0 기준']], v => mutate(() => { set.depthRef = v; })), set.depthRef === 'auto' ? '포켓 안 구멍·포켓 안 포켓·평면 뒤 가공은 그 바닥에서부터 깊이를 재고, 이미 깎인 높이에서 시작합니다 (빈 공간 공회전 없음)' : '모든 깊이를 원래 윗면(Z0)에서 잽니다 (V0.4 이전 방식)') +
       u.fld('구멍 순서', u.select(set.pathOrder, [['nearest', '최단 거리(근사)'], ['zigzag', '지그재그(행)'], ['input', '입력 순서']], v => mutate(() => { set.pathOrder = v; }))) + '</div>';
-    h += acc('nc-order', '순서·깊이 기준', (set.toolOrder === 'tool' ? '공구 교환 최소화' : '목록 순서') + ' · ' + (set.depthRef === 'auto' ? '바닥 기준 자동' : 'Z0 기준'), ord, false);
+    h += acc('nc-order', '순서·깊이 기준', (set.toolOrder === 'tool' ? '교환 최소' : '목록 순서') + ' · ' + (set.depthRef === 'auto' ? '바닥 자동' : 'Z0 기준'), ord, false);
     const out = u.check(set.coolant, v => mutate(() => { set.coolant = v; }), '절삭유 M08/M09') + u.check(set.m01, v => mutate(() => { set.m01 = v; }), '공구 교환 전 선택 정지 M01') +
       u.check(set.seqNo, v => mutate(() => { set.seqNo = v; }), '시퀀스 번호(N) 출력' + (set.restart ? ' (재시작 블록을 쓰면 꺼짐)' : '')) +
       u.check(set.restart, v => mutate(() => { set.restart = v; }), '공구별 재시작 블록 (N100·N200… — 공구가 부러지면 그 공구부터 다시)');
     h += acc('nc-out', '출력 옵션', [set.coolant ? '절삭유' : '', set.m01 ? 'M01' : '', set.seqNo ? 'N번호' : '', set.restart ? '재시작 블록' : ''].filter(Boolean).join(' · ') || '없음', out, false);
     // [V0.6] 첫 가공 모드 · 머신 좌표
-    const first = u.check(set.firstRun, v => mutate(() => { set.firstRun = v; }), '<b>첫 가공 모드</b> — 공정마다 진입 전 M00 정지, 절삭 이송 낮춤') +
+    const first = u.check(set.firstRun, v => mutate(() => { set.firstRun = v; }), '첫 가공 모드 — 공정마다 진입 전 M00 정지, 절삭 이송 낮춤') +
       (set.firstRun ? u.fld('첫 가공 절삭 이송 (%)', u.num(set.firstFeed, v => mutate(() => { set.firstFeed = Math.max(10, Math.min(100, Math.round(v))); }), 'min="10" max="100"'), '탭은 동기 이송이라 그대로 (오버라이드 100%)') : '') +
       '<div class="grid2">' + u.fld('G54 Z (머신 좌표, 선택)', u.optnum(set.g54Z, v => mutate(() => { set.g54Z = v === null ? null : Math.min(0, v); })), '장비의 공작물 좌표계 Z 값. 공구 H 측정값과 함께 Z 행정(오버트래블)을 검사') + '<span></span></div>' +
       '<small>첫 가공 순서: ① 첫 가공 모드 NC 로 Z를 띄운 드라이런 → ② 싱글 블록 → ③ 시편 가공·측정 → ④ 관리자가 그 가공 종류를 승인.</small>';
@@ -745,7 +745,7 @@
     const grid = '<div class="kindgrid" role="radiogroup" aria-label="가공 방법">' +
       ['drill', 'tap', 'pocket', 'contour', 'face', 'chamfer', 'ream', 'bore', 'custom'].map(x => u.btn('<span class="tile">' + ico(KIND[x].ico) + '</span><span>' + (x === 'custom' ? '직접 구성' : KIND[x].label) + '</span>', () => { S.kindOpen = false; setGroupMode(g, x); renderProps(); }, (mode === x ? 'on ' : '') + KIND[x].cls, 'role="radio" aria-checked="' + (mode === x) + '"')).join('') + '</div>';
     let h = dense ? '<h3>가공 방법</h3>' + grid
-      : '<div class="kindbar"><span class="kl">가공 방법</span>' + u.btn('<span class="tile sm ' + k.cls + '">' + ico(k.ico) + '</span><b>' + (mode === 'custom' ? '직접 구성' : k.label) + '</b><i class="car">' + (S.kindOpen ? '▴' : '▾') + '</i>', () => { S.kindOpen = !S.kindOpen; renderProps(); }, 'kindchip' + (S.kindOpen ? ' on' : ''), 'aria-expanded="' + !!S.kindOpen + '" title="가공 방법 바꾸기 (구멍·탭·포켓…)"') + '</div>' + (S.kindOpen ? grid : '');
+      : '<div class="kindbar"><span class="kl">가공 방법</span>' + u.btn('<span class="tile sm ' + k.cls + '">' + ico(k.ico) + '</span><b>' + (mode === 'custom' ? '직접 구성' : k.label) + '</b>' + ico('i-chev', 'car' + (S.kindOpen ? ' up' : '')), () => { S.kindOpen = !S.kindOpen; renderProps(); }, 'kindchip' + (S.kindOpen ? ' on' : ''), 'aria-expanded="' + !!S.kindOpen + '" title="가공 방법 바꾸기 (구멍·탭·포켓…)"') + '</div>' + (S.kindOpen ? grid : '');
     const F = mode === 'pocket' ? pocketForm(u, g) : mode === 'contour' ? contourForm(u, g) : mode === 'face' ? faceForm(u, g) : mode === 'chamfer' ? chamferForm(u, g) : g.spec ? specForm(u, g) : null;
     // 위치가 하나뿐이면 기본 치수 바로 아래에서 X·Y 입력 (형상 가공은 대부분 한 곳)
     const single = g.holes.length === 1 && mode !== 'face', h1 = g.holes[0];
@@ -759,12 +759,15 @@
       let p = '<div class="subtabs">' + [['single', '개별'], ['line', '직선'], ['grid', '사각 배열'], ['pcd', '원형(PCD)']].map(x => u.btn(x[1], () => { S.arrKind = x[0]; renderProps(); }, 'sm' + (S.arrKind === x[0] ? ' on' : ''))).join('') + '</div>' + arrayForm(u, g);
       if (g.holes.length) {
         const lim = 300, z = S.gz.get(g.id);
-        p += '<div class="tblwrap" style="margin-top:8px"><table class="tbl"><tr><th>#</th><th>X</th><th>Y</th><th title="가장 깊은 공구 끝">바닥 Z</th><th></th></tr>';
+        let tb = '<div class="tblwrap" style="margin-top:8px"><table class="tbl"><tr><th>#</th><th>X</th><th>Y</th><th title="가장 깊은 공구 끝">바닥 Z</th><th></th></tr>';
         g.holes.slice(0, lim).forEach((hh, i) => {
-          p += '<tr class="' + (S.sel.hid === hh.id ? 'sel' : '') + '"><td>' + u.btn(String(i + 1), () => { S.sel.hid = hh.id; renderAll(); }, 'sm', 'title="화면에서 선택"') + '</td><td>' + u.num(hh.x, v => mutate(() => { hh.x = C.r3(v); })) + '</td><td>' + u.num(hh.y, v => mutate(() => { hh.y = C.r3(v); })) + '</td><td class="num">' + (z === null || z === undefined ? '-' : uf(z)) + '</td><td>' + u.btn('✕', () => mutate(() => { g.holes.splice(i, 1); }), 'sm danger', 'title="삭제" aria-label="위치 삭제"') + '</td></tr>';
+          tb += '<tr class="' + (S.sel.hid === hh.id ? 'sel' : '') + '"><td>' + u.btn(String(i + 1), () => { S.sel.hid = hh.id; renderAll(); }, 'sm', 'title="화면에서 선택"') + '</td><td>' + u.num(hh.x, v => mutate(() => { hh.x = C.r3(v); })) + '</td><td>' + u.num(hh.y, v => mutate(() => { hh.y = C.r3(v); })) + '</td><td class="num">' + (z === null || z === undefined ? '-' : uf(z)) + '</td><td>' + u.btn('✕', () => mutate(() => { g.holes.splice(i, 1); }), 'sm danger', 'title="삭제" aria-label="위치 삭제"') + '</td></tr>';
         });
-        p += '</table></div>' + (g.holes.length > lim ? '<small>처음 ' + lim + '개만 표시 (화면에서 선택·편집 가능)</small>' : '');
-        p += '<div class="row" style="margin-top:6px">' + u.btn('위치 전체 삭제', () => { if (confirm('위치 ' + g.holes.length + '개를 모두 삭제할까요?')) mutate(() => { g.holes = []; }); }, 'sm danger') + '</div>';
+        tb += '</table></div>' + (g.holes.length > lim ? '<small>처음 ' + lim + '개만 표시 (화면에서 선택·편집 가능)</small>' : '');
+        tb += '<div class="row" style="margin-top:6px">' + u.btn('위치 전체 삭제', () => { if (confirm('위치 ' + g.holes.length + '개를 모두 삭제할까요?')) mutate(() => { g.holes = []; }); }, 'sm danger') + '</div>';
+        // [V0.7] 위치가 많으면(4개 이상) 표는 한 줄로 접어 둠 — 화면에서 위치를 골랐으면 펼침
+        const many = g.holes.length > 3 && !dense, lopen = S.openSec['pos-list'] !== undefined ? S.openSec['pos-list'] : !!S.sel.hid;
+        p += many ? '<details class="sublist" data-sec="pos-list"' + (lopen ? ' open' : '') + '><summary>위치 목록 <b>' + g.holes.length + '</b>개 <small>(눌러서 보기·고치기)</small></summary>' + tb + '</details>' : tb;
       } else p += '<div class="note warn">위치가 없습니다. 위 입력란을 쓰거나 2D 화면의 [위치 추가] 도구로 클릭하세요.</div>';
       h += acc(isMill ? 'pos-m' : 'pos-h', isMill ? '위치 <small>(같은 모양을 여러 곳에)</small>' : '구멍 위치', g.holes.length + '개' + (single ? ' · X' + uf(h1.x) + ' Y' + uf(h1.y) : ''), p, isMill ? g.holes.length !== 1 : true);
     }
@@ -780,7 +783,9 @@
     const seen = new Set(), left = [];
     FLD.list.filter(i => !FLD.used.has(i)).sort((a, b) => (a.level === 'error' ? 0 : 1) - (b.level === 'error' ? 0 : 1)).forEach(i => { const t = i.msg.replace(/^\[[^\]]*\]\s*(공정 \d+ \([^)]*\):\s*)?/, ''); if (!seen.has(t)) { seen.add(t); left.push({ level: i.level, t }); } });
     const usedMsg = [...FLD.used].map(i => i.msg);
-    const notes = gp ? gp.noteList.filter(n => !usedMsg.some(m => m.includes(n.msg))).map(n => n.html).join('') + gp.alerts : '';
+    const hk = t => t.replace(/^\[[^\]]*\]\s*(공정 \d+ \([^)]*\):\s*)?/, '').replace(/[^가-힣]/g, '').slice(0, 10); // 숫자·단위를 뺀 앞 10글자로 같은 오류인지 판정
+    const usedKey = usedMsg.map(hk);
+    const notes = gp ? gp.noteList.filter(n => !usedMsg.some(m => m.includes(n.msg)) && !usedKey.includes(hk(n.msg))).map(n => n.html).join('') + gp.alerts : '';
     let al = notes ? '<div class="alerts">' + notes + '</div>' : '';
     if (left.length) al += '<div class="alerts">' + left.slice(0, 4).map(i => '<div class="note ' + i.level + '">' + (i.level === 'error' ? '✖ ' : '⚠ ') + esc(i.t) + '</div>').join('') +
       (left.length > 4 ? '<div class="row" style="margin-top:6px">' + u.btn('외 ' + (left.length - 4) + '건 — 검증 결과 열기', () => openDrawer('check'), 'sm') + '</div>' : '') + '</div>';
@@ -817,7 +822,7 @@
           : op.type === 'pocketProfile' ? ' · 구배 ' + op.draft + '° · 입구 R' + op.topR + ' · 바닥 R' + op.floorR + ' · 계단 ' + op.profStep
           : op.type === 'pocketFinish' || op.type === 'contourFinish' ? ' · 여유 0' : op.type === 'faceMill' ? ' · 절입 ' + op.stepdown + ' · 간격 ' + op.stepover + '%'
             : op.type === 'chamferMill' ? ' · C' + op.cw : (op.q && C.OPS.get(op.type).ui.q ? ' · Q' + op.q : '');
-      rows += '<div class="genrow"><span class="num" style="background:' + col + '">' + (i + 1) + '</span><span class="nm">' + esc(C.opLabel(op, m)) + '</span><small>' + (d ? '끝 Z' + uf(d.z) + ' · ' : '') + 'S' + c.rpm + ' F' + c.feed + extra + '</small></div>';
+      rows += '<div class="genrow"><span class="num" style="background:' + col + ';color:' + onColor(col) + '">' + (i + 1) + '</span><span class="nm">' + esc(C.opLabel(op, m)) + '</span><small>' + (d ? '끝 Z' + uf(d.z) + ' · ' : '') + 'S' + c.rpm + ' F' + c.feed + extra + '</small></div>';
     });
     const noteList = []; // 오류·경고 안내 (입력칸 아래에 이미 같은 말이 붙었으면 groupBody0 에서 뺌)
     res.notes.forEach(n => { const s = '<div class="note ' + n.level + '">' + (n.level === 'error' ? '✖ ' : n.level === 'warn' ? '⚠ ' : 'ℹ ') + esc(n.msg) + '</div>'; if (n.level === 'info') info += s; else noteList.push({ msg: n.msg, html: s }); });
@@ -1432,7 +1437,7 @@
       const res = u.select(S.sim.res, [['l', '해상도: 낮음(빠름)'], ['m', '해상도: 보통'], ['h', '해상도: 높음(느림)']], v => { S.sim.res = v; update3D(true); }, 'title="시뮬레이션 격자 해상도"');
       const sect = u.btn('단면 보기', () => { S.sim.section = !S.sim.section; applySection(); renderVTools(); }, 'sm' + (S.sim.section ? ' on' : ''), 'title="선택한 가공의 첫 위치(없으면 소재 중앙)에서 앞쪽을 잘라 구멍·포켓 깊이를 옆에서 봅니다" aria-pressed="' + !!S.sim.section + '"');
       $('#vtools').innerHTML = dense ? views + '<span class="sep"></span>' + paths + res + '<span class="sep"></span>' + sect
-        : '<span class="bgrp">' + views + '</span><span class="sep"></span>' + sect + popMenu('vpop3', '⋯', '더 보기: 공구 경로 표시 · 해상도', paths + u.fld('시뮬레이션 해상도', res));
+        : '<span class="bgrp">' + views + '</span><span class="sep"></span>' + sect + popMenu('vpop3', ico('i-more'), '더 보기: 공구 경로 표시 · 해상도', paths + u.fld('시뮬레이션 해상도', res));
       $('#viewHint').textContent = '';
       return;
     }
@@ -1455,7 +1460,7 @@
     $('#vtools').innerHTML = dense
       ? bSel + bAdd + bClamp + bDel + '<span class="sep"></span><span class="bgrp">' + bZoom + bFit + '</span><span class="sep"></span>' + bSec + '<span class="sep"></span>' + selStep + popMenu('vpop', '표시 ▾', '표시 옵션', disp)
       : bSel + bAdd + (S.mode === 'clamp' ? bClamp : '') + (S.sel.hid ? bDel : '') + '<span class="sep"></span>' + bFit + bSec +
-        popMenu('vpop', '⋯', '더 보기: 클램프 · 확대/축소 · 공정 순서 · 격자·스냅', '<div class="row">' + (S.mode === 'clamp' ? '' : bClamp) + '<span class="bgrp">' + bZoom + '</span></div>' + u.fld('순서를 표시할 공정', selStep) + disp);
+        popMenu('vpop', ico('i-more'), '더 보기: 클램프 · 확대/축소 · 공정 순서 · 격자·스냅', '<div class="row">' + (S.mode === 'clamp' ? '' : bClamp) + '<span class="bgrp">' + bZoom + '</span></div>' + u.fld('순서를 표시할 공정', selStep) + disp);
     const g = curGroup();
     const hint = { select: dense ? '클릭=선택 · 드래그=이동 · □ 손잡이 끌기=크기 조절 · 빈 곳 드래그=화면 이동 · 휠/두 손가락=확대' : '', add: g ? '클릭/터치 위치에 [' + g.name + '] 추가' : '먼저 왼쪽 목록에서 가공을 선택하세요', clamp: '드래그하여 클램프 영역 지정 (높이 기본 30mm) — 끝나면 [선택]' };
     const vh = $('#viewHint'); vh.textContent = hint[S.mode]; vh.hidden = !hint[S.mode];
@@ -2072,7 +2077,7 @@
       let h = '<div class="sect"><b>화면</b><div class="grid2">' +
         u.fld('테마', u.select(s.theme, [['system', '시스템 설정 따름'], ['light', '밝게'], ['dark', '어둡게']], v => { s.theme = v; applyTheme(); saveDB(); drawView(); })) +
         u.fld('글자 크기', u.select(s.fs, [['s', '작게'], ['m', '보통'], ['l', '크게']], v => { s.fs = v; applyTheme(); saveDB(); drawView(); })) + '</div>' +
-        u.check(!!s.dense, v => { s.dense = v; S.openSec = {}; S.addOpen = false; S.kindOpen = false; applyTheme(); saveDB(); renderAll(); }, '<b>모두 펼쳐 보기</b> (전문가용) — 접힌 항목과 ⋯ 안의 버튼을 처음부터 모두 표시') +
+        u.check(!!s.dense, v => { s.dense = v; S.openSec = {}; S.addOpen = false; S.kindOpen = false; applyTheme(); saveDB(); renderAll(); }, '모두 펼쳐 보기 (전문가용) — 접힌 항목과 ⋯ 안의 버튼을 처음부터 모두 표시') +
         '<div class="row" style="margin-top:8px">' + u.btn(ico('i-swap') + (layout().sw ? '패널 기본 자리로' : '왼쪽·오른쪽 패널 바꾸기'), () => { $('#togSwap').click(); closeDlg(); }, 'sm') + u.btn('화면 배치 초기화', () => { DB.settings.layout = null; DB.settings.order = null; saveDB(); location.reload(); }, 'sm', 'title="패널 크기·자리, 머리글 아이콘·탭 순서를 처음대로"') + '</div>' +
         '<small>머리글 아이콘과 화면·서랍 탭은 <b>끌어서</b> 원하는 순서·묶음으로 옮길 수 있습니다. 패널 경계를 끌면 크기가 바뀝니다.</small></div>';
       h += '<div class="sect"><b>소리·언어</b>' + u.check(s.sound, v => { s.sound = v; saveDB(); if (v) beep(); }, 'NC 생성 차단·검증 오류 시 경고음') +
@@ -2278,7 +2283,13 @@
     $('#btnShare').onclick = openShare;
     $('#btnSettings').onclick = openSettings;
     $('#btnHelp').onclick = openHelp;
-    $('#btnMore').onclick = () => { const t = $('#top'), on = !t.classList.contains('more'); t.classList.toggle('more', on); $('#btnMore').setAttribute('aria-expanded', on); };
+    $('#btnMore').onclick = () => {
+      if (DENSE()) { const t = $('#top'), on = !t.classList.contains('more'); t.classList.toggle('more', on); $('#btnMore').setAttribute('aria-expanded', on); return; }
+      const r = $('#btnMore').getBoundingClientRect(), go = id => () => $('#' + id).click();
+      const extra = [{ label: '작업지시서 인쇄', fn: go('btnSheet') }, { label: '공유 링크·QR코드', fn: go('btnShare') }, { label: document.documentElement.dataset.theme === 'dark' ? '밝게 보기' : '어둡게 보기', fn: go('btnTheme') }];
+      // 휴대폰은 머리글 버튼이 모두 숨어 있으므로 전부 메뉴에
+      openMenu(Math.max(8, r.right - 220), r.bottom + 6, mobile() ? [{ label: '되돌리기', fn: undo, disabled: !S.undo.length }, { label: '다시 하기', fn: redo, disabled: !S.redo.length }, '-', { label: '프로젝트', fn: go('btnProjects') }, { label: '장비·공구', fn: go('btnTools') }].concat(extra, ['-', { label: '도움말·용어집', fn: go('btnHelp') }, { label: '설정', fn: go('btnSettings') }]) : extra);
+    };
     $('#btnTheme').onclick = () => { DB.settings.theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; applyTheme(); saveDB(); renderAll(); };
     $('#tab2d').onclick = () => setVMode('2d'); $('#tab3d').onclick = () => setVMode('3d');
     $('#drawerClose').onclick = () => { S.drawer = false; S.view.fitted = false; renderAll(); };

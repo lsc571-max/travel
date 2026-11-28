@@ -49,6 +49,8 @@
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3l10 18H2z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M12 10v5M12 17.5v.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2.1" fill="currentColor"/><circle cx="12" cy="12" r="2.1" fill="currentColor"/><circle cx="19" cy="12" r="2.1" fill="currentColor"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 4.5v15M4.5 12h15" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></symbol>
     <symbol id="i-print" viewBox="0 0 24 24"><path d="M7 9V4h10v5M7 17H5a2 2 0 01-2-2v-4a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2h-2M7 14h10v6H7z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
   </defs>
@@ -74,7 +76,7 @@
       <button id="btnHelp" class="ibtn" title="도움말·용어집 (F1)" aria-label="도움말"><svg><use href="#i-help"/></svg></button>
       <button id="btnSettings" class="ibtn" title="설정" aria-label="설정"><svg><use href="#i-gear"/></svg></button>
     </div>
-    <button id="btnMore" class="ibtn mmore" title="더보기: 작업지시서 · 공유 · 밝게/어둡게" aria-label="더보기" aria-expanded="false">⋯</button>
+    <button id="btnMore" class="ibtn mmore" title="더보기: 작업지시서 · 공유 · 밝게/어둡게" aria-label="더보기" aria-haspopup="menu" aria-expanded="false"><svg><use href="#i-more"/></svg></button>
     <button id="btnDownload" class="savebtn" title="NC 파일 저장"><svg><use href="#i-save"/></svg><span>NC 저장</span></button>
   </header>
 
@@ -87,8 +89,8 @@
   <section id="view" class="panel mpanel" aria-label="화면">
     <div class="vhead">
       <div class="vtabs" role="tablist">
-        <button id="tab2d" role="tab" data-v="2d">2D 배치</button>
-        <button id="tab3d" role="tab" data-v="3d">3D 시뮬레이션</button>
+        <button id="tab2d" role="tab" data-v="2d">2D<span class="lbl"> 배치</span></button>
+        <button id="tab3d" role="tab" data-v="3d">3D<span class="lbl"> 시뮬레이션</span></button>
       </div>
       <div class="vtools" id="vtools"></div>
       <button id="togL" class="ibtn sm paneltog" title="작업 목록 숨기기/보이기" aria-label="작업 목록 숨기기/보이기"><svg><use href="#i-panelL"/></svg></button>
