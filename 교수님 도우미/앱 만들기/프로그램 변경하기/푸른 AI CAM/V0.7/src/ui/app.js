@@ -91,7 +91,7 @@
   let FLD = null;
   const FKEYS = [['깊이', /깊이|두께/], ['가로', /가로|크기|폭|소재 범위|벗어/], ['세로', /세로|크기|폭|소재 범위|벗어/], ['지름', /지름|직경|Ø/], ['코너 R', /코너 R/], ['공구', /공구|엔드밀|드릴|리머|보링 바|탭 M/], ['측벽', /측벽 여유|측벽/], ['바닥', /바닥 여유/], ['경로 간격', /경로 간격/], ['절입', /절입/], ['관통 여유', /관통 여유|하부 여유/], ['모따기 폭', /모따기/], ['구배', /구배/], ['계단', /계단/], ['입구 R', /입구 R/], ['바닥 R', /바닥 R/], ['진입', /진입|선가공|램프|헬리컬/], ['날 빼기', /G76|Q/]];
   const FSPEC = ['경로 간격', '절입', '관통 여유', '측벽', '바닥', '구배', '계단', '입구 R', '바닥 R', '코너 R', '모따기 폭', '날 빼기', '진입'];
-  const bestKey = msg => { const ks = FKEYS.filter(x => x[1].test(msg)); return ((ks.find(x => FSPEC.includes(x[0])) || ks[0]) || [null])[0]; };
+  const bestKey = msg => { if (/클램프/.test(msg)) return null; const ks = FKEYS.filter(x => x[1].test(msg)); return ((ks.find(x => FSPEC.includes(x[0])) || ks[0]) || [null])[0]; }; // 클램프 충돌은 어느 칸의 문제가 아니므로 칸에 붙이지 않고 기본 치수 아래에 표시
   function fieldIssue(label) {
     if (!FLD || !FLD.list.length) return null;
     if (FLD.off) return null; // [V0.7] 접혀 있는 [공정 상세 편집] 안쪽 칸은 오류를 가져가지 않음 (가져가면 화면에 안 보이게 됨)

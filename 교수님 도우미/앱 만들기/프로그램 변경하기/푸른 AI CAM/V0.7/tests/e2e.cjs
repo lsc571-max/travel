@@ -652,7 +652,7 @@ function serve() {
     await p9.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[U.P.groups.length - 1]; U.mutate(() => { g.holes.push({ id: 'hx1', x: 75, y: 50 }); g.spec.thru = true; g.spec.brk = 8; }); }); await sleep(300);
     const sC = await p9.evaluate(() => { const f = [...document.querySelectorAll('#rightBody .basic .fld')].find(x => /관통 여유/.test(x.textContent)); return { has: !!f, err: !!f && f.classList.contains('ferr'), msg: f ? f.textContent.slice(0, 80) : '' }; });
     ok('[V0.7] 관통 여유가 하부 여유보다 크면 [관통 여유] 칸이 빨갛게 되고 이유 표시', sC.has && sC.err, JSON.stringify(sC));
-    await p9.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[U.P.groups.length - 1]; U.mutate(() => { g.spec.thru = false; g.spec.brk = 2; g.spec.depth = 5; }); }); await sleep(300);
+    await p9.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[U.P.groups.length - 1]; U.mutate(() => { U.P.groups[2].spec = window.PCAM.newPocketSpec({ w: 40, h: 30, depth: 5 }); g.spec.thru = false; g.spec.brk = 2; g.spec.depth = 5; }); }); await sleep(300); // 셋째 가공을 다시 포켓으로 → 그 바닥 안의 구멍
     const sD = await p9.evaluate(() => { const U = window.__PCAM_UI__, n = document.querySelector('#rightBody .note.info .reflist'); return { inFloor: U.P.groups.length, vis: !!n && !n.closest('details:not([open])'), txt: n ? n.textContent.slice(0, 90) : '' }; });
     ok('[V0.7] 다른 가공 바닥 안의 구멍: "먼저 가공된 바닥 기준 … 실제 끝 Z" 안내가 접힌 줄 밖에 보임', sD.vis && /실제 끝/.test(sD.txt), JSON.stringify(sD));
     await p9.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[U.P.groups.length - 1]; U.mutate(() => { g.holes = []; g.spec.depth = 10; }); }); await sleep(250);
