@@ -26,6 +26,8 @@
     out('(PUREUN AI CAM ' + VERSION + ' ' + ds + ')', false);
     // [V0.6] 승인: 가공 종류 × 앱 버전. 승인 없는 가공이 하나라도 있으면 TEST
     const ap = P.approvalOf(machine, plan);
+    if (opts.part) out('(PART ' + opts.part.k + ' OF ' + opts.part.n + (opts.part.after ? ' - RUN ONLY AFTER O' + pad(opts.part.after, 4) : ' - RUN FIRST') + ')', false); // [V0.6 검토] 분할 파일 순서
+    if (opts.forceTest && ap.ok) out('(*** TEST ONLY - WHOLE JOB NOT VERIFIED ***)', false);
     if (!ap.ok) out(ap.approved.length ? '(*** TEST ONLY - NOT VERIFIED: ' + ap.missing.map(k => (P.OPS.get(k) || {}).ncName || k).join(', ').slice(0, 90) + ' ***)' : '(*** TEST ONLY - MACHINE NOT VERIFIED ***)', false);
     const hashAt = B.length; // [V0.6] NC 해시 줄 자리 (마지막에 채움)
     out('(MACHINE: ' + (ncText(machine.name, 30) || 'MC') + ')', false);
@@ -34,6 +36,8 @@
     const used = [];
     plan.steps.forEach(s => { if (s.tool && !used.includes(s.tool)) used.push(s.tool); });
     const tname = t => t.type === 'tap' ? 'TAP M' + fmt(t.dia) + ' P' + fmt(t.pitch)
+      : t.type === 'reamer' ? 'REAMER D' + fmt(t.dia) + ' ' + String(t.tol || 'H7').replace(/[^A-Za-z0-9]/g, '')
+      : t.type === 'boring' ? 'BORING BAR D' + fmt(t.dia)
       : t.type === 'chamfer' ? 'CHAMFER MILL D' + fmt(t.dia) + ' A' + fmt(t.angle) + ' TIP D' + fmt(t.tip || 0)
         : (t.type === 'center' ? 'SPOT DRILL D' : t.type === 'endmill' ? 'FLAT ENDMILL D' : t.type === 'facemill' ? 'FACE MILL D' : 'DRILL D') + fmt(t.dia) + (t.type === 'endmill' || t.type === 'facemill' ? ' Z' + (t.z || 3) : '');
     used.forEach(t => out('(T' + pad(t.no, 2) + ' ' + tname(t) + ')', false));
@@ -43,7 +47,8 @@
     if (firstRun) out('(FIRST RUN MODE - M00 BEFORE EACH OP, CUTTING FEED ' + Math.round(fpct * 100) + ' PERCENT)', false);
     const restart = !!set.restart; let nRestart = 0; // [V0.6] 공구별 재시작 블록 (N100, N200 …)
     // M00 은 장비에 따라 주축·절삭유를 멈추므로, 다시 지령
-    const stopAt = (t, tp) => { if (firstRun) { out('(CHECK T' + pad(t.no, 2) + ' H' + pad(t.no, 2) + ' ' + set.wcs + ' - SINGLE BLOCK, CYCLE START)', false); out('M00'); if (spinOn) { out('S' + tp.rpm + ' M03'); if (set.coolant) out('M08'); } } };
+    // [V0.6 검토] 공구 교환 공정은 M06 바로 뒤(G43 이동 전)에 멈춰 H·G54 를 먼저 확인. 같은 공구 연속 공정은 진입 전에 멈춤
+    const stopAt = (t, tp) => { if (firstRun) { out('(CHECK T' + pad(t.no, 2) + ' H' + pad(t.no, 2) + ' ' + set.wcs + ' - SINGLE BLOCK, CYCLE START)', false); out('M00'); if (spinOn) out('S' + tp.rpm + ' M03'); if (spinOn && set.coolant) out('M08'); } };
     out('G21');
     out('G00 G17 G40 G49 G80 G90 G94'); // G94: 분당 이송 (이전 프로그램의 G95 잔류 방지)
     out('G91 G28 Z0.');
@@ -61,10 +66,11 @@
       }
       out('(OP' + s.idx + ' ' + s.ncName + ' T' + pad(t.no, 2) + ' Z' + fmt(tp.z) + ' ' + s.holes.length + (tp.kind === 'path' ? ' ' + (P.OPS.get(s.type).ncUnit || 'POCKETS') + ')' : ' HOLES)'), false);
       if (tp.kind === 'tap' || tp.kind === 'rigidTap') out('(TAP - SET FEED AND SPINDLE OVERRIDE TO 100 PERCENT)', false); // 탭: 오버라이드 100% 안내
-      if (s.toolChange && restart) { nRestart += 100; out('N' + nRestart + ' (RESTART T' + pad(t.no, 2) + ')', false); }
+      if (s.toolChange && restart) { nRestart += 100; out('N' + nRestart + ' (RESTART T' + pad(t.no, 2) + ')', false); if (!s.first) { out('G91 G28 Z0.'); out('G90'); } } // [V0.6 검토] 재시작 시 Z 원점 복귀 후 교환
       if (s.toolChange) out('T' + pad(t.no, 2) + ' M06');
       if (s.toolChange && restart) out('G00 G17 G40 G49 G80 G90 G94'); // 재시작 시 모달 상태 초기화
-      const stopHere = () => stopAt(t, tp);
+      if (s.toolChange && firstRun) { out('(CHECK T' + pad(t.no, 2) + ' H' + pad(t.no, 2) + ' ' + set.wcs + ' BEFORE G43 - SINGLE BLOCK, CYCLE START)', false); out('M00'); }
+      const stopHere = () => { if (!s.toolChange) stopAt(t, tp); };
       if (tp.kind === 'path') { pathBlock(s, t, tp); return; }
       const h0 = s.holes[0];
       const rigid = tp.kind === 'rigidTap';
@@ -107,7 +113,7 @@
           out('G00 G90 ' + set.wcs + ' X' + fmt(pm.sx) + ' Y' + fmt(pm.sy) + ' S' + tp.rpm + ' M03'); spinOn = true;
           if (s.toolChange) out('G43 Z' + fmt(set.initialZ) + ' H' + pad(t.no, 2) + (set.coolant ? ' M08' : ''));
         } else out('G00 X' + fmt(pm.sx) + ' Y' + fmt(pm.sy));
-        if (k === 0) stopAt(t, tp);
+        if (k === 0 && !s.toolChange) stopAt(t, tp);
         out('G00 Z' + fmt(tp.r));
         let lastF = null, lastZ = tp.r, lastX = pm.sx, lastY = pm.sy;
         pm.moves.forEach(mv => {
@@ -141,7 +147,7 @@
     } else L = B.map(b => b.s);
     // [V0.6] NC 해시 (이 줄을 뺀 전체 내용 기준) — 작업 기록·승인과 대조
     const hash = P.ncHash(L.join('\n'));
-    L.splice(hashAt, 0, '(NC HASH ' + hash + ' - PUREUN AI CAM ' + VERSION + ' VERIFIED BY INDEPENDENT CHECKER)');
+    L.splice(hashAt, 0, '(NC HASH ' + hash + ' - PUREUN AI CAM ' + VERSION + ')');
     return { text: L.join('\n'), hits, cuts, lines: L.length, hash };
   }
 

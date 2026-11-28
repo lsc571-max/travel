@@ -35,8 +35,9 @@
   function stamp(sim, x, y, z, tool) {
     if (!tool || !(tool.dia > 0)) return;
     const R = tool.dia / 2, kind = toolKind(tool), tg = TAG[kind];
-    const cone = (kind === 'drill' || kind === 'center' || kind === 'chamfer') ? 1 / Math.tan(toNum(tool.angle, kind === 'drill' ? 118 : 90) / 2 * Math.PI / 180) : 0;
-    const tipR = kind === 'chamfer' ? Math.max(0, toNum(tool.tip, 0)) / 2 : 0; // 모따기 공구: 끝 평면 반경
+    // [V0.6] 보링 바 = 평바닥, 리머 = 앞 모따기(45°, 길이 lead) 만 경사
+    const cone = tool.type === 'boring' ? 0 : tool.type === 'reamer' ? 1 : (kind === 'drill' || kind === 'center' || kind === 'chamfer') ? 1 / Math.tan(toNum(tool.angle, kind === 'drill' ? 118 : 90) / 2 * Math.PI / 180) : 0;
+    const tipR = kind === 'chamfer' ? Math.max(0, toNum(tool.tip, 0)) / 2 : tool.type === 'reamer' ? Math.max(0, R - Math.max(0.05, toNum(tool.lead, 0.5))) : 0; // 모따기 공구: 끝 평면 반경 · 리머: 모따기 안쪽 평면
     const i0 = Math.max(0, Math.floor((x - R - sim.x0) / sim.dx)), i1 = Math.min(sim.nx - 1, Math.ceil((x + R - sim.x0) / sim.dx));
     const j0 = Math.max(0, Math.floor((y - R - sim.y0) / sim.dx)), j1 = Math.min(sim.ny - 1, Math.ceil((y + R - sim.y0) / sim.dx));
     if (i0 > i1 || j0 > j1) return;
@@ -102,7 +103,7 @@
       const L = motionLength(m);
       let sec = m.k === 'rapid' ? L / rapid * 60 : L / Math.max(1, toNum(m.f, 100)) * 60;
       if (m.k === 'drill' && m.q > 0) sec += Math.ceil(L / m.q) * (2 * L / 2) / rapid * 60;
-      if (m.k === 'drill') sec += L / rapid * 60; // 복귀
+      if (m.k === 'drill') sec += m.code === 'G85' && m.f > 0 ? L / m.f * 60 : L / rapid * 60; // 복귀 (G85 리머는 이송 복귀)
       const t0 = acc; acc += sec;
       return { t0, t1: acc, sec };
     });

@@ -207,7 +207,8 @@
   function recompute() {
     const m = machine();
     S.V = C.validateProject(P, m);
-    const g = C.generateNC(P, m, S.V.plan);
+    // [V0.6 검토] 날짜 줄은 마지막 수정 시각 → 같은 내용이면 NC 해시가 분마다 바뀌지 않음
+    const ud = new Date(P.updatedAt), g = C.generateNC(P, m, S.V.plan, { date: isNaN(ud.getTime()) ? new Date() : ud });
     S.nc.text = g.text; S.nc.hits = g.hits; S.nc.cuts = g.cuts || []; S.nc.blocked = g.blocked || ''; S.nc.hash = g.hash || '';
     S.nc.verify = g.text ? C.verifyNC(g.text, verifyCtx(m, { expected: g.hits, expectedCuts: g.cuts || [] })) : null;
     // 재검증한 수정본도 소재·장비·클램프가 바뀌면 현재 조건으로 다시 검사 (이전 통과 결과 재사용 금지)
@@ -261,7 +262,8 @@
       if (!S.nc.verify) return { ok: false, why: 'G코드가 없습니다' };
       if (S.nc.verify.errors.length) return { ok: false, why: 'NC 해석 검증 오류 ' + S.nc.verify.errors.length + '건' };
     }
-    return { ok: true, test: !C.approvalOf(machine(), S.V.plan).ok }; // [V0.6] 가공 종류 × 버전 승인
+    // [V0.6] 가공 종류 × 버전 승인. [V0.6 검토] 손으로 고친 NC 는 승인된 가공과 같다는 보장이 없으므로 항상 검증용(TEST)
+    return { ok: true, test: S.nc.edited ? true : !C.approvalOf(machine(), S.V.plan).ok, editedTest: !!S.nc.edited };
   }
 
   /* ---------------- 전체 렌더 ---------------- */
@@ -559,7 +561,7 @@
       box.classList.add('sortable');
       [...box.children].filter(el => el.matches(itemSel)).forEach(el => {
         el.draggable = true;
-        el.addEventListener('dragstart', e => { dragEl = el; el.classList.add('dragging'); document.body.classList.add('arranging'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', idOf(el)); } catch (er) { /* 일부 브라우저 */ } });
+        el.addEventListener('dragstart', e => { dragEl = el; el.classList.add('dragging'); document.body.classList.add('arranging'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', idOf(el)); } catch (er) { void er; /* 일부 브라우저 */ } });
         el.addEventListener('dragend', () => { el.classList.remove('dragging'); document.body.classList.remove('arranging'); clear(); dragEl = null; });
       });
       box.addEventListener('dragover', e => {
@@ -1302,6 +1304,8 @@
         L.splice(oi >= 0 ? oi + 1 : 1, 0, '(USER EDITED - REVERIFIED ' + new Date().toISOString().slice(0, 10) + ')');
         text = L.join('\n');
       }
+      // TEST 표시 줄이 지워졌으면 다시 넣음 (파일 이름 TEST_ 와 내용 일치)
+      if (!/\(\*\*\* TEST ONLY/.test(text)) { const L = text.split(/\r?\n/), oi = L.findIndex(l => /^\s*O\d/.test(l)); L.splice(oi >= 0 ? oi + 1 : 1, 0, '(*** TEST ONLY - USER EDITED NC ***)'); text = L.join('\n'); }
       const w = withHash(text, 'USER EDITED'); text = w.text; hash = w.hash;
     }
     const m = machine(), kb = Math.ceil(text.length / 1024), tooBig = m.memKB > 0 && kb > m.memKB;
@@ -1310,7 +1314,7 @@
     const chkOk = () => { if ([...document.querySelectorAll('#dlg .ncChk')].some(x => !x.checked)) { beep(); toast('가공 전 점검 항목을 모두 확인하세요.', 'err'); return false; } return true; };
     const fileName = () => { let name = [...($('#ncFileName').value || '')].filter(ch => ch.charCodeAt(0) >= 32).join('').trim().replace(/[\\/:*?"<>|]+/g, '_') || ncFileName(ds); if (!/\.(nc|txt|tap|ncc|eia)$/i.test(name)) name += '.nc'; if (ds.test && !/^TEST_/.test(name)) name = 'TEST_' + name; return name; };
     const kinds = [...new Set((S.V.plan.steps || []).map(s => s.type))].join(',');
-    openDlg('NC 저장', () => (ds.test ? '<div class="banner warn">' + ico('i-warn') + '실가공 검증 전 가공이 있어 <b>검증용(TEST)</b> 파일입니다. 파일 이름에 TEST_ 가 붙습니다.</div>' : '') +
+    openDlg('NC 저장', () => (ds.test ? '<div class="banner warn">' + ico('i-warn') + (ds.editedTest ? '손으로 고친 NC 는 항상 <b>검증용(TEST)</b> 입니다.' : '실가공 검증 전 가공이 있어 <b>검증용(TEST)</b> 파일입니다.') + ' 파일 이름에 TEST_ 가 붙고 내용에도 TEST 표시가 들어갑니다.</div>' : '') +
       (tooBig ? '<div class="banner warn">' + ico('i-warn') + 'NC 크기 ' + kb + 'KB 가 장비 메모리 ' + m.memKB + 'KB 보다 큽니다. <b>공구별로 나눠 저장</b>하거나 DNC(외부 운전)로 보내세요.</div>' : '') +
       (P.settings.firstRun ? '<div class="note info">첫 가공 모드 NC 입니다: 공정마다 M00 정지, 절삭 이송 ' + P.settings.firstFeed + '%.</div>' : '') +
       '<label class="fld"><span>파일 이름</span><input type="text" id="ncFileName" value="' + esc(ncFileName(ds)) + '" maxlength="80"></label>' +
@@ -1333,7 +1337,8 @@
     for (let k = 0; k < parts.length; k++) {
       const p2 = Object.assign({}, P, { programNo: P.programNo + k });
       if (p2.programNo > 9999) { beep(); return toast('프로그램 번호가 9999 를 넘습니다. O번호를 줄이세요.', 'err'); }
-      const g = C.generateNC(p2, m, parts[k], {});
+      if (p2.programNo >= 8000 && P.programNo < 8000 && !confirm('나눠 저장하면 O' + p2.programNo + ' 처럼 8000번대(장비 보호 영역)가 됩니다. 계속할까요?')) return;
+      const g = C.generateNC(p2, m, parts[k], { date: new Date(P.updatedAt), forceTest: !!ds.test, part: { k: k + 1, n: parts.length, after: k ? P.programNo + k - 1 : 0 } });
       const v = C.verifyNC(g.text, verifyCtx(m, { expected: g.hits, expectedCuts: g.cuts || [], carryIn: carry }));
       if (v.errors.length || !v.match) { beep(); return toast('공구별 파일 ' + (k + 1) + ' 검증 실패: ' + (v.errors[0] ? v.errors[0].msg : '경로 불일치') + ' — 저장하지 않았습니다.', 'err'); }
       carry = v.carry;
@@ -1678,11 +1683,11 @@
       u.check(m.g76 !== false, dm(v => { m.g76 = v; }), 'G76 정밀 보링 지원 (주축 정위치 · Q 날 빼기)') +
       '<div class="grid3" style="margin-top:6px">' + u.fld('Z 행정 하한 (머신 좌표)', u.num(m.zMin, dm(v => { m.zMin = Math.min(0, v); })), 'G54 Z·H 를 입력하면 최저점이 이 안인지 검사') + u.fld('NC 메모리 (KB, 0=모름)', u.num(m.memKB || 0, v => dbChange(() => { m.memKB = Math.max(0, v); })), '넘으면 공구별 나눠 저장 안내') + '<span></span></div>';
 
-    h += '<h3>공구 목록 <small>(' + m.tools.length + '개)</small></h3><div class="tblwrap"><table class="tbl"><tr><th>T</th><th>종류</th><th>직경(mm)</th><th title="드릴: 선단각 · 탭: 피치 · 엔드밀: 날 수">각(°)/피치(mm)/날수</th><th>재질</th><th title="유효 날 길이(가공 가능한 최대 깊이)">날장(mm)</th><th title="홀더 끝에서 공구 끝까지 길이 (0 = 미입력 → 홀더 간섭 검사 생략)">돌출(mm)</th><th title="홀더(척) 바깥 지름 (클램프 간섭 검사)">홀더Ø</th><th title="장비에서 측정한 공구 길이 보정값 H (머신 Z 행정 검사)">H 측정</th><th></th></tr>';
+    h += '<h3>공구 목록 <small>(' + m.tools.length + '개)</small></h3><div class="tblwrap"><table class="tbl"><tr><th>T</th><th>종류</th><th>직경(mm)</th><th title="드릴: 선단각 · 탭: 피치 · 엔드밀: 날 수 · 리머: 앞 모따기 길이">각(°)/피치/날수/안내부</th><th>재질</th><th title="유효 날 길이(가공 가능한 최대 깊이)">날장(mm)</th><th title="홀더 끝에서 공구 끝까지 길이 (0 = 미입력 → 홀더 간섭 검사 생략)">돌출(mm)</th><th title="홀더(척) 바깥 지름 (클램프 간섭 검사)">홀더Ø</th><th title="장비에서 측정한 공구 길이 보정값 H (머신 Z 행정 검사)">H 측정</th><th></th></tr>';
     m.tools.slice().sort((a, b) => a.no - b.no).forEach(t => {
       h += '<tr><td style="width:56px">' + u.int(t.no, dm(v => { t.no = v; })) + '</td><td>' + u.select(t.type, Object.keys(C.TOOL_TYPES).map(k => [k, C.TOOL_TYPES[k]]), dm(v => { const n = C.normalizeTool(Object.assign({}, t, { type: v })); Object.keys(t).forEach(k => delete t[k]); Object.assign(t, n); })) + '</td>' +
         '<td>' + u.num(t.dia, dm(v => { t.dia = v; })) + '</td>' +
-        '<td>' + (t.type === 'tap' ? u.num(t.pitch, dm(v => { t.pitch = v; }), 'title="피치(mm)"') : t.type === 'endmill' ? u.int(t.z, dm(v => { t.z = Math.max(1, Math.min(12, v)); }), 'title="날 수"') : u.num(t.angle, dm(v => { t.angle = v; }), 'title="선단각(°)"')) + '</td>' +
+        '<td>' + (t.type === 'reamer' ? u.num(t.lead, dm(v => { t.lead = Math.max(0.1, Math.min(5, v)); }), 'title="리머 앞 모따기(안내부) 길이(mm) — 공구 끝 깊이에 더해짐"') : t.type === 'boring' ? '<small>-</small>' : t.type === 'tap' ? u.num(t.pitch, dm(v => { t.pitch = v; }), 'title="피치(mm)"') : t.type === 'endmill' ? u.int(t.z, dm(v => { t.z = Math.max(1, Math.min(12, v)); }), 'title="날 수"') : u.num(t.angle, dm(v => { t.angle = v; }), 'title="선단각(°)"')) + '</td>' +
         '<td>' + u.select(t.mat, [['HSS', 'HSS'], ['CARBIDE', '초경']], dm(v => { t.mat = v; })) + '</td>' +
         '<td>' + u.num(t.flute, dm(v => { t.flute = v; }), 'title="유효 날 길이(mm)"') + '</td>' +
         '<td>' + u.num(t.stick || 0, dm(v => { t.stick = Math.max(0, v); }), 'title="돌출 길이(mm), 0 = 미입력"') + '</td><td>' + u.num(t.holderDia || 0, dm(v => { t.holderDia = Math.max(0, v); }), 'title="홀더 지름(mm)"') + '</td><td>' + u.num(t.hVal || 0, v => dbChange(() => { t.hVal = Math.max(0, v); }), 'title="H 측정값(mm)"') + '</td>' +
@@ -1865,7 +1870,7 @@
       '<tr><th>소재</th><td>' + esc(C.MATERIALS[st.material] ? C.MATERIALS[st.material].label : st.material) + ' · ' + st.sx + ' × ' + st.sy + ' × ' + st.sz + ' mm</td><th>원점</th><td>' + esc(C.ORIGIN_LABEL[st.origin]) + ' · Z0 = 소재 윗면 · ' + esc(set.wcs) + '</td></tr>' +
       '<tr><th>초기점</th><td>Z' + set.initialZ + ' (' + (set.retract === 'G98' ? 'G98 초기점 복귀' : 'G99 R점 복귀') + ')</td><th>하부 여유</th><td>' + C.toNum(st.under, 0) + ' mm</td></tr>' +
       '<tr><th>예상 시간</th><td>' + (S.est ? '약 ' + fmtSec(S.est.total) + ' (절삭·이동 ' + fmtSec(S.est.cut) + ' + 공구 교환 ' + S.est.changes + '회)' : '-') + '</td><th>클램프</th><td>' + (P.clamps.length ? P.clamps.map((cl, i) => '#' + (i + 1) + ' X' + cl.x + ' Y' + cl.y + ' ' + cl.w + '×' + cl.h + ' H' + cl.height).join('<br>') : '없음') + '</td></tr>';
-    h += '<tr><th>NC 해시</th><td colspan="3"><b>' + esc(S.nc.hash || '-') + '</b> <small>(NC 파일 맨 위 (NC HASH …) 줄과 같아야 이 지시서의 파일입니다)</small>' + (set.firstRun ? ' · <b>첫 가공 모드</b> (공정마다 M00, 이송 ' + set.firstFeed + '%)' : '') + (set.restart ? ' · 공구별 재시작 블록 N100…' : '') + '</td></tr>';
+    h += '<tr><th>NC 해시</th><td colspan="3"><b>' + (S.nc.edited ? '수정본 — 저장할 때 다시 계산 (가공 기록 참고)' : esc(S.nc.hash || '-')) + '</b> <small>(NC 파일 맨 위 (NC HASH …) 줄과 같아야 이 지시서의 파일입니다)</small>' + (set.firstRun ? ' · <b>첫 가공 모드</b> (공정마다 M00, 이송 ' + set.firstFeed + '%)' : '') + (set.restart ? ' · 공구별 재시작 블록 N100…' : '') + '</td></tr>';
     h += '</table>' + sheetLayout();
     h += '<h2>공구표</h2><table class="sh-t"><tr><th>T</th><th>공구</th><th>날장</th><th>돌출</th><th>재질</th><th>사용 공정</th><th>시간(추정)</th><th>H 장비값</th><th>확인</th></tr>';
     used.forEach(no => {

@@ -17,7 +17,7 @@
   const ALLOWED_M = new Set([0, 1, 2, 3, 5, 6, 8, 9, 29, 30]);
   // FANUC 모달 그룹 (같은 그룹 동시 지령 금지 검사용)
   const GROUPS = [['00 비모달', [4, 28]], ['01 이동', [0, 1, 2, 3]], ['02 평면', [17]], ['03 절대/증분', [90, 91]], ['05 이송', [94]], ['06 단위', [21]],
-    ['07 반경보정', [40]], ['08 공구길이', [43, 49]], ['09 고정사이클', [73, 80, 81, 82, 83, 84]], ['10 복귀', [98, 99]], ['14 좌표계', [54, 55, 56, 57, 58, 59]]];
+    ['07 반경보정', [40]], ['08 공구길이', [43, 49]], ['09 고정사이클', [73, 76, 80, 81, 82, 83, 84, 85, 86]], ['10 복귀', [98, 99]], ['14 좌표계', [54, 55, 56, 57, 58, 59]]];
   // 이동을 0.5mm 간격 점으로 나눔 (직선·원호, Z 는 선형 보간)
   function sampleMove(x0, y0, z0, x1, y1, z1, arc) {
     const pts = [];
@@ -293,7 +293,7 @@
         else if (g === 99) s.ret = 99;
         else if (g >= 54 && g <= 59) s.wcs = g;
         else if (g === 49) { s.h = null; }
-        else if (g === 80) { s.cycle = null; s.m29 = false; s.initZ = null; }
+        else if (g === 80) { s.cycle = null; s.m29 = false; s.initZ = null; s.cq = null; s.cp = 0; s.cz = null; s.cr = null; } // [V0.6 검토] G80 은 사이클 데이터(Z·R·Q·P)를 지움
         else if (g >= 0 && g <= 3) { s.motion = g; s.m29 = false; s.m29S = 0; if (s.cycle !== null) { s.cycle = null; s.initZ = null; } }
         else if (g === 28) g28 = true;
         else if (g === 43) g43 = true;
@@ -399,6 +399,7 @@
           if ((tool.type === 'reamer' || tool.type === 'boring') && ![76, 85, 86].includes(s.cycle)) E(ln, (tool.type === 'reamer' ? '리머' : '보링 바') + ' T' + tool.no + ' 로 ' + code + ' 실행 — 급속 복귀로 구멍 벽을 긁습니다. 리머는 G85, 보링은 G76(또는 G86)을 쓰세요.');
           if ([76, 85, 86].includes(s.cycle) && tool.type !== 'reamer' && tool.type !== 'boring') E(ln, code + ' 는 리머·보링 바 전용입니다 (T' + tool.no + ' ' + tool.type + ').');
           if (s.cycle === 76 && tool.type !== 'boring') E(ln, 'G76 정밀 보링은 보링 바로만 가공합니다.');
+          if (tool.type === 'reamer' && s.cycle !== 85) E(ln, '리머 T' + tool.no + ' 는 G85(이송 복귀)로만 가공합니다 — ' + code + ' 는 급속·정지 복귀로 구멍 벽을 긁습니다.');
           if (s.cycle === 76 && !(s.cq >= 0.05 && s.cq <= 0.5 + EPS)) E(ln, 'G76 날 빼기 거리 Q' + (s.cq === null ? ' 없음' : fmt(s.cq)) + ' — 0.05~0.5mm 여야 합니다 (반대쪽 벽 충돌·벽 긁힘).');
           if (s.cycle === 76 && machine.g76 === false) E(ln, '이 장비는 G76(주축 정위치)을 지원하지 않습니다.');
           if ((s.cycle === 73 || s.cycle === 83) && tool.type === 'center') W(ln, '센터 드릴로 펙 사이클을 사용합니다.');

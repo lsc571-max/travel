@@ -211,9 +211,13 @@
       if (d > t.stick - 1 + EPS) add('error', 8, 'T' + t.no + ' 돌출 길이 ' + t.stick + 'mm 로는 깊이 ' + r3(d) + 'mm 를 가공할 수 없습니다 (홀더가 소재에 닿음, 여유 1mm). 공구를 더 길게 물리거나 [장비·공구]의 돌출 길이를 확인하세요.', ref);
       else if (d > t.stick - 3 + EPS) add('warn', 8, 'T' + t.no + ' 돌출 길이 ' + t.stick + 'mm 와 가공 깊이 ' + r3(d) + 'mm 의 차이가 3mm 미만입니다 (홀더 근접).', ref);
     });
+    const noHolder = [...deep.values()].filter(({ s }) => s.tool.stick > 0 && !(s.tool.holderDia > 0)).map(({ s }) => 'T' + s.tool.no);
+    if (noHolder.length && project.clamps.length) add('info', 8, '홀더 지름이 입력되지 않은 공구(' + noHolder.join(', ') + ')는 홀더-클램프 간섭을 검사하지 않습니다.');
     if (noStick.length) add('info', 8, '돌출 길이가 입력되지 않은 공구(' + noStick.join(', ') + ')는 홀더 간섭을 검사하지 않습니다. [장비·공구]에서 입력하면 검사합니다.');
     // [V0.6] 머신 좌표 Z 행정: G54 Z(머신)·공구 길이 H 를 입력하면 초기점·최저점이 행정 안인지
     if (P.isNum(set.g54Z) && set.g54Z !== null) {
+      const noH = [...new Set(plan.steps.filter(s => s.tool && !(s.tool.hVal > 0)).map(s => 'T' + s.tool.no))];
+      if (noH.length) add('info', 10, 'H 측정값이 없는 공구(' + noH.join(', ') + ')는 머신 Z 행정을 검사하지 않습니다.');
       plan.steps.forEach(s => {
         const t = s.tool; if (!t || !(t.hVal > 0)) return;
         const top = set.g54Z + t.hVal + toNum(set.initialZ, 50), bot = set.g54Z + t.hVal + s.z;

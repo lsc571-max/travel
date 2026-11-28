@@ -40,7 +40,8 @@ test('실가공 승인: 가공 종류·버전별, 해시 줄, 공구별 재시�
   const L = r.gen.text.split('\n');
   const ns = L.filter(l => /^N\d+ /.test(l));
   assert.deepEqual(ns.map(l => l.split(' ')[0]), ['N100', 'N200'], '공구 2개 → N100, N200 (순번 출력은 끔)');
-  L.forEach((l, i) => { if (/^N\d00 /.test(l)) assert.match(L[i + 1], /^T\d+ M06$/); });
+  // 재시작 번호 뒤: (첫 공구 아니면) Z 원점 복귀 G91 G28 Z0. → G90 → 공구 교환 → 모달 초기화
+  L.forEach((l, i) => { if (/^N\d00 /.test(l)) { const nx = L.slice(i + 1, i + 5).join('|'); assert.match(nx, l.startsWith('N100') ? /^T\d+ M06\|G00 G17 G40 G49 G80 G90 G94/ : /^G91 G28 Z0\.\|G90\|T\d+ M06\|G00 G17 G40 G49 G80 G90 G94/, nx); } });
   assert.match(r.gen.text, /\(NC HASH [0-9A-F]{8} /);
   assert.equal(r.gen.hash, C.ncHash(r.gen.text.split('\n').filter(l => !/^\(NC HASH /.test(l)).join('\n')));
   assert.ok(r.V.issues.some(i => /실가공 검증 전/.test(i.msg)));
@@ -112,4 +113,24 @@ test('정밀 보링: 드릴 없으면 원형 포켓 밑구멍 → G76 Q, G76 미
   assert.ok(C.verifyNC(r.gen.text.replace(/Q0\.2/, 'Q2.'), r.ctx({ expected: null })).errors.some(e => /Q/.test(e.msg)));
   const dr = build([{ spec: C.newHoleSpec('bore', { dia: 20, depth: 10 }) }], { machine: addDrill(23, 18) });
   assert.deepEqual(dr.p.groups[0].ops.map(o => o.type), ['center', 'drill', 'bore']); assert.deepEqual(dr.vr.errors, []);
+});
+
+test('[V0.6 검토] 첫 가공 M00 은 G43 이동 전, 리지드 탭 절삭유 유지, 분할 파일 순서·TEST 표시, 리머 G86 차단, G80 은 사이클 데이터 지움', () => {
+  const r = build([{ spec: C.newPocketSpec({ shape: 'rect', w: 40, h: 30, depth: 5 }) }, { spec: C.newHoleSpec('tap', { tapD: 8, tapP: 1.25, tapDepth: 12 }), at: [[20, 20]] }], { settings: { firstRun: true } });
+  assert.deepEqual(r.vr.errors, []);
+  const L = r.gen.text.split('\n');
+  L.forEach((l, i) => { if (/^G43 /.test(l)) { const back = L.slice(Math.max(0, i - 4), i).join('|'); assert.match(back, /M00/, 'G43 앞 M00: ' + back); } });
+  const t = L.findIndex(l => /^M29 /.test(l)), before = L.slice(0, t).reverse(), m08 = before.findIndex(l => /M08/.test(l)), m09 = before.findIndex(l => /^M09$/.test(l));
+  assert.ok(m08 >= 0 && (m09 < 0 || m08 < m09), '리지드 탭 전 절삭유 켜짐');
+  // 분할: 순서 주석·전체 TEST
+  const parts = C.planByTool(r.V.plan);
+  const g2 = C.generateNC(Object.assign({}, r.p, { programNo: 2 }), r.m, parts[1], { forceTest: true, part: { k: 2, n: parts.length, after: 1 } });
+  assert.match(g2.text, /\(PART 2 OF \d+ - RUN ONLY AFTER O0001\)/); assert.match(g2.text, /TEST ONLY/);
+  // 리머 + G86 차단, G80 뒤 Q 없는 G76 차단
+  const rm = build([{ spec: C.newHoleSpec('ream', { dia: 6, depth: 12 }) }], { machine: addDrill(23, 5.8) });
+  assert.ok(C.verifyNC(rm.gen.text.replace('G85 ', 'G86 '), rm.ctx({ expected: null })).errors.some(e => /리머/.test(e.msg)));
+  const bo = build([{ spec: C.newHoleSpec('bore', { dia: 20, depth: 10 }) }]);
+  assert.ok(C.verifyNC(bo.gen.text.replace(/ Q0\.2/, ''), bo.ctx({ expected: null })).errors.some(e => /Q/.test(e.msg)));
+  // 공구 목록 주석에 리머·보링 이름
+  assert.match(rm.gen.text, /\(T09 REAMER D6\. H7\)/); assert.match(bo.gen.text, /\(T22 BORING BAR D20\.\)/);
 });

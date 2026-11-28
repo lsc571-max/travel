@@ -8,7 +8,7 @@
 (function (root) {
   'use strict';
   const P = root.PCAM, H = P.HOLE;
-  const { toNum, r3, EPS } = P;
+  const { r3, EPS } = P;
   // 같은 그룹 앞 공정 중 밑구멍(드릴) 찾기 (위치 오프셋 at 이 같아야 함)
   function preHoles(ctx) {
     const { op, oi, ops, tm, st } = ctx;
