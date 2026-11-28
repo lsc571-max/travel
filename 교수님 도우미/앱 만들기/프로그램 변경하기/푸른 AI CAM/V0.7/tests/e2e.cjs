@@ -624,7 +624,17 @@ function serve() {
     await p9.click('#rightBody details[data-sec="adv"] > summary'); await sleep(200);
     ok('[V0.7] 오류가 있는 줄은 닫아도 다시 펼쳐짐 (다시 그릴 때)', await p9.evaluate(() => { window.__PCAM_UI__.renderAll(); return document.querySelector('#rightBody details[data-sec="adv"]').open; }));
     await p9.evaluate(() => { const U = window.__PCAM_UI__; U.mutate(() => { U.P.groups[2].spec.draft = 0; }); }); await sleep(300);
-    ok('[V0.7] 오류를 고치면 다시 접힘 · NC 저장 가능', await p9.evaluate(() => !document.querySelector('#rightBody details[data-sec="adv"]').open && !document.querySelector('#btnDownload').classList.contains('blocked')));
+    ok('[V0.7] 오류를 고쳐도 그 가공을 보는 동안은 줄이 열려 있음 (입력하던 칸이 사라지지 않음) · NC 저장 가능', await p9.evaluate(() => document.querySelector('#rightBody details[data-sec="adv"]').open && !document.querySelector('#rightBody details[data-sec="adv"] summary .am') && !document.querySelector('#btnDownload').classList.contains('blocked')));
+    await p9.click('#tree .titem[data-gid] >> nth=0'); await sleep(150); await p9.click('#tree .titem[data-gid] >> nth=2'); await sleep(200);
+    ok('[V0.7] 다른 가공을 골랐다 돌아오면 다시 접힘', await p9.evaluate(() => !document.querySelector('#rightBody details[data-sec="adv"]').open));
+    // [독립 검증 반영] 오류는 알맞은 칸·줄에, 접힌 안쪽 칸이 가져가지 않음
+    await p9.evaluate(() => { const U = window.__PCAM_UI__; U.mutate(() => { U.P.groups[2].spec.stepover = 5; }); }); await sleep(300);
+    const sA = await p9.evaluate(() => { const adv = document.querySelector('#rightBody details[data-sec="adv"]'), f = adv.querySelector('.fld.ferr'); return { adv: adv.open, lbl: f ? f.querySelector('span').textContent : '', opt: document.querySelector('#rightBody details[data-sec="opt"]').open }; });
+    ok('[V0.7] 경로 간격 오류 → [고급 설정]이 펼쳐지고 [경로 간격] 칸에 표시 ([옵션]의 공구 칸이 아님)', sA.adv && /경로 간격/.test(sA.lbl) && !sA.opt, JSON.stringify(sA));
+    await p9.evaluate(() => { const U = window.__PCAM_UI__; U.mutate(() => { U.P.groups[2].spec.stepover = 50; U.P.clamps.push({ id: 'ct', x: 60, y: 35, w: 30, h: 30, height: 30 }); }); }); await sleep(300);
+    const sB = await p9.evaluate(() => ({ al: [...document.querySelectorAll('#rightBody .alerts')].map(a => a.textContent).join(' '), edit: document.querySelector('#rightBody details.adv').open }));
+    ok('[V0.7] 클램프와 겹침 오류 → 기본 치수 아래에 바로 표시 (접힌 공정 상세 편집 안에 숨지 않음)', /클램프/.test(sB.al) && !sB.edit, JSON.stringify(sB));
+    await p9.evaluate(() => { const U = window.__PCAM_UI__; U.mutate(() => { U.P.clamps.pop(); }); }); await sleep(250);
     // 입력칸에 붙지 않는 오류도 기본 치수 아래에 보임
     await p9.evaluate(() => { const U = window.__PCAM_UI__; U.mutate(() => { U.P.groups[2].spec.toolNo = 99; }); }); await sleep(250);
     ok('[V0.7] 접힌 옵션 안의 잘못된 공구 → 기본 치수 바로 아래에 오류 안내', /T99/.test(await p9.textContent('#rightBody .alerts').catch(() => '')));
@@ -638,6 +648,14 @@ function serve() {
     await p9.click('#tree .addmain'); await sleep(100); await p9.click('#tree .addpal .addbtn.k-drill'); await sleep(250);
     const s4 = await p9.evaluate(() => { const d = document.querySelector('#rightBody details[data-sec="pos-h"]'); return { open: d && d.open, warn: d && !!d.querySelector('summary .am.warn'), basic: document.querySelectorAll('#rightBody .basic input[type=number]').length, tabs: document.querySelectorAll('#rightBody .subtabs button').length, verb: document.querySelector('#tree .nextstep b').textContent }; });
     ok('[V0.7] 구멍 추가: 지름·깊이 + 위치 입력이 바로 보이고, 위치가 없으면 ! 표시 · 다음 할 일 = 위치 넣기', s4.open && s4.warn && s4.basic === 2 && s4.tabs === 4 && /위치 넣기/.test(s4.verb), JSON.stringify(s4));
+    // [독립 검증 반영] 관통 여유 오류·깊이 기준 안내는 항상 보임
+    await p9.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[U.P.groups.length - 1]; U.mutate(() => { g.holes.push({ id: 'hx1', x: 75, y: 50 }); g.spec.thru = true; g.spec.brk = 8; }); }); await sleep(300);
+    const sC = await p9.evaluate(() => { const f = [...document.querySelectorAll('#rightBody .basic .fld')].find(x => /관통 여유/.test(x.textContent)); return { has: !!f, err: !!f && f.classList.contains('ferr'), msg: f ? f.textContent.slice(0, 80) : '' }; });
+    ok('[V0.7] 관통 여유가 하부 여유보다 크면 [관통 여유] 칸이 빨갛게 되고 이유 표시', sC.has && sC.err, JSON.stringify(sC));
+    await p9.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[U.P.groups.length - 1]; U.mutate(() => { g.spec.thru = false; g.spec.brk = 2; g.spec.depth = 5; }); }); await sleep(300);
+    const sD = await p9.evaluate(() => { const U = window.__PCAM_UI__, n = document.querySelector('#rightBody .note.info .reflist'); return { inFloor: U.P.groups.length, vis: !!n && !n.closest('details:not([open])'), txt: n ? n.textContent.slice(0, 90) : '' }; });
+    ok('[V0.7] 다른 가공 바닥 안의 구멍: "먼저 가공된 바닥 기준 … 실제 끝 Z" 안내가 접힌 줄 밖에 보임', sD.vis && /실제 끝/.test(sD.txt), JSON.stringify(sD));
+    await p9.evaluate(() => { const U = window.__PCAM_UI__, g = U.P.groups[U.P.groups.length - 1]; U.mutate(() => { g.holes = []; g.spec.depth = 10; }); }); await sleep(250);
     // 2D 도구 막대
     const vt = await p9.evaluate(() => { const v = document.querySelector('#vtools'), r = v.getBoundingClientRect(); return { n: [...v.querySelectorAll(':scope > button, :scope > details > summary')].filter(b => b.getBoundingClientRect().width > 0).length, h: Math.round(r.height), clamp: [...v.querySelectorAll('button')].some(b => /클램프/.test(b.textContent) && !b.closest('details:not([open])')), hint: document.querySelector('#viewHint').hidden }; });
     ok('[V0.7] 2D 도구 막대: 한 줄 · 6개 이하 (선택·위치 추가·맞춤·단면도·⋯), 안내 글 숨김', vt.n <= 6 && vt.h <= 46 && !vt.clamp && vt.hint, JSON.stringify(vt));
@@ -648,6 +666,10 @@ function serve() {
     await p9.click('#vtools button:has-text("선택")'); await sleep(100);
     await p9.click('#vtools details.pop > summary'); await sleep(100); await p9.mouse.click(700, 500); await sleep(150);
     ok('[V0.7] ⋯ 펼침은 바깥을 누르면 닫힘', await p9.evaluate(() => !document.querySelector('#vtools details.pop').open));
+    await p9.click('#vtools details.pop > summary'); await sleep(100); await p9.keyboard.press('Escape'); await sleep(150);
+    ok('[V0.7] ⋯ 펼침은 Esc 로도 닫힘', await p9.evaluate(() => !document.querySelector('#vtools details.pop').open));
+    await p9.click('#tree .addmain'); await sleep(100); await p9.keyboard.press('Escape'); await sleep(150);
+    ok('[V0.7] 가공 추가 선택판도 Esc 로 닫힘', !(await p9.locator('#tree .addpal').count()));
     // 소재·원점 NC
     await p9.click('#tree .titem[data-node="nc"]'); await sleep(200);
     const s5 = await p9.evaluate(() => [...document.querySelectorAll('#rightBody details.acc')].map(d => d.dataset.sec + (d.open ? '+' : '-')).join(' '));

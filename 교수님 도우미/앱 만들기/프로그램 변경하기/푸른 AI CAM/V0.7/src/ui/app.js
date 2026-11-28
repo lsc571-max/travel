@@ -32,6 +32,7 @@
     bore: { ico: 'i-bore', cls: 'k-bore', label: '보링', color: '#c2553a' },
     custom: { ico: 'i-custom', cls: 'k-custom', label: '직접 구성', color: '#64748b' }
   };
+  const OLD_COLOR = { chamfer: '#d6336c', face: '#5b7083', ream: '#1d7f8c', bore: '#6d5bd0' }; // V0.6 이하 기본 표시 색
   const SIM_RES = { l: 60000, m: 160000, h: 400000 };
   const TOOL_BAND = { center: '#14a37f', drill: '#2f6fed', tap: '#8b5cf6', endmill: '#ee8a10', facemill: '#5b7083', chamfer: '#d6336c', reamer: '#1d7f8c', boring: '#6d5bd0' };
   const MILL_KINDS = ['pocket', 'contour', 'face', 'chamfer'];
@@ -89,11 +90,14 @@
   // 지금 그리는 가공의 오류·경고를 관련 입력칸에 연결 (칸 이름의 핵심 낱말로)
   let FLD = null;
   const FKEYS = [['깊이', /깊이|두께/], ['가로', /가로|크기|폭|소재 범위|벗어/], ['세로', /세로|크기|폭|소재 범위|벗어/], ['지름', /지름|직경|Ø/], ['코너 R', /코너 R/], ['공구', /공구|엔드밀|드릴|리머|보링 바|탭 M/], ['측벽', /측벽 여유|측벽/], ['바닥', /바닥 여유/], ['경로 간격', /경로 간격/], ['절입', /절입/], ['관통 여유', /관통 여유|하부 여유/], ['모따기 폭', /모따기/], ['구배', /구배/], ['계단', /계단/], ['입구 R', /입구 R/], ['바닥 R', /바닥 R/], ['진입', /진입|선가공|램프|헬리컬/], ['날 빼기', /G76|Q/]];
+  const FSPEC = ['경로 간격', '절입', '관통 여유', '측벽', '바닥', '구배', '계단', '입구 R', '바닥 R', '코너 R', '모따기 폭', '날 빼기', '진입'];
+  const bestKey = msg => { const ks = FKEYS.filter(x => x[1].test(msg)); return ((ks.find(x => FSPEC.includes(x[0])) || ks[0]) || [null])[0]; };
   function fieldIssue(label) {
     if (!FLD || !FLD.list.length) return null;
-    const t = String(label).replace(/<[^>]*>/g, ''), k = FKEYS.find(x => t.includes(x[0]));
+    if (FLD.off) return null; // [V0.7] 접혀 있는 [공정 상세 편집] 안쪽 칸은 오류를 가져가지 않음 (가져가면 화면에 안 보이게 됨)
+    const t = String(label).replace(/<[^>]*>/g, ''), k = FKEYS.filter(x => t.includes(x[0])).sort((a, b) => b[0].length - a[0].length)[0]; // 이름표에 맞는 가장 긴 열쇠말
     if (!k) return null;
-    const cands = FLD.list.filter(x => !FLD.used.has(x) && k[1].test(x.msg));
+    const cands = FLD.list.filter(x => !FLD.used.has(x) && bestKey(x.msg) === k[0]); // [V0.7] 오류는 가장 구체적인 칸 하나에만 (예: '경로 간격' 오류가 '공구' 칸에 붙지 않게)
     if (!cands.length) return null;
     const i = cands.find(x => quickFix(x)) || cands.find(x => x.level === 'error') || cands[0]; // 바로 고칠 수 있는 것·오류 먼저
     FLD.used.add(i);
@@ -118,7 +122,7 @@
     undo: [], redo: [],
     V: null, nc: { text: '', hits: [], cuts: [], blocked: '', verify: null, edited: false, editText: '', editVerify: null },
     admin: { authed: false, until: 0, clicks: [] },
-    openSec: {}, gz: new Map(), est: null, toolsTab: 'machine', dlgRefresh: null,
+    openSec: {}, keepOpen: {}, gz: new Map(), est: null, toolsTab: 'machine', dlgRefresh: null,
     sim: { speed: 10, res: 'm', showPaths: true, sig: '', stockSig: '', total: 0, tl: [], motions: [], t: 0 }
   };
   const $ = (s, r) => (r || document).querySelector(s);
@@ -169,10 +173,11 @@
   }
   // change 처리는 포커스 이동(Tab) 이후 실행하여 다음 입력칸 포커스를 유지
   document.addEventListener('change', e => { const el = e.target, k = el && el.dataset && el.dataset.k; if (k && binds.has(k)) { const fn = binds.get(k); setTimeout(() => fn(el), 0); } });
-  document.addEventListener('click', e => { const sm = e.target.closest && e.target.closest('summary'), d = sm && sm.parentElement; if (d && d.dataset && d.dataset.sec && !d.dataset.forced) S.openSec[d.dataset.sec] = !d.open; }, true); // [V0.7] 사람이 누른 것만 기억 (처음부터 펼친 줄·오류로 펼친 줄은 기억하지 않음)
+  document.addEventListener('click', e => { const sm = e.target.closest && e.target.closest('summary'), d = sm && sm.parentElement; if (!d || !d.dataset || !d.dataset.sec) return; if (d.dataset.forced) { e.preventDefault(); return; } S.openSec[d.dataset.sec] = !d.open; delete S.keepOpen[d.dataset.sec]; }, true); // [V0.7] 사람이 누른 것만 기억 (처음부터 펼친 줄·오류로 펼친 줄은 기억하지 않음)
   document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-a]'); if (b && acts.has(b.dataset.a) && !b.disabled) { e.preventDefault(); acts.get(b.dataset.a)(e, b); } });
   // [V0.7] ⋯ 펼침 메뉴는 바깥을 누르면 닫힘
   document.addEventListener('pointerdown', e => { document.querySelectorAll('details.pop[open]').forEach(d => { if (!d.contains(e.target)) { d.open = false; if (d.dataset.sec) S.openSec[d.dataset.sec] = false; } }); }, true);
+  document.addEventListener('click', e => { if (S.addOpen && e.target.closest && !e.target.closest('.addpal, .addmain, .nextstep, .flow, dialog, #ctxmenu')) { S.addOpen = false; renderTree(); } }); // 선택판 바깥을 누르면 닫힘
   // 버튼이 아닌 선택 항목(작업 목록 등)도 키보드 Enter/Space 로 선택
   document.addEventListener('keydown', e => { const b = e.target; if ((e.key === 'Enter' || e.key === ' ') && b && b.getAttribute && b.getAttribute('role') === 'button' && b.tagName !== 'BUTTON' && b.dataset.a) { e.preventDefault(); b.click(); } });
 
@@ -198,7 +203,8 @@
     if (kind === 'ok') document.querySelectorAll('#toasts .toast.err').forEach(x => x.remove()); // 해결된 오류 알림 정리
     const t = document.createElement('div'); t.className = 'toast ' + (kind || ''); t.textContent = msg;
     if (action) { document.querySelectorAll('#toasts .toast.act').forEach(x => x.remove()); t.classList.add('act'); const b = document.createElement('button'); b.type = 'button'; b.textContent = action.label; b.onclick = () => { t.remove(); action.fn(); }; t.appendChild(b); }
-    const box = $('#toasts'); box.appendChild(t); while (box.children.length > 3) box.firstChild.remove(); // 최대 3개 setTimeout(() => t.remove(), action ? 7000 : kind === 'err' ? 5000 : 2600);
+    const box = $('#toasts'); box.appendChild(t); while (box.children.length > 3) box.firstChild.remove(); // 최대 3개
+    setTimeout(() => t.remove(), action ? 9000 : kind === 'err' ? 8000 : 3500); // [V0.7] 주석 뒤에 붙어 실행되지 않던 줄 — 알림이 계속 남아 아래 줄을 가리던 문제
   }
   function beep() {
     if (!DB.settings.sound) return;
@@ -323,7 +329,7 @@
   }
   const stIcon = s => '<span class="st ' + s + '" title="' + (s === 'ok' ? '문제 없음' : s === 'err' ? '오류 확인 필요' : '경고 확인') + '">' + ico(s === 'ok' ? 'i-check' : s === 'err' ? 'i-x' : 'i-warn') + '</span>';
   function flash(sel) { const el = $(sel); if (!el) return; el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
-  function select(kind, gid) { const changed = S.sel.kind !== kind || S.sel.gid !== (gid || null); S.sel = { kind, gid: gid || null, hid: null }; S.kindOpen = false; S.addOpen = false; if (mobile()) S.mpanel = 'right'; renderAll(); if (changed) $('#rightBody').scrollTop = 0; }
+  function select(kind, gid) { const changed = S.sel.kind !== kind || S.sel.gid !== (gid || null); S.sel = { kind, gid: gid || null, hid: null }; S.kindOpen = false; S.addOpen = false; S.keepOpen = {}; if (mobile()) S.mpanel = 'right'; renderAll(); if (changed) $('#rightBody').scrollTop = 0; }
   function renderTree() {
     const u = U('tr'), m = machine(), st = P.stock, set = P.settings, dense = DENSE();
     const item = (sel, icon, cls, title, sub, status, fn, extra, color, gid) => '<div class="titem' + (sel ? ' sel' : '') + (gid ? '' : ' mini') + ' s-' + status + '" role="button" tabindex="0" aria-pressed="' + sel + '" data-a="' + u.act(fn) + '"' + (gid ? ' data-gid="' + esc(gid) + '" draggable="true" aria-label="' + esc(title) + ' (오른쪽 버튼: 메뉴, Delete: 삭제, Ctrl+C/V: 복사·붙여넣기)"' : ' data-node="' + (icon === 'i-nc' ? 'nc' : 'stock') + '"') + '>' + tile(icon, cls, null, gid ? '' : 'sm', color) + '<span class="tx"><b>' + esc(title) + '</b><small>' + esc(sub) + '</small></span>' + (extra || '') + stIcon(status) + '</div>';
@@ -628,6 +634,7 @@
   function renderProps() {
     if (S.sel.kind === 'group' && !curGroup()) S.sel = { kind: 'stock', gid: null, hid: null };
     const u = U('rt');
+    if (S.kindGid !== S.sel.gid) { S.kindOpen = false; S.kindGid = S.sel.gid; } // 다른 가공으로 넘어가면 선택판 닫기 (추가·삭제·되돌리기 포함)
     let head = '', body = '';
     if (S.sel.kind === 'group') {
       const g = curGroup(), k = KIND[kindOf(g)], i = P.groups.indexOf(g);
@@ -658,7 +665,8 @@
   function acc(key, title, sum, body, defOpen) {
     if (!body) return '';
     const err = /class="fld ferr|class="note error/.test(body), warn = !err && /class="fld fwarn|class="note warn/.test(body);
-    const open = err || (S.openSec[key] !== undefined ? S.openSec[key] : (DENSE() || !!defOpen));
+    if (err) S.keepOpen[key] = true; // 오류를 고치는 순간 줄이 닫혀 입력하던 칸이 사라지지 않게 (다른 항목을 고르면 풀림)
+    const open = err || (S.openSec[key] !== undefined ? S.openSec[key] : (!!S.keepOpen[key] || DENSE() || !!defOpen));
     return '<details class="sect2 acc' + (err ? ' haserr' : warn ? ' haswarn' : '') + '" data-sec="' + key + '"' + (err ? ' data-forced="1"' : '') + (open ? ' open' : '') + '><summary><span class="t">' + title + '</span>' +
       (err ? '<span class="am err" title="오류가 있어 펼쳤습니다">!</span>' : warn ? '<span class="am warn" title="경고가 있습니다 — 눌러서 확인">!</span>' : '') +
       '<span class="v">' + (sum || '') + '</span></summary><div class="accb">' + body + '</div></details>';
@@ -772,7 +780,7 @@
       h += acc(isMill ? 'pos-m' : 'pos-h', isMill ? '위치 <small>(같은 모양을 여러 곳에)</small>' : '구멍 위치', g.holes.length + '개' + (single ? ' · X' + uf(h1.x) + ' Y' + uf(h1.y) : ''), p, isMill ? g.holes.length !== 1 : true);
     }
     if (F) h += acc('opt', '옵션', esc(F.optSum), F.opt, false);
-    const diag = depthDiagram(g) + refNote(g), z = S.gz.get(g.id);
+    const rn = refNote(g), diag = depthDiagram(g), z = S.gz.get(g.id);
     h += acc('dd', '깊이 단면도 <small>(Z값)</small>', z === null || z === undefined ? '' : '바닥 Z' + uf(z), diag, false);
     const colorFld = dense ? '' : '<div class="grid2">' + u.fld('표시 색 (화면·목록)', u.color(g.color, v => mutate(() => { g.color = v; }))) + '<span></span></div>';
     if (F) {
@@ -789,7 +797,7 @@
     let al = notes ? '<div class="alerts">' + notes + '</div>' : '';
     if (left.length) al += '<div class="alerts">' + left.slice(0, 4).map(i => '<div class="note ' + i.level + '">' + (i.level === 'error' ? '✖ ' : '⚠ ') + esc(i.t) + '</div>').join('') +
       (left.length > 4 ? '<div class="row" style="margin-top:6px">' + u.btn('외 ' + (left.length - 4) + '건 — 검증 결과 열기', () => openDrawer('check'), 'sm') + '</div>' : '') + '</div>';
-    return h.replace(MARK, () => al);
+    return h.replace(MARK, () => al + rn); // 먼저 가공된 바닥 기준 안내(실제 끝 Z)는 항상 보임
   }
   function setGroupMode(g, mode) {
     const cur = kindOf(g);
@@ -799,7 +807,7 @@
     if (mode === 'face' && g.holes.length > 1 && !confirm('평면 가공은 위치가 1개뿐입니다. 나머지 위치 ' + (g.holes.length - 1) + '개를 지울까요?')) return;
     mutate(() => {
       const old = g.spec;
-      g.spec = newSpecFor(mode); if (g.color === KIND[cur].color) g.color = KIND[mode].color;
+      g.spec = newSpecFor(mode); if (g.color === KIND[cur].color || g.color === OLD_COLOR[cur]) g.color = KIND[mode].color;
       // 포켓·윤곽·모따기 사이 전환은 형상(모양·크기·도면 형상)을 그대로 이어받음
       if (old && ['pocket', 'contour', 'chamfer'].includes(old.kind) && ['pocket', 'contour', 'chamfer'].includes(mode)) ['shape', 'w', 'h', 'cr', 'dia', 'sides', 'rot', 'poly'].forEach(k => { if (old[k] !== undefined) g.spec[k] = C.clone(old[k]); });
       if (MILL_KINDS.includes(mode) && !g.holes.length) { const r = C.stockRect(P.stock); g.holes.push({ id: C.uid('h'), x: C.r3((r.x0 + r.x1) / 2), y: C.r3((r.y0 + r.y1) / 2) }); }
@@ -835,14 +843,17 @@
       }, 'sm primary') + '</div>';
     });
     const tools = [...new Set(g.ops.map(o => o.toolNo))];
-    const edit = '<details class="adv" data-sec="adv-' + g.id + '"' + (S.openSec['adv-' + g.id] ? ' open' : '') + '><summary>공정 상세 편집</summary><small>여기서 바꾸면 이 가공은 "직접 구성"으로 전환됩니다.</small>' +
-      opCards(u, g.ops, fn => { mutate(() => { fn(); g.spec = null; }); toast('직접 구성으로 전환했습니다.', 'warn'); }) + '</details>';
+    const eopen = !!S.openSec['adv-' + g.id];
+    if (FLD && !eopen) FLD.off = true;
+    let cards; try { cards = opCards(u, g.ops, fn => { mutate(() => { fn(); g.spec = null; }); toast('직접 구성으로 전환했습니다.', 'warn'); }); } finally { if (FLD) FLD.off = false; }
+    const edit = '<details class="adv" data-sec="adv-' + g.id + '"' + (eopen ? ' open' : '') + '><summary>공정 상세 편집</summary><small>여기서 바꾸면 이 가공은 "직접 구성"으로 전환됩니다.</small>' + cards + '</details>';
     return { rows: '<div class="gen">' + rows + info + '</div>', noteList, alerts, sum: g.ops.length ? g.ops.length + '단계 · ' + tools.map(t => 'T' + t).join(' ') : '공정 없음', edit };
   }
   /* ---------- [V0.7] 간편 입력 양식: 기본(항상 보임) / 옵션(한 번 눌러 펼침) / 고급 으로 나눠 돌려줌 ----------
    * { basic, opt, optSum, adv, advSum, res }  res = 자동 구성 결과 (공정·안내·없는 공구)
    */
-  const thruFld = (u, sp, set, label) => '<div class="fld"><span>' + (label || '관통') + '</span><div class="row">' + u.check(sp.thru, set(v => { sp.thru = v; }), '끝까지 뚫기') + (sp.thru ? u.num(sp.brk, set(v => { sp.brk = v; }), 'style="width:76px" title="관통 여유 (mm, 소재 아래로 더 내려가는 거리 — 하부 여유 이하)"') : '') + '</div></div>';
+  const thruFld = (u, sp, set, label) => '<div class="fld"><span>' + (label || '관통') + '</span><div class="row">' + u.check(sp.thru, set(v => { sp.thru = v; }), '끝까지 뚫기') + '</div></div>' +
+    (sp.thru ? u.fld('관통 여유 (mm)', u.num(sp.brk, set(v => { sp.brk = v; })), '끝까지 뚫을 때 소재 아래로 더 내려가는 거리. 소재 아래 받침 틈(하부 여유)보다 작아야 합니다') : '');
   // 구멍 / 탭 / 리머 / 보링
   function specForm(u, g) {
     const sp = g.spec, m = machine();
@@ -1178,7 +1189,7 @@
   /* ---------------- 상태 표시줄 ---------------- */
   function renderStatus() {
     const u = U('sb'), c = counts(), ds = downloadState(), m = machine(), ne = c.e + c.ne, nw = c.w + c.nw;
-    let h = !P.groups.length ? '<span class="sb">' + ico('i-plus') + '가공을 추가하세요 (왼쪽 [+ 구멍] [+ 탭] [+ 포켓])</span>'
+    let h = !P.groups.length ? '<span class="sb">' + ico('i-plus') + '가공을 추가하세요 (왼쪽 [+ 가공 추가])</span>'
       : u.btn(ico(ne ? 'i-x' : nw ? 'i-warn' : 'i-check') + (ne ? '오류 ' + ne + '건 — NC 차단' : nw ? '경고 ' + nw + '건' : '검증 통과'), () => openDrawer('check'), 'sb ' + (ne ? 'err' : nw ? 'warn' : 'ok'), 'title="검증 결과 보기"');
     if (ds.ok && ds.test) h += '<span class="pill warn" title="관리자가 실가공 검증을 승인하기 전까지 NC 파일은 TEST 로 표시됩니다">검증용(TEST)</span>';
     h += '<span class="sbsep"></span>';
@@ -1219,7 +1230,7 @@
     groupIss(iss.filter(i => i.level === 'warn' && !isUnverified(i))).forEach(i => todo.push({ lv: 'warn', msg: i.msg, a: regActBc(i.ref) }));
     if (vr0) groupMsgs(vr0.warnings).forEach(g => todo.push({ lv: 'warn', msg: lineTxt(g) + g.msg, a: regActLine(g.lines[0]) }));
     if (!P.groups.length) todo.length = 0;
-    h += '<div class="todo"><b>' + (todo.length ? '확인할 내용 ' + todo.length + '건' : (P.groups.length ? '확인할 내용 없음' : '아직 가공이 없습니다 — 왼쪽 [+ 구멍] [+ 탭] [+ 포켓]으로 시작하세요')) + '</b>' + (todo.length ? '<ul>' + todo.slice(0, 60).map(t => '<li class="' + t.lv + '" data-a="' + t.a + '" role="button" tabindex="0">' + (t.lv === 'err' ? '✖ ' : '⚠ ') + esc(t.msg) + '</li>').join('') + '</ul>' + (todo.length > 60 ? '<small>그 외 ' + (todo.length - 60) + '건은 아래 상세에서 확인</small>' : '') : '') + '</div>';
+    h += '<div class="todo"><b>' + (todo.length ? '확인할 내용 ' + todo.length + '건' : (P.groups.length ? '확인할 내용 없음' : '아직 가공이 없습니다 — 왼쪽 [+ 가공 추가]에서 가공을 고르세요.')) + '</b>' + (todo.length ? '<ul>' + todo.slice(0, 60).map(t => '<li class="' + t.lv + '" data-a="' + t.a + '" role="button" tabindex="0">' + (t.lv === 'err' ? '✖ ' : '⚠ ') + esc(t.msg) + '</li>').join('') + '</ul>' + (todo.length > 60 ? '<small>그 외 ' + (todo.length - 60) + '건은 아래 상세에서 확인</small>' : '') : '') + '</div>';
     h += '<details class="sect2" data-sec="chkdetail"' + (S.openSec.chkdetail ? ' open' : '') + '><summary>검증 상세 (11개 항목 · 독립 NC 해석 · 5단계 절차)</summary>';
     h += '<div class="chkcols"><div><b>모델 검증 (11개 항목)</b>';
     C.CHECKS.forEach(ck => {
@@ -2047,7 +2058,7 @@
       let h = '<div class="help"><h3>처음 사용 순서</h3><ol class="howto">' +
         '<li><b>소재</b>: 왼쪽 [소재·고정]에서 크기·재질·클램프를 넣습니다.</li>' +
         '<li><b>원점·NC</b>: 원점 위치(G54), 초기점, 첫 가공 모드를 정합니다.</li>' +
-        '<li><b>가공 추가</b>: [+ 구멍]·[+ 탭]·[+ 포켓]… 또는 [도면(DXF) 불러오기]. 크기·깊이만 넣으면 공구와 조건이 자동으로 정해집니다.</li>' +
+        '<li><b>가공 추가</b>: [+ 가공 추가]를 누르고 구멍·탭·포켓… 또는 도면(DXF)을 고릅니다. 크기·깊이만 넣으면 공구와 조건이 자동으로 정해집니다. 더 바꿀 것은 아래 접힌 줄(옵션·고급 설정)을 누르세요.</li>' +
         '<li><b>위치</b>: 2D 화면에서 [위치 추가]로 찍거나 표에 X·Y 를 넣습니다. 포켓은 □ 손잡이로 크기를 끌어 바꿉니다.</li>' +
         '<li><b>확인</b>: 아래 [검증 결과]의 빨간 항목을 눌러 고치고, [3D 시뮬레이션]으로 처음부터 재생해 봅니다.</li>' +
         '<li><b>NC 저장</b>: 가공 전 점검을 체크하고 저장합니다. 처음 쓰는 장비·가공은 <b>첫 가공 모드</b>로 드라이런 → 싱글 블록 → 시편 순서로 확인하세요.</li></ol>' +
@@ -2316,7 +2327,13 @@
         const items = [...document.querySelectorAll('#tree .titem')], i = items.indexOf(e.target.closest('.titem')), nx = items[i + (e.key === 'ArrowUp' ? -1 : 1)];
         if (nx) { e.preventDefault(); nx.click(); requestAnimationFrame(() => { const all = [...document.querySelectorAll('#tree .titem')]; if (all[i + (e.key === 'ArrowUp' ? -1 : 1)]) all[i + (e.key === 'ArrowUp' ? -1 : 1)].focus(); }); }
       }
-      else if (e.key === 'Escape') { closeMenu(); if (!typing && S.mode !== 'select') setMode('select'); }
+      else if (e.key === 'Escape') {
+        closeMenu();
+        const pops = document.querySelectorAll('details.pop[open]'); pops.forEach(d => { d.open = false; if (d.dataset.sec) S.openSec[d.dataset.sec] = false; });
+        if (S.addOpen) { S.addOpen = false; renderTree(); }
+        if (S.kindOpen) { S.kindOpen = false; renderProps(); }
+        if (!typing && S.mode !== 'select') setMode('select');
+      }
       else if (!typing && !dlg && e.key === ' ' && S.vmode === '3d' && V3 && V3.ok && !(e.target.getAttribute && e.target.getAttribute('role') === 'button') && e.target.tagName !== 'BUTTON') { e.preventDefault(); if (V3.isPlaying()) V3.pause(); else V3.play(); }
       else if (e.altKey && e.shiftKey && e.key.toLowerCase() === 'a') { e.preventDefault(); openAdminAuth(); } // 접근성용 대체 관리자 진입 (비밀번호 필요)
     });
